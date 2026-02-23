@@ -13,9 +13,10 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
 });
 
-Route::middleware(['auth:sanctum', 'role:koor'])->prefix('koor')->group(function () {
-    //Dashboard Koor
-    Route::get('rata-ipk-per-angkatan', [KoorController::class, 'getRataIpkPerAngkatan']);
+Route::prefix('ews')->group(function () {
+    Route::middleware(['auth:sanctum', 'role:koor'])->prefix('koor')->group(function () {
+        //Dashboard Koor
+        Route::get('rata-ipk-per-angkatan', [KoorController::class, 'getRataIpkPerAngkatan']);
     Route::get('status-mahasiswa', [KoorController::class, 'getStatusMahasiswa']);
     Route::get('status-kelulusan', [KoorController::class, 'getStatusKelulusan']);
     Route::get('table-ringkasan-mahasiswa', [KoorController::class, 'getTableRingkasanMahasiswa']);
@@ -80,4 +81,5 @@ Route::middleware(['auth:sanctum', 'role:mahasiswa'])->prefix('mahasiswa')->grou
 
     // peringatan
     Route::get('peringatan', [MahasiswaController::class, 'getPeringatan']);
+});
 });
