@@ -13,6 +13,12 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
 });
 
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::controller(AuthController::class)->group(function () {
+        Route::get('/profile', 'profile');
+    });
+});
+
 Route::prefix('ews')->group(function () {
     Route::middleware(['auth:sanctum', 'role:koor'])->prefix('koor')->group(function () {
         //Dashboard Koor
