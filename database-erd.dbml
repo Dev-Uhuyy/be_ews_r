@@ -1,0 +1,231 @@
+// Early Warning System (EWS) Database Schema
+// Generated for dbdiagram.io
+
+Table users {
+  id bigint [pk, increment]
+  name varchar(255)
+  email varchar(255) [unique]
+  email_verified_at timestamp [null]
+  password varchar(255)
+  access_token text [null]
+  refresh_token text [null]
+  bo_token text [null]
+  remember_token varchar(100) [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+  deleted_at timestamp [null]
+
+  Note: 'User authentication and base user data'
+}
+
+Table prodi {
+  id bigint [pk, increment]
+  nama varchar(255)
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'Program Studi (Study Program)'
+}
+
+Table prodi_user {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  prodi_id bigint [not null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  indexes {
+    (user_id, prodi_id) [unique]
+  }
+
+  Note: 'Pivot table for user-prodi relationship'
+}
+
+Table dosen {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  prodi_id bigint [null]
+  gelar_depan varchar(255) [null]
+  gelar_belakang varchar(255) [null]
+  bidang_kajian varchar(255) [null]
+  scholar_link varchar(255) [null]
+  npp varchar(255) [null]
+  telepon varchar(255) [null]
+  ttd text [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+  deleted_at timestamp [null]
+
+  Note: 'Dosen (Lecturer) information'
+}
+
+Table mahasiswa {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  prodi_id bigint [null]
+  nim varchar(255) [unique]
+  transkrip text [null]
+  telepon varchar(255) [null]
+  minat varchar(255) [null]
+  cuti_2 boolean [default: false]
+  status_mahasiswa varchar(50) [null]
+  tanggal_yusidium date [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+  deleted_at timestamp [null]
+
+  Note: 'Mahasiswa (Student) information'
+}
+
+Table akademik_mahasiswa {
+  id bigint [pk, increment]
+  mahasiswa_id bigint [not null]
+  dosen_wali_id bigint [not null]
+  semester_aktif int [default: 1]
+  tahun_masuk year [null]
+  ipk decimal(3,2) [null]
+  mk_nasional int [null]
+  mk_fakultas int [null]
+  mk_prodi int [null]
+  sks_tempuh int [null]
+  sks_now int [null]
+  sks_lulus int [null]
+  sks_gagal int [null]
+  nilai_d_melebihi_batas int [null]
+  nilai_e int [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'Academic data for each student'
+}
+
+Table ips_mahasiswa {
+  id bigint [pk, increment]
+  mahasiswa_id bigint [not null]
+  ips_1 decimal(4,2) [null]
+  ips_2 decimal(4,2) [null]
+  ips_3 decimal(4,2) [null]
+  ips_4 decimal(4,2) [null]
+  ips_5 decimal(4,2) [null]
+  ips_6 decimal(4,2) [null]
+  ips_7 decimal(4,2) [null]
+  ips_8 decimal(4,2) [null]
+  ips_9 decimal(4,2) [null]
+  ips_10 decimal(4,2) [null]
+  ips_11 decimal(4,2) [null]
+  ips_12 decimal(4,2) [null]
+  ips_13 decimal(4,2) [null]
+  ips_14 decimal(4,2) [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'IPS (Semester GPA) for up to 14 semesters'
+}
+
+Table mata_kuliah_peminatans {
+  id bigint [pk, increment]
+  peminatan varchar(255)
+  prodi_id bigint [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'Mata Kuliah Peminatan (Course Specialization)'
+}
+
+Table mata_kuliahs {
+  id bigint [pk, increment]
+  prodi_id bigint [not null]
+  kode varchar(255) [unique]
+  name varchar(255)
+  koordinator_mk bigint [null]
+  sks int
+  semester int
+  tipe_mk varchar(50) [null]
+  peminatan_id bigint [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'Mata Kuliah (Course) master data'
+}
+
+Table kelompok_mata_kuliah {
+  id bigint [pk, increment]
+  mata_kuliah_id bigint [not null]
+  kode varchar(255)
+  dosen_pengampu_id bigint [not null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'Kelompok Mata Kuliah (Course Class/Group)'
+}
+
+Table khs_krs_mahasiswa {
+  id bigint [pk, increment]
+  mahasiswa_id bigint [not null]
+  matakuliah_id bigint [not null]
+  kelompok_id bigint [not null]
+  semester_ambil int [null]
+  status varchar(1) [note: 'B=Baru, U=Ulang']
+  absen int [null]
+  nilai_uts int [null]
+  nilai_uas int [null]
+  nilai_akhir_angka int [null]
+  nilai_akhir_huruf varchar(5) [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'KHS/KRS - Student course enrollment and grades'
+}
+
+Table early_warning_system {
+  id bigint [pk, increment]
+  akademik_mahasiswa_id bigint [not null]
+  status varchar(50) [default: 'tepat_waktu', note: 'tepat_waktu, normal, perhatian, kritis']
+  status_kelulusan varchar(50) [null]
+  status_rekomitmen varchar(50) [null]
+  id_rekomitmen varchar(255) [null]
+  link_rekomitmen text [null]
+  tanggal_pengajuan_rekomitmen date [null]
+  SPS1 text [null]
+  SPS2 text [null]
+  SPS3 text [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'Early Warning System records for student monitoring'
+}
+
+// Relationships
+
+// Users relationships
+Ref: mahasiswa.user_id > users.id [delete: cascade]
+Ref: dosen.user_id > users.id [delete: cascade]
+Ref: prodi_user.user_id > users.id [delete: cascade]
+
+// Prodi relationships
+Ref: prodi_user.prodi_id > prodi.id [delete: cascade]
+Ref: dosen.prodi_id > prodi.id [delete: set null]
+Ref: mahasiswa.prodi_id > prodi.id [delete: set null]
+Ref: mata_kuliah_peminatans.prodi_id > prodi.id [delete: cascade]
+Ref: mata_kuliahs.prodi_id > prodi.id [delete: cascade]
+
+// Mahasiswa relationships
+Ref: akademik_mahasiswa.mahasiswa_id > mahasiswa.id [delete: cascade]
+Ref: ips_mahasiswa.mahasiswa_id > mahasiswa.id [delete: cascade]
+Ref: khs_krs_mahasiswa.mahasiswa_id > mahasiswa.id [delete: cascade]
+
+// Dosen relationships
+Ref: akademik_mahasiswa.dosen_wali_id > dosen.id [delete: cascade]
+Ref: kelompok_mata_kuliah.dosen_pengampu_id > dosen.id [delete: cascade]
+Ref: mata_kuliahs.koordinator_mk > dosen.id [delete: set null]
+
+// Mata Kuliah relationships
+Ref: mata_kuliahs.peminatan_id > mata_kuliah_peminatans.id [delete: set null]
+Ref: kelompok_mata_kuliah.mata_kuliah_id > mata_kuliahs.id [delete: cascade]
+Ref: khs_krs_mahasiswa.matakuliah_id > mata_kuliahs.id [delete: cascade]
+
+// Kelompok Mata Kuliah relationships
+Ref: khs_krs_mahasiswa.kelompok_id > kelompok_mata_kuliah.id [delete: cascade]
+
+// Akademik Mahasiswa relationships
+Ref: early_warning_system.akademik_mahasiswa_id > akademik_mahasiswa.id [delete: cascade]
