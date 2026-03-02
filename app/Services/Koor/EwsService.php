@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Koor;
 
 use App\Models\AkademikMahasiswa;
 use App\Models\EarlyWarningSystem;
