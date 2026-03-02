@@ -396,6 +396,32 @@ class StatusMahasiswaService
             if (!empty($filters['nilai_e'])) {
                 $query->where('akademik_mahasiswa.nilai_e', $filters['nilai_e']);
             }
+
+            // Filter semester 1-3
+            if (!empty($filters['semester_1_3']) && $filters['semester_1_3'] === 'yes') {
+                $query->whereBetween('akademik_mahasiswa.semester_aktif', [1, 3]);
+            }
+
+            // Filter IPK < 2
+            if (!empty($filters['ipk_rendah']) && $filters['ipk_rendah'] === 'yes') {
+                $query->where('akademik_mahasiswa.ipk', '<', 2);
+            }
+
+            // Filter SKS lulus < 144
+            if (!empty($filters['sks_kurang']) && $filters['sks_kurang'] === 'yes') {
+                $query->where('akademik_mahasiswa.sks_lulus', '<', 144);
+            }
+
+            // Filter mahasiswa dengan mata kuliah ulang (diambil lebih dari 1 kali)
+            if (!empty($filters['mk_ulang']) && $filters['mk_ulang'] === 'yes') {
+                $query->whereExists(function($subquery) {
+                    $subquery->select(DB::raw(1))
+                        ->from('khs_krs_mahasiswa')
+                        ->whereColumn('khs_krs_mahasiswa.mahasiswa_id', 'mahasiswa.id')
+                        ->groupBy('khs_krs_mahasiswa.mahasiswa_id', 'khs_krs_mahasiswa.matakuliah_id')
+                        ->havingRaw('COUNT(*) > 1');
+                });
+            }
         }
 
         return $query->orderBy('mahasiswa.nim', 'asc')->paginate($perPage);

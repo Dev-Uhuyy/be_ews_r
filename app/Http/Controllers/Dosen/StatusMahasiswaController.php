@@ -97,6 +97,10 @@ class StatusMahasiswaController extends Controller
      *   ?status_kelulusan=eligible|noneligible (filter by kelulusan status)
      *   ?tahun_masuk=2023 (filter by angkatan)
      *   ?semester_aktif=6 (filter by semester)
+     *   ?semester_1_3=yes (filter semester 1-3 only)
+     *   ?ipk_rendah=yes (filter IPK < 2)
+     *   ?mk_ulang=yes (filter mahasiswa dengan mata kuliah ulang)
+     *   ?sks_kurang=yes (filter SKS lulus < 144)
      *   ?mk_nasional=yes|no
      *   ?mk_fakultas=yes|no
      *   ?mk_prodi=yes|no
@@ -177,7 +181,7 @@ class StatusMahasiswaController extends Controller
             }
 
             // Validasi dan extract yes/no fields
-            $yesNoFields = ['mk_nasional', 'mk_fakultas', 'mk_prodi', 'nilai_d_melebihi_batas', 'nilai_e', 'SPS1', 'SPS2', 'SPS3'];
+            $yesNoFields = ['mk_nasional', 'mk_fakultas', 'mk_prodi', 'nilai_d_melebihi_batas', 'nilai_e', 'SPS1', 'SPS2', 'SPS3', 'semester_1_3', 'ipk_rendah', 'mk_ulang', 'sks_kurang'];
             foreach ($yesNoFields as $field) {
                 if ($request->has($field)) {
                     $value = strtolower($request->query($field));

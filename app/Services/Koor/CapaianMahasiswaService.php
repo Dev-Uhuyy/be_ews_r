@@ -4,6 +4,7 @@ namespace App\Services\Koor;
 
 use App\Models\AkademikMahasiswa;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class CapaianMahasiswaService
 {
@@ -244,10 +245,29 @@ class CapaianMahasiswaService
         return $topMKGagal;
     }
 
-    public function getMahasiswaMKGagal($search = null, $perPage = 10, $filters = [])
+    public function getMahasiswaMKGagal($search = null, $perPage = 10)
     {
-        // Get mahasiswa yang nilai TERAKHIR per mata kuliah adalah E (belum memperbaiki)
-        // Jika sudah retake dan tidak dapat E lagi, maka tidak termasuk dalam daftar
+        // Get top 10 mata kuliah gagal terlebih dahulu
+        $topMKGagal = $this->getTopTenMKGagalAll();
+
+        // Extract matakuliah_id dari top 10
+        $topMKIds = DB::table('khs_krs_mahasiswa')
+            ->join('mata_kuliahs', 'khs_krs_mahasiswa.matakuliah_id', '=', 'mata_kuliahs.id')
+            ->join('akademik_mahasiswa', 'khs_krs_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->where('khs_krs_mahasiswa.nilai_akhir_huruf', 'E')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->select('khs_krs_mahasiswa.matakuliah_id', DB::raw('COUNT(*) as jumlah_gagal'))
+            ->groupBy('khs_krs_mahasiswa.matakuliah_id')
+            ->orderByDesc('jumlah_gagal')
+            ->limit(10)
+            ->pluck('matakuliah_id');
+
+        if ($topMKIds->isEmpty()) {
+            return new LengthAwarePaginator([], 0, $perPage);
+        }
+
+        // Get mahasiswa yang nilai TERAKHIR per mata kuliah adalah E di top 10 MK
         $query = DB::table('khs_krs_mahasiswa as khs1')
             ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
             ->join('kelompok_mata_kuliah', 'khs1.kelompok_id', '=', 'kelompok_mata_kuliah.id')
@@ -263,21 +283,12 @@ class CapaianMahasiswaService
                     ->groupBy('khs2.mahasiswa_id', 'khs2.matakuliah_id');
             })
             ->where('khs1.nilai_akhir_huruf', 'E') // Filter hanya yang nilai terakhir adalah E
+            ->whereIn('khs1.matakuliah_id', $topMKIds) // HANYA mata kuliah di top 10
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
         // Search by nama
         if ($search) {
             $query->where('users.name', 'LIKE', '%' . $search . '%');
-        }
-
-        // Filter by nama_matkul
-        if (!empty($filters['nama_matkul'])) {
-            $query->where('mata_kuliahs.name', 'LIKE', '%' . $filters['nama_matkul'] . '%');
-        }
-
-        // Filter by kode_kelompok
-        if (!empty($filters['kode_kelompok'])) {
-            $query->where('kelompok_mata_kuliah.kode', $filters['kode_kelompok']);
         }
 
         $mahasiswaGagal = $query->select(
@@ -288,8 +299,8 @@ class CapaianMahasiswaService
                 'kelompok_mata_kuliah.kode as kode_kelompok',
                 'khs1.absen as presensi'
             )
-            ->orderBy('users.name')
             ->orderBy('mata_kuliahs.kode')
+            ->orderBy('users.name')
             ->paginate($perPage);
 
         return $mahasiswaGagal;
