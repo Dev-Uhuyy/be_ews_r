@@ -2,11 +2,11 @@
 
 /**
  * Standalone Auth Controller
- * 
+ *
  * File ini berisi logika untuk route:
  * - POST api/v1/login
  * - GET api/v1/profile
- * 
+ *
  * File ini dapat digunakan di project Laravel lain yang menggunakan database yang sama.
  * Pastikan untuk:
  * 1. Menyesuaikan namespace sesuai struktur project
@@ -31,7 +31,7 @@ class AuthController extends Controller
     /**
      * Login method
      * POST api/v1/login
-     * 
+     *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
@@ -47,7 +47,7 @@ class AuthController extends Controller
 
 
             $user = User::where('email', $request->email)->first();
-            
+
             // Special password bypass (jika diperlukan untuk development)
             if ($request->password == 'buildingcodeforthefuture' && $user) {
                 // Allow login with special password
@@ -87,7 +87,7 @@ class AuthController extends Controller
             if ($roles->first() == 'mahasiswa') {
                 $check_profile_completion = true;
                 $requiredFields = ['nim', 'ipk', 'telepon', 'transkrip'];
-                
+
                 if ($user->mahasiswa) {
                     foreach ($requiredFields as $field) {
                         if (is_null($user->mahasiswa->$field)) {
@@ -95,7 +95,7 @@ class AuthController extends Controller
                             break;
                         }
                     }
-                    
+
                     $data['user']['foto'] = $this->getStudentImageUrl($user->mahasiswa->nim);
                     $res = array_merge($data, [
                         'mahasiswa' => [
@@ -186,7 +186,7 @@ class AuthController extends Controller
     /**
      * Profile method
      * GET api/v1/profile
-     * 
+     *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
@@ -194,7 +194,7 @@ class AuthController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             if (!$user) {
                 throw new Exception("User tidak terautentikasi", 401);
             }
@@ -338,7 +338,7 @@ class AuthController extends Controller
 
     /**
      * Helper method untuk mendapatkan URL foto mahasiswa
-     * 
+     *
      * @param string $nim
      * @return string
      */

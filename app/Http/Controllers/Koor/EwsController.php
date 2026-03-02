@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Koor;
 
 use App\Http\Controllers\Controller;
-use App\Services\EwsService;
-use App\Services\KoorService;
+use App\Services\Koor\EwsService;
+use App\Services\Koor\StatusMahasiswaService;
 use App\Jobs\RecalculateAllEwsJob;
 use App\Models\AkademikMahasiswa;
 use Illuminate\Http\Request;
@@ -12,12 +12,12 @@ use Illuminate\Http\Request;
 class EwsController extends Controller
 {
     protected $ewsService;
-    protected $koorService;
+    protected $statusMahasiswaService;
 
-    public function __construct(EwsService $ewsService, KoorService $koorService)
+    public function __construct(EwsService $ewsService, StatusMahasiswaService $statusMahasiswaService)
     {
         $this->ewsService = $ewsService;
-        $this->koorService = $koorService;
+        $this->statusMahasiswaService = $statusMahasiswaService;
     }
 
     /**
@@ -34,7 +34,7 @@ class EwsController extends Controller
                 return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
             }
 
-            $distribusi = $this->koorService->getDistribusiStatusEws($tahunMasuk);
+            $distribusi = $this->statusMahasiswaService->getDistribusiStatusEws($tahunMasuk);
 
             // Check if any mahasiswa found when filter is applied
             if ($tahunMasuk && array_sum($distribusi) == 0) {
@@ -75,7 +75,7 @@ class EwsController extends Controller
             $result = $this->ewsService->updateStatus($akademik);
 
             // Get detail mahasiswa lengkap setelah recalculate
-            $detailMahasiswa = $this->koorService->getDetailMahasiswa($mahasiswaId);
+            $detailMahasiswa = $this->statusMahasiswaService->getDetailMahasiswa($mahasiswaId);
 
             if (!$detailMahasiswa) {
                 return $this->errorResponse('Detail mahasiswa tidak ditemukan', 404);

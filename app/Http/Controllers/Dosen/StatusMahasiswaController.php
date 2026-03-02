@@ -3,97 +3,17 @@
 namespace App\Http\Controllers\Dosen;
 
 use App\Http\Controllers\Controller;
-use App\Services\DosenService;
+use App\Services\Dosen\StatusMahasiswaService;
 use Illuminate\Http\Request;
 
-class DosenController extends Controller
+class StatusMahasiswaController extends Controller
 {
-    protected $dosenService;
+    protected $statusMahasiswaService;
 
-    public function __construct(DosenService $dosenService)
+    public function __construct(StatusMahasiswaService $statusMahasiswaService)
     {
-        $this->dosenService = $dosenService;
+        $this->statusMahasiswaService = $statusMahasiswaService;
     }
-
-    // Dashboard Dosen
-
-    public function getStatusMahasiswa()
-    {
-        try {
-            $statusMahasiswa = $this->dosenService->getStatusMahasiswa();
-            return $this->successResponse(
-                $statusMahasiswa,
-                'Status mahasiswa berhasil diambil'
-            );
-        } catch (\Exception $e) {
-            return $this->exceptionError($e, 'getStatusMahasiswa');
-        }
-    }
-
-    public function getRataIpkPerAngkatan()
-    {
-        try {
-            $rataIpk = $this->dosenService->getRataIpkPerAngkatan();
-
-            // Check if data is found
-            if ($rataIpk->isEmpty()) {
-                return $this->errorResponse('Tidak ditemukan data mahasiswa bimbingan', 404);
-            }
-
-            return $this->successResponse(
-                $rataIpk,
-                'Rata IPK per angkatan berhasil diambil'
-            );
-        } catch (\Exception $e) {
-            return $this->exceptionError($e, 'getRataIpkPerAngkatan');
-        }
-    }
-
-    public function getStatusKelulusan()
-    {
-        try {
-            $statusKelulusan = $this->dosenService->getStatusKelulusan();
-            return $this->successResponse(
-                $statusKelulusan,
-                'Status kelulusan berhasil diambil'
-            );
-        } catch (\Exception $e) {
-            return $this->exceptionError($e, 'getStatusKelulusan');
-        }
-    }
-
-    /**
-     * Get table ringkasan mahasiswa per angkatan
-     * Query params:
-     *   ?per_page=10 (items per page)
-     */
-    public function getTableRingkasanMahasiswa(Request $request)
-    {
-        try {
-            $perPage = $request->query('per_page', 10);
-
-            // Validasi per_page
-            if (!is_numeric($perPage) || $perPage < 1 || $perPage > 100) {
-                return $this->errorResponse('Parameter per_page harus berupa angka antara 1-100', 400);
-            }
-
-            $tableRingkasan = $this->dosenService->getTableRingkasanMahasiswa($perPage);
-
-            // Check if data is found
-            if ($tableRingkasan->isEmpty()) {
-                return $this->errorResponse('Tidak ditemukan data mahasiswa', 404);
-            }
-
-            return $this->paginationResponse(
-                $tableRingkasan,
-                'Tabel ringkasan mahasiswa berhasil diambil'
-            );
-        } catch (\Exception $e) {
-            return $this->exceptionError($e, 'getTableRingkasanMahasiswa');
-        }
-    }
-
-    // General
 
     public function getDetailAngkatan(Request $request, $tahunMasuk)
     {
@@ -111,7 +31,7 @@ class DosenController extends Controller
                 return $this->errorResponse('Parameter per_page harus berupa angka antara 1-100', 400);
             }
 
-            $result = $this->dosenService->getDetailAngkatan($tahunMasuk, $search, $perPage);
+            $result = $this->statusMahasiswaService->getDetailAngkatan($tahunMasuk, $search, $perPage);
 
             // Check if data is found
             if ($result['paginated_data']->isEmpty()) {
@@ -146,7 +66,7 @@ class DosenController extends Controller
                 return $this->errorResponse('Parameter mahasiswa_id harus berupa angka yang valid', 400);
             }
 
-            $detail = $this->dosenService->getDetailMahasiswa($mahasiswaId);
+            $detail = $this->statusMahasiswaService->getDetailMahasiswa($mahasiswaId);
 
             if (!$detail) {
                 return $this->errorResponse('Mahasiswa tidak ditemukan atau bukan mahasiswa bimbingan Anda', 404);
@@ -268,7 +188,7 @@ class DosenController extends Controller
                 }
             }
 
-            $mahasiswaAll = $this->dosenService->getMahasiswaAll($search, $perPage, $mode, $filters);
+            $mahasiswaAll = $this->statusMahasiswaService->getMahasiswaAll($search, $perPage, $mode, $filters);
 
             // Check if data is found
             if ($mahasiswaAll->isEmpty()) {
@@ -284,8 +204,6 @@ class DosenController extends Controller
         }
     }
 
-    // Status Mahasiswa
-
     public function getDistribusiStatusEws(Request $request)
     {
         try {
@@ -296,7 +214,7 @@ class DosenController extends Controller
                 return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
             }
 
-            $distribusi = $this->dosenService->getDistribusiStatusEws($tahunMasuk);
+            $distribusi = $this->statusMahasiswaService->getDistribusiStatusEws($tahunMasuk);
 
             // Check if any mahasiswa found when filter is applied
             if ($tahunMasuk && array_sum($distribusi) == 0) {
@@ -315,7 +233,7 @@ class DosenController extends Controller
     public function getTableRingkasanStatus()
     {
         try {
-            $tableData = $this->dosenService->getTableRingkasanStatus();
+            $tableData = $this->statusMahasiswaService->getTableRingkasanStatus();
 
             // Check if data is found
             if (empty($tableData)) {
@@ -325,62 +243,6 @@ class DosenController extends Controller
             return $this->successResponse($tableData, 'Table ringkasan status berhasil diambil');
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'getTableRingkasanStatus');
-        }
-    }
-
-    // Statistik Kelulusan
-
-    public function getCardStatistikKelulusan(Request $request)
-    {
-        try {
-            $tahunMasuk = $request->query('tahun_masuk');
-
-            // Validasi tahun_masuk jika diberikan
-            if ($tahunMasuk !== null && (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100)) {
-                return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
-            }
-
-            $statistikKelulusan = $this->dosenService->getCardStatistikKelulusan($tahunMasuk);
-
-            // Check if data is found when filter is applied
-            if ($tahunMasuk && !$statistikKelulusan) {
-                return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
-            }
-
-            return $this->successResponse(
-                $statistikKelulusan,
-                'Statistik kelulusan berhasil diambil'
-            );
-        } catch (\Exception $e) {
-            return $this->exceptionError($e, 'getCardStatistikKelulusan');
-        }
-    }
-
-    /**
-     * Get table statistik kelulusan per angkatan
-     * Query params:
-     *   ?per_page=10 (items per page)
-     */
-    public function getTableStatistikKelulusan(Request $request)
-    {
-        try {
-            $perPage = $request->query('per_page', 10);
-
-            // Validasi per_page
-            if (!is_numeric($perPage) || $perPage < 1 || $perPage > 100) {
-                return $this->errorResponse('Parameter per_page harus berupa angka antara 1-100', 400);
-            }
-
-            $tableData = $this->dosenService->getTableStatistikKelulusan($perPage);
-
-            // Check if data is found
-            if ($tableData->isEmpty()) {
-                return $this->errorResponse('Tidak ditemukan data yang sesuai', 404);
-            }
-
-            return $this->paginationResponse($tableData, 'Table statistik kelulusan berhasil diambil');
-        } catch (\Exception $e) {
-            return $this->exceptionError($e, 'getTableStatistikKelulusan');
         }
     }
 }
