@@ -29,10 +29,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::prefix('ews')->group(function () {
     Route::middleware(['auth:sanctum', 'role:koor'])->prefix('koor')->group(function () {
-    //Dashboard Koor
-    Route::get('rata-ipk-per-angkatan', [KoorDashboardController::class, 'getRataIpkPerAngkatan']);
-    Route::get('status-mahasiswa', [KoorDashboardController::class, 'getStatusMahasiswa']);
-    Route::get('status-kelulusan', [KoorDashboardController::class, 'getStatusKelulusan']);
+    // Dashboard Koor - Combined endpoint
+    Route::get('dashboard', [KoorDashboardController::class, 'getDashboard']);
     Route::get('table-ringkasan-mahasiswa', [KoorDashboardController::class, 'getTableRingkasanMahasiswa']);
 
     //General
@@ -64,10 +62,8 @@ Route::prefix('ews')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'role:dosen'])->prefix('dosen')->group(function () {
-    // Dashboard Dosen
-    Route::get('rata-ipk-per-angkatan', [DosenDashboardController::class, 'getRataIpkPerAngkatan']);
-    Route::get('status-mahasiswa', [DosenDashboardController::class, 'getStatusMahasiswa']);
-    Route::get('status-kelulusan', [DosenDashboardController::class, 'getStatusKelulusan']);
+    // Dashboard Dosen - Combined endpoint
+    Route::get('dashboard', [DosenDashboardController::class, 'getDashboard']);
     Route::get('table-ringkasan-mahasiswa', [DosenDashboardController::class, 'getTableRingkasanMahasiswa']);
     Route::get('mahasiswa/detail/{mahasiswaId}', [DosenStatusMahasiswaController::class, 'getDetailMahasiswa']);
 
