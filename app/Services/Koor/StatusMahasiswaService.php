@@ -268,29 +268,32 @@ class StatusMahasiswaService
         ];
     }
 
-    public function getTableRingkasanStatus()
+    private function getTableRingkasanStatusQuery()
     {
-        //Angkatan, total mhs, ipk<2, mangkir, cuti 2x, normal, perhatian, kritis
-        // Exclude mahasiswa yang sudah lulus dan DO
-        $tableData = AkademikMahasiswa::select(
+        return AkademikMahasiswa::select(
                     'akademik_mahasiswa.tahun_masuk',
                     DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
                     DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk < 2 THEN 1 ELSE 0 END) as ipk_kurang_dari_2'),
                     DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as mangkir'),
                     DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as cuti'),
-                    //DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as perhatian'),
-                    //DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as kritis')
+                    DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as perhatian')
                 )
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
                 ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
                 ->whereNotNull('akademik_mahasiswa.tahun_masuk')
                 ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
                 ->groupBy('akademik_mahasiswa.tahun_masuk')
-                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
-                ->get();
+                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc');
+    }
 
-        return $tableData;
+    public function getTableRingkasanStatus()
+    {
+        return $this->getTableRingkasanStatusQuery()->get();
+    }
+
+    public function getTableRingkasanStatusExport()
+    {
+        return $this->getTableRingkasanStatusQuery()->get();
     }
 
     /**
@@ -302,10 +305,9 @@ class StatusMahasiswaService
      * @param string $mode 'simple' (nama, nim, doswal with filters) or 'detailed' (all fields, no filters)
      * @param array $filters Additional filters (ONLY applied in simple mode): status_mahasiswa, status_ews, status_kelulusan, tahun_masuk, etc
      */
-    public function getMahasiswaAll($search = null, $perPage = 10, $mode = 'simple', $filters = [])
+    private function getMahasiswaAllQuery($search = null, $mode = 'simple', $filters = [])
     {
         if ($mode === 'simple') {
-            // Simple mode: hanya nama, nim, dosen wali (BISA filter by banyak field)
             $query = Mahasiswa::select(
                         'mahasiswa.id as mahasiswa_id',
                         'mahasiswa.nim',
@@ -319,7 +321,6 @@ class StatusMahasiswaService
                     ->leftJoin('users as dosen_users', 'dosen.user_id', '=', 'dosen_users.id')
                     ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
         } else {
-            // Detailed mode: semua field (TANPA filter tambahan, hanya tampilkan semua)
             $query = Mahasiswa::select(
                         'mahasiswa.id as mahasiswa_id',
                         'mahasiswa.nim',
@@ -347,7 +348,6 @@ class StatusMahasiswaService
                     ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
         }
 
-        // Filter berdasarkan nama atau NIM jika ada pencarian
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('users.name', 'LIKE', '%' . $search . '%')
@@ -355,64 +355,46 @@ class StatusMahasiswaService
             });
         }
 
-        // Apply additional filters ONLY for simple mode
         if ($mode === 'simple') {
             if (!empty($filters['status_mahasiswa'])) {
                 $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [strtolower($filters['status_mahasiswa'])]);
             }
-
             if (!empty($filters['status_ews'])) {
                 $query->where('early_warning_system.status', $filters['status_ews']);
             }
-
             if (!empty($filters['status_kelulusan'])) {
                 $query->where('early_warning_system.status_kelulusan', $filters['status_kelulusan']);
             }
-
             if (!empty($filters['tahun_masuk'])) {
                 $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
             }
-
             if (!empty($filters['semester_aktif'])) {
                 $query->where('akademik_mahasiswa.semester_aktif', $filters['semester_aktif']);
             }
-
             if (!empty($filters['mk_nasional'])) {
                 $query->where('akademik_mahasiswa.mk_nasional', $filters['mk_nasional']);
             }
-
             if (!empty($filters['mk_fakultas'])) {
                 $query->where('akademik_mahasiswa.mk_fakultas', $filters['mk_fakultas']);
             }
-
             if (!empty($filters['mk_prodi'])) {
                 $query->where('akademik_mahasiswa.mk_prodi', $filters['mk_prodi']);
             }
-
             if (!empty($filters['nilai_d_melebihi_batas'])) {
                 $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', $filters['nilai_d_melebihi_batas']);
             }
-
             if (!empty($filters['nilai_e'])) {
                 $query->where('akademik_mahasiswa.nilai_e', $filters['nilai_e']);
             }
-
-            // Filter semester 1-3
             if (!empty($filters['semester_1_3']) && $filters['semester_1_3'] === 'yes') {
                 $query->whereBetween('akademik_mahasiswa.semester_aktif', [1, 3]);
             }
-
-            // Filter IPK < 2
             if (!empty($filters['ipk_rendah']) && $filters['ipk_rendah'] === 'yes') {
                 $query->where('akademik_mahasiswa.ipk', '<', 2);
             }
-
-            // Filter SKS lulus < 144
             if (!empty($filters['sks_kurang']) && $filters['sks_kurang'] === 'yes') {
                 $query->where('akademik_mahasiswa.sks_lulus', '<', 144);
             }
-
-            // Filter mahasiswa dengan mata kuliah ulang (diambil lebih dari 1 kali)
             if (!empty($filters['mk_ulang']) && $filters['mk_ulang'] === 'yes') {
                 $query->whereExists(function($subquery) {
                     $subquery->select(DB::raw(1))
@@ -424,6 +406,16 @@ class StatusMahasiswaService
             }
         }
 
-        return $query->orderBy('mahasiswa.nim', 'asc')->paginate($perPage);
+        return $query->orderBy('mahasiswa.nim', 'asc');
+    }
+
+    public function getMahasiswaAll($search = null, $perPage = 10, $mode = 'simple', $filters = [])
+    {
+        return $this->getMahasiswaAllQuery($search, $mode, $filters)->paginate($perPage);
+    }
+
+    public function getMahasiswaAllExport($search = null, $mode = 'simple', $filters = [])
+    {
+        return $this->getMahasiswaAllQuery($search, $mode, $filters)->get();
     }
 }

@@ -32,15 +32,18 @@ Route::prefix('ews')->group(function () {
     // Dashboard Koor - Combined endpoint
     Route::get('dashboard', [KoorDashboardController::class, 'getDashboard']);
     Route::get('table-ringkasan-mahasiswa', [KoorDashboardController::class, 'getTableRingkasanMahasiswa']);
+    Route::get('table-ringkasan-mahasiswa/export', [KoorDashboardController::class, 'exportTableRingkasanMahasiswaCsv']);
 
     //General
     Route::get('mahasiswa/detail/{mahasiswaId}', [KoorStatusMahasiswaController::class, 'getDetailMahasiswa']);
     Route::get('mahasiswa/detail-angkatan/{tahunMasuk}', [KoorStatusMahasiswaController::class, 'getDetailAngkatan']);
     Route::get('mahasiswa/all', [KoorStatusMahasiswaController::class, 'getMahasiswaAll']);
+    Route::get('mahasiswa/all/export', [KoorStatusMahasiswaController::class, 'exportMahasiswaAllCsv']);
 
     //Status Mahasiswa
     Route::get('distribusi-status-ews', [EwsController::class, 'getDistribusiStatusEws']);
     Route::get('table-ringkasan-status', [KoorStatusMahasiswaController::class, 'getTableRingkasanStatus']);
+    Route::get('table-ringkasan-status/export', [KoorStatusMahasiswaController::class, 'exportTableRingkasanStatusCsv']);
 
     //capaian mahasiswa
     Route::get('tren-ips/all', [CapaianMahasiswaController::class, 'getTrenIPSAll']);
@@ -54,6 +57,7 @@ Route::prefix('ews')->group(function () {
 
     // Tindak Lanjut Prodi
     Route::get('surat-rekomitmen', [TindakLanjutProdiController::class, 'getSuratRekomitmen']);
+    Route::get('surat-rekomitmen/export', [TindakLanjutProdiController::class, 'exportSuratRekomitmenCsv']);
     Route::patch('surat-rekomitmen/{id_rekomitmen}', [TindakLanjutProdiController::class, 'updateStatusRekomitmen']);
 
     // Early Warning System
