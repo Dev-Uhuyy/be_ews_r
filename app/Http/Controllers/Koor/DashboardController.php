@@ -15,6 +15,27 @@ class DashboardController extends Controller
         $this->dashboardService = $dashboardService;
     }
 
+    /**
+     * Get complete dashboard data (status mahasiswa, rata IPK per angkatan, status kelulusan)
+     */
+    public function getDashboard()
+    {
+        try {
+            $dashboard = [
+                'status_mahasiswa' => $this->dashboardService->getStatusMahasiswa(),
+                'rata_ipk_per_angkatan' => $this->dashboardService->getRataIpkPerAngkatan(),
+                'status_kelulusan' => $this->dashboardService->getStatusKelulusan(),
+            ];
+
+            return $this->successResponse(
+                $dashboard,
+                'Dashboard data berhasil diambil'
+            );
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'getDashboard');
+        }
+    }
+
     public function getStatusMahasiswa()
     {
         try {
