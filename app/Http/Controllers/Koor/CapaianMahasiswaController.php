@@ -97,12 +97,11 @@ class CapaianMahasiswaController extends Controller
     }
 
     /**
-     * Get mahasiswa dengan MK gagal (nilai E terakhir)
+     * Get mahasiswa dengan MK gagal dari Top 10 MK Gagal
+     * Hanya menampilkan mahasiswa yang gagal di mata kuliah yang masuk top 10
      * Query params:
      *   ?search=keyword (search by nama)
      *   ?per_page=10 (items per page)
-     *   ?nama_matkul=keyword (filter by nama mata kuliah)
-     *   ?kode_kelompok=A11.4501 (filter by kode kelompok)
      */
     public function getMahasiswaMKGagal(Request $request)
     {
@@ -115,16 +114,7 @@ class CapaianMahasiswaController extends Controller
                 return $this->errorResponse('Parameter per_page harus berupa angka antara 1-100', 400);
             }
 
-            // Extract filters
-            $filters = [];
-            if ($request->has('nama_matkul')) {
-                $filters['nama_matkul'] = $request->query('nama_matkul');
-            }
-            if ($request->has('kode_kelompok')) {
-                $filters['kode_kelompok'] = $request->query('kode_kelompok');
-            }
-
-            $mahasiswaMKGagal = $this->capaianMahasiswaService->getMahasiswaMKGagal($search, $perPage, $filters);
+            $mahasiswaMKGagal = $this->capaianMahasiswaService->getMahasiswaMKGagal($search, $perPage);
 
             // Check if data is found
             if ($mahasiswaMKGagal->isEmpty()) {
