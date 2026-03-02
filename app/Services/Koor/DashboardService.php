@@ -67,10 +67,8 @@ class DashboardService
         ];
     }
 
-    public function getTableRingkasanMahasiswa($perPage = 10)
+    private function getTableRingkasanMahasiswaQuery()
     {
-        // Angkatan, jml mhs, aktif, cuti, mangkir, ipk rata2, tepat waktu, normal, perhatian, kritis
-        // Exclude mahasiswa yang sudah lulus dan DO
         return AkademikMahasiswa::select(
                     'akademik_mahasiswa.tahun_masuk',
                     DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
@@ -86,9 +84,18 @@ class DashboardService
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
                 ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
                 ->whereNotNull('akademik_mahasiswa.tahun_masuk')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")') // Exclude mahasiswa yang sudah lulus dan DO
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
                 ->groupBy('akademik_mahasiswa.tahun_masuk')
-                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
-                ->paginate($perPage);
+                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc');
+    }
+
+    public function getTableRingkasanMahasiswa($perPage = 10)
+    {
+        return $this->getTableRingkasanMahasiswaQuery()->paginate($perPage);
+    }
+
+    public function getTableRingkasanMahasiswaExport()
+    {
+        return $this->getTableRingkasanMahasiswaQuery()->get();
     }
 }

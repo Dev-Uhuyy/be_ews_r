@@ -111,4 +111,41 @@ class DashboardController extends Controller
             return $this->exceptionError($e, 'getTableRingkasanMahasiswa');
         }
     }
+
+    /**
+     * Export table ringkasan mahasiswa per angkatan ke XLSX
+     */
+    public function exportTableRingkasanMahasiswaCsv(Request $request)
+    {
+        try {
+            $tableRingkasan = $this->dashboardService->getTableRingkasanMahasiswaExport();
+
+            if ($tableRingkasan->isEmpty()) {
+                return $this->errorResponse('Tidak ditemukan data mahasiswa', 404);
+            }
+
+            $fileName = 'Ringkasan Mahasiswa ' . date('Y-m-d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+            
+            \Maatwebsite\Excel\Facades\Excel::store(
+                new \App\Exports\TableRingkasanMahasiswaExport($tableRingkasan), 
+                $filePath, 
+                'public'
+            );
+
+            return response()->json([
+                'meta' => [
+                    'status' => 'success',
+                    'message' => 'File export ringkasan mahasiswa berhasil digenerate',
+                    'timestamp' => now()->toIso8601String()
+                ],
+                'data' => [
+                    'url' => asset('storage/' . $filePath)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportTableRingkasanMahasiswaCsv');
+        }
+    }
 }

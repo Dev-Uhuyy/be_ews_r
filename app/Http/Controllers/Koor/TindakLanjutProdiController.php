@@ -16,6 +16,57 @@ class TindakLanjutProdiController extends Controller
     }
 
     /**
+     * Export data surat rekomitmen mahasiswa ke XLSX
+     */
+    public function exportSuratRekomitmenCsv(Request $request)
+    {
+        try {
+            $search = $request->query('search');
+            $tahunMasuk = $request->query('tahun_masuk');
+            $statusRekomitmen = $request->query('status_rekomitmen');
+
+            // Validasi tahun_masuk jika diberikan
+            if ($tahunMasuk !== null && (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100)) {
+                return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
+            }
+
+            // Validasi status_rekomitmen jika diberikan
+            if ($statusRekomitmen !== null && !in_array(strtolower($statusRekomitmen), ['diterima', 'ditolak', 'belum diverifikasi'])) {
+                return $this->errorResponse('Parameter status_rekomitmen harus berupa "diterima", "ditolak", atau "belum diverifikasi"', 400);
+            }
+
+            $suratRekomitmen = $this->tindakLanjutProdiService->getSuratRekomitmenExport($search, $tahunMasuk, $statusRekomitmen);
+
+            if ($suratRekomitmen->isEmpty()) {
+                return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
+            }
+
+            $fileName = 'Surat Rekomitmen ' . date('Y-m-d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+
+            \Maatwebsite\Excel\Facades\Excel::store(
+                new \App\Exports\SuratRekomitmenExport($suratRekomitmen), 
+                $filePath, 
+                'public'
+            );
+
+            return response()->json([
+                'meta' => [
+                    'status' => 'success',
+                    'message' => 'File export surat rekomitmen berhasil digenerate',
+                    'timestamp' => now()->toIso8601String()
+                ],
+                'data' => [
+                    'url' => asset('storage/' . $filePath)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportSuratRekomitmenCsv');
+        }
+    }
+
+    /**
      * Get data surat rekomitmen mahasiswa
      * Query params:
      *   ?search=keyword (search by id_tiket)

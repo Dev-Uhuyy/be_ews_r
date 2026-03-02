@@ -98,6 +98,43 @@ class StatusMahasiswaController extends Controller
     }
 
     /**
+     * Export table ringkasan status per angkatan ke XLSX
+     */
+    public function exportTableRingkasanStatusCsv(Request $request)
+    {
+        try {
+            $tableData = $this->statusMahasiswaService->getTableRingkasanStatusExport();
+
+            if ($tableData->isEmpty()) {
+                return $this->errorResponse('Tidak ditemukan data mahasiswa', 404);
+            }
+
+            $fileName = 'Ringkasan Status ' . date('Y-m-d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+
+            \Maatwebsite\Excel\Facades\Excel::store(
+                new \App\Exports\TableRingkasanStatusExport($tableData), 
+                $filePath, 
+                'public'
+            );
+
+            return response()->json([
+                'meta' => [
+                    'status' => 'success',
+                    'message' => 'File export ringkasan status berhasil digenerate',
+                    'timestamp' => now()->toIso8601String()
+                ],
+                'data' => [
+                    'url' => asset('storage/' . $filePath)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportTableRingkasanStatusCsv');
+        }
+    }
+
+    /**
      * Get all mahasiswa with complete details
      * Query params:
      *   ?search=keyword (search by name or NIM - works for both modes)
@@ -215,6 +252,61 @@ class StatusMahasiswaController extends Controller
             );
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'getMahasiswaAll');
+        }
+    }
+
+    /**
+     * Export data semua mahasiswa ke XLSX
+     */
+    public function exportMahasiswaAllCsv(Request $request)
+    {
+        try {
+            $search = $request->query('search', null);
+            $mode = $request->query('mode', 'detailed'); // default to detailed for export
+            
+            // Extract filters from request
+            $filters = [];
+            $filterFields = [
+                'status_mahasiswa', 'status_ews', 'status_kelulusan', 'tahun_masuk', 
+                'semester_aktif', 'mk_nasional', 'mk_fakultas', 'mk_prodi', 
+                'nilai_d_melebihi_batas', 'nilai_e', 'semester_1_3', 'ipk_rendah', 
+                'mk_ulang', 'sks_kurang'
+            ];
+            
+            foreach ($filterFields as $field) {
+                if ($request->has($field)) {
+                    $filters[$field] = $request->query($field);
+                }
+            }
+
+            $mahasiswaAll = $this->statusMahasiswaService->getMahasiswaAllExport($search, $mode, $filters);
+
+            if ($mahasiswaAll->isEmpty()) {
+                return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
+            }
+
+            $fileName = 'Data Mahasiswa ' . date('Y-m-d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+
+            \Maatwebsite\Excel\Facades\Excel::store(
+                new \App\Exports\MahasiswaAllExport($mahasiswaAll), 
+                $filePath, 
+                'public'
+            );
+
+            return response()->json([
+                'meta' => [
+                    'status' => 'success',
+                    'message' => 'File export mahasiswa berhasil digenerate',
+                    'timestamp' => now()->toIso8601String()
+                ],
+                'data' => [
+                    'url' => asset('storage/' . $filePath)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportMahasiswaAllCsv');
         }
     }
 }

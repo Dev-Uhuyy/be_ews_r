@@ -15,10 +15,8 @@ class TindakLanjutProdiService
      * @param int $perPage Items per page
      * @return \Illuminate\Pagination\LengthAwarePaginator
      */
-    public function getSuratRekomitmen($search = null, $tahunMasuk = null, $statusRekomitmen = null, $perPage = 10)
+    private function getSuratRekomitmenQuery($search = null, $tahunMasuk = null, $statusRekomitmen = null)
     {
-        // Ambil data mahasiswa dengan surat rekomitmen
-        // Hanya tampilkan yang sudah punya id_rekomitmen (sudah mengajukan rekomitmen)
         $query = EarlyWarningSystem::select(
                     'early_warning_system.id_rekomitmen as id_tiket',
                     'users.name as nama',
@@ -34,26 +32,32 @@ class TindakLanjutProdiService
                 ->leftJoin('dosen', 'akademik_mahasiswa.dosen_wali_id', '=', 'dosen.id')
                 ->leftJoin('users as dosen_users', 'dosen.user_id', '=', 'dosen_users.id')
                 ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-                ->whereNotNull('early_warning_system.id_rekomitmen'); // Hanya yang punya id_rekomitmen
+                ->whereNotNull('early_warning_system.id_rekomitmen');
 
-        // Search by id_tiket
         if ($search) {
             $query->where('early_warning_system.id_rekomitmen', 'LIKE', '%' . $search . '%');
         }
 
-        // Filter by tahun_masuk
         if ($tahunMasuk) {
             $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
         }
 
-        // Filter by status_tindak_lanjut (status_rekomitmen)
         if ($statusRekomitmen) {
             $query->where('early_warning_system.status_rekomitmen', $statusRekomitmen);
         }
 
         return $query->orderBy('early_warning_system.tanggal_pengajuan_rekomitmen', 'desc')
-                    ->orderBy('mahasiswa.nim', 'asc')
-                    ->paginate($perPage);
+                    ->orderBy('mahasiswa.nim', 'asc');
+    }
+
+    public function getSuratRekomitmen($search = null, $tahunMasuk = null, $statusRekomitmen = null, $perPage = 10)
+    {
+        return $this->getSuratRekomitmenQuery($search, $tahunMasuk, $statusRekomitmen)->paginate($perPage);
+    }
+
+    public function getSuratRekomitmenExport($search = null, $tahunMasuk = null, $statusRekomitmen = null)
+    {
+        return $this->getSuratRekomitmenQuery($search, $tahunMasuk, $statusRekomitmen)->get();
     }
 
     public function updateStatusRekomitmen($idRekomitmen, $status)
