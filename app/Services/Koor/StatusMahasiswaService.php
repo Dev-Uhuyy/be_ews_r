@@ -355,55 +355,54 @@ class StatusMahasiswaService
             });
         }
 
-        if ($mode === 'simple') {
-            if (!empty($filters['status_mahasiswa'])) {
-                $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [strtolower($filters['status_mahasiswa'])]);
-            }
-            if (!empty($filters['status_ews'])) {
-                $query->where('early_warning_system.status', $filters['status_ews']);
-            }
-            if (!empty($filters['status_kelulusan'])) {
-                $query->where('early_warning_system.status_kelulusan', $filters['status_kelulusan']);
-            }
-            if (!empty($filters['tahun_masuk'])) {
-                $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
-            }
-            if (!empty($filters['semester_aktif'])) {
-                $query->where('akademik_mahasiswa.semester_aktif', $filters['semester_aktif']);
-            }
-            if (!empty($filters['mk_nasional'])) {
-                $query->where('akademik_mahasiswa.mk_nasional', $filters['mk_nasional']);
-            }
-            if (!empty($filters['mk_fakultas'])) {
-                $query->where('akademik_mahasiswa.mk_fakultas', $filters['mk_fakultas']);
-            }
-            if (!empty($filters['mk_prodi'])) {
-                $query->where('akademik_mahasiswa.mk_prodi', $filters['mk_prodi']);
-            }
-            if (!empty($filters['nilai_d_melebihi_batas'])) {
-                $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', $filters['nilai_d_melebihi_batas']);
-            }
-            if (!empty($filters['nilai_e'])) {
-                $query->where('akademik_mahasiswa.nilai_e', $filters['nilai_e']);
-            }
-            if (!empty($filters['semester_1_3']) && $filters['semester_1_3'] === 'yes') {
-                $query->whereBetween('akademik_mahasiswa.semester_aktif', [1, 3]);
-            }
-            if (!empty($filters['ipk_rendah']) && $filters['ipk_rendah'] === 'yes') {
-                $query->where('akademik_mahasiswa.ipk', '<', 2);
-            }
-            if (!empty($filters['sks_kurang']) && $filters['sks_kurang'] === 'yes') {
-                $query->where('akademik_mahasiswa.sks_lulus', '<', 144);
-            }
-            if (!empty($filters['mk_ulang']) && $filters['mk_ulang'] === 'yes') {
-                $query->whereExists(function($subquery) {
-                    $subquery->select(DB::raw(1))
-                        ->from('khs_krs_mahasiswa')
-                        ->whereColumn('khs_krs_mahasiswa.mahasiswa_id', 'mahasiswa.id')
-                        ->groupBy('khs_krs_mahasiswa.mahasiswa_id', 'khs_krs_mahasiswa.matakuliah_id')
-                        ->havingRaw('COUNT(*) > 1');
-                });
-            }
+        // Apply additional filters
+        if (!empty($filters['status_mahasiswa'])) {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [strtolower($filters['status_mahasiswa'])]);
+        }
+        if (!empty($filters['status_ews'])) {
+            $query->where('early_warning_system.status', $filters['status_ews']);
+        }
+        if (!empty($filters['status_kelulusan'])) {
+            $query->where('early_warning_system.status_kelulusan', $filters['status_kelulusan']);
+        }
+        if (!empty($filters['tahun_masuk'])) {
+            $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
+        }
+        if (!empty($filters['semester_aktif'])) {
+            $query->where('akademik_mahasiswa.semester_aktif', $filters['semester_aktif']);
+        }
+        if (!empty($filters['mk_nasional'])) {
+            $query->where('akademik_mahasiswa.mk_nasional', $filters['mk_nasional']);
+        }
+        if (!empty($filters['mk_fakultas'])) {
+            $query->where('akademik_mahasiswa.mk_fakultas', $filters['mk_fakultas']);
+        }
+        if (!empty($filters['mk_prodi'])) {
+            $query->where('akademik_mahasiswa.mk_prodi', $filters['mk_prodi']);
+        }
+        if (!empty($filters['nilai_d_melebihi_batas'])) {
+            $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', $filters['nilai_d_melebihi_batas']);
+        }
+        if (!empty($filters['nilai_e'])) {
+            $query->where('akademik_mahasiswa.nilai_e', $filters['nilai_e']);
+        }
+        if (!empty($filters['semester_1_3']) && $filters['semester_1_3'] === 'yes') {
+            $query->whereBetween('akademik_mahasiswa.semester_aktif', [1, 3]);
+        }
+        if (!empty($filters['ipk_rendah']) && $filters['ipk_rendah'] === 'yes') {
+            $query->where('akademik_mahasiswa.ipk', '<', 2);
+        }
+        if (!empty($filters['sks_kurang']) && $filters['sks_kurang'] === 'yes') {
+            $query->where('akademik_mahasiswa.sks_lulus', '<', 144);
+        }
+        if (!empty($filters['mk_ulang']) && $filters['mk_ulang'] === 'yes') {
+            $query->whereExists(function($subquery) {
+                $subquery->select(DB::raw(1))
+                    ->from('khs_krs_mahasiswa')
+                    ->whereColumn('khs_krs_mahasiswa.mahasiswa_id', 'mahasiswa.id')
+                    ->groupBy('khs_krs_mahasiswa.mahasiswa_id', 'khs_krs_mahasiswa.matakuliah_id')
+                    ->havingRaw('COUNT(*) > 1');
+            });
         }
 
         return $query->orderBy('mahasiswa.nim', 'asc');

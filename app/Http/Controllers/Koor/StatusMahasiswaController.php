@@ -135,6 +135,76 @@ class StatusMahasiswaController extends Controller
     }
 
     /**
+     * Helper to validate and extract filters from request
+     */
+    private function validateAndExtractFilters(Request $request)
+    {
+        $filters = [];
+
+        // Validasi dan extract status_mahasiswa
+        if ($request->has('status_mahasiswa')) {
+            $statusMahasiswa = $request->query('status_mahasiswa');
+            $validStatusMahasiswa = ['aktif', 'cuti', 'mangkir', 'lulus', 'do'];
+            if (!in_array(strtolower($statusMahasiswa), $validStatusMahasiswa)) {
+                return ['error' => 'Parameter status_mahasiswa harus salah satu dari: aktif, cuti, mangkir, lulus, do'];
+            }
+            $filters['status_mahasiswa'] = $statusMahasiswa;
+        }
+
+        // Validasi dan extract status_ews
+        if ($request->has('status_ews')) {
+            $statusEws = $request->query('status_ews');
+            $validStatusEws = ['tepat_waktu', 'normal', 'perhatian', 'kritis'];
+            if (!in_array($statusEws, $validStatusEws)) {
+                return ['error' => 'Parameter status_ews harus salah satu dari: tepat_waktu, normal, perhatian, kritis'];
+            }
+            $filters['status_ews'] = $statusEws;
+        }
+
+        // Validasi dan extract status_kelulusan
+        if ($request->has('status_kelulusan')) {
+            $statusKelulusan = $request->query('status_kelulusan');
+            $validStatusKelulusan = ['eligible', 'noneligible'];
+            if (!in_array($statusKelulusan, $validStatusKelulusan)) {
+                return ['error' => 'Parameter status_kelulusan harus salah satu dari: eligible, noneligible'];
+            }
+            $filters['status_kelulusan'] = $statusKelulusan;
+        }
+
+        // Validasi dan extract tahun_masuk
+        if ($request->has('tahun_masuk')) {
+            $tahunMasuk = $request->query('tahun_masuk');
+            if (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100) {
+                return ['error' => 'Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)'];
+            }
+            $filters['tahun_masuk'] = $tahunMasuk;
+        }
+
+        // Validasi dan extract semester_aktif
+        if ($request->has('semester_aktif')) {
+            $semesterAktif = $request->query('semester_aktif');
+            if (!is_numeric($semesterAktif) || $semesterAktif < 1 || $semesterAktif > 14) {
+                return ['error' => 'Parameter semester_aktif harus berupa angka antara 1-14'];
+            }
+            $filters['semester_aktif'] = $semesterAktif;
+        }
+
+        // Validasi dan extract yes/no fields
+        $yesNoFields = ['mk_nasional', 'mk_fakultas', 'mk_prodi', 'nilai_d_melebihi_batas', 'nilai_e', 'semester_1_3', 'ipk_rendah', 'mk_ulang', 'sks_kurang'];
+        foreach ($yesNoFields as $field) {
+            if ($request->has($field)) {
+                $value = strtolower($request->query($field));
+                if (!in_array($value, ['yes', 'no'])) {
+                    return ['error' => "Parameter {$field} harus berupa 'yes' atau 'no'"];
+                }
+                $filters[$field] = $value;
+            }
+        }
+
+        return ['filters' => $filters];
+    }
+
+    /**
      * Get all mahasiswa with complete details
      * Query params:
      *   ?search=keyword (search by name or NIM - works for both modes)
@@ -176,68 +246,11 @@ class StatusMahasiswaController extends Controller
                 return $this->errorResponse('Parameter mode hanya boleh "simple" atau "detailed"', 400);
             }
 
-            // Extract filters
-            $filters = [];
-
-            // Validasi dan extract status_mahasiswa
-            if ($request->has('status_mahasiswa')) {
-                $statusMahasiswa = $request->query('status_mahasiswa');
-                $validStatusMahasiswa = ['aktif', 'cuti', 'mangkir', 'lulus', 'do'];
-                if (!in_array(strtolower($statusMahasiswa), $validStatusMahasiswa)) {
-                    return $this->errorResponse('Parameter status_mahasiswa harus salah satu dari: aktif, cuti, mangkir, lulus, do', 400);
-                }
-                $filters['status_mahasiswa'] = $statusMahasiswa;
+            $filtersResult = $this->validateAndExtractFilters($request);
+            if (isset($filtersResult['error'])) {
+                return $this->errorResponse($filtersResult['error'], 400);
             }
-
-            // Validasi dan extract status_ews
-            if ($request->has('status_ews')) {
-                $statusEws = $request->query('status_ews');
-                $validStatusEws = ['tepat_waktu', 'normal', 'perhatian', 'kritis'];
-                if (!in_array($statusEws, $validStatusEws)) {
-                    return $this->errorResponse('Parameter status_ews harus salah satu dari: tepat_waktu, normal, perhatian, kritis', 400);
-                }
-                $filters['status_ews'] = $statusEws;
-            }
-
-            // Validasi dan extract status_kelulusan
-            if ($request->has('status_kelulusan')) {
-                $statusKelulusan = $request->query('status_kelulusan');
-                $validStatusKelulusan = ['eligible', 'noneligible'];
-                if (!in_array($statusKelulusan, $validStatusKelulusan)) {
-                    return $this->errorResponse('Parameter status_kelulusan harus salah satu dari: eligible, noneligible', 400);
-                }
-                $filters['status_kelulusan'] = $statusKelulusan;
-            }
-
-            // Validasi dan extract tahun_masuk
-            if ($request->has('tahun_masuk')) {
-                $tahunMasuk = $request->query('tahun_masuk');
-                if (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100) {
-                    return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
-                }
-                $filters['tahun_masuk'] = $tahunMasuk;
-            }
-
-            // Validasi dan extract semester_aktif
-            if ($request->has('semester_aktif')) {
-                $semesterAktif = $request->query('semester_aktif');
-                if (!is_numeric($semesterAktif) || $semesterAktif < 1 || $semesterAktif > 14) {
-                    return $this->errorResponse('Parameter semester_aktif harus berupa angka antara 1-14', 400);
-                }
-                $filters['semester_aktif'] = $semesterAktif;
-            }
-
-            // Validasi dan extract yes/no fields
-            $yesNoFields = ['mk_nasional', 'mk_fakultas', 'mk_prodi', 'nilai_d_melebihi_batas', 'nilai_e', 'semester_1_3', 'ipk_rendah', 'mk_ulang', 'sks_kurang'];
-            foreach ($yesNoFields as $field) {
-                if ($request->has($field)) {
-                    $value = strtolower($request->query($field));
-                    if (!in_array($value, ['yes', 'no'])) {
-                        return $this->errorResponse("Parameter {$field} harus berupa 'yes' atau 'no'", 400);
-                    }
-                    $filters[$field] = $value;
-                }
-            }
+            $filters = $filtersResult['filters'];
 
             $mahasiswaAll = $this->statusMahasiswaService->getMahasiswaAll($search, $perPage, $mode, $filters);
 
@@ -264,20 +277,11 @@ class StatusMahasiswaController extends Controller
             $search = $request->query('search', null);
             $mode = $request->query('mode', 'detailed'); // default to detailed for export
             
-            // Extract filters from request
-            $filters = [];
-            $filterFields = [
-                'status_mahasiswa', 'status_ews', 'status_kelulusan', 'tahun_masuk', 
-                'semester_aktif', 'mk_nasional', 'mk_fakultas', 'mk_prodi', 
-                'nilai_d_melebihi_batas', 'nilai_e', 'semester_1_3', 'ipk_rendah', 
-                'mk_ulang', 'sks_kurang'
-            ];
-            
-            foreach ($filterFields as $field) {
-                if ($request->has($field)) {
-                    $filters[$field] = $request->query($field);
-                }
+            $filtersResult = $this->validateAndExtractFilters($request);
+            if (isset($filtersResult['error'])) {
+                return $this->errorResponse($filtersResult['error'], 400);
             }
+            $filters = $filtersResult['filters'];
 
             $mahasiswaAll = $this->statusMahasiswaService->getMahasiswaAllExport($search, $mode, $filters);
 
@@ -285,7 +289,37 @@ class StatusMahasiswaController extends Controller
                 return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
             }
 
+            // Custom filename logic based on params
             $fileName = 'Data Mahasiswa ' . date('Y-m-d') . '.xlsx';
+
+            if (($filters['ipk_rendah'] ?? null) === 'yes' && ($filters['semester_1_3'] ?? null) === 'yes') {
+                $fileName = 'Daftar Mahasiswa Beresiko Semester 1-3.xlsx';
+            } elseif (($filters['ipk_rendah'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa IPK di Bawah 2 Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (($filters['sks_kurang'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa SKS Kurang dari 144 Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (($filters['mk_ulang'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa Mengulang Mata Kuliah Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (($filters['mk_nasional'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa Mengulang Mata Kuliah Nasional Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (($filters['mk_fakultas'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa Mengulang Mata Kuliah Fakultas Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (($filters['mk_prodi'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa Mengulang Mata Kuliah Prodi Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (($filters['nilai_d_melebihi_batas'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa Nilai D Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (($filters['nilai_e'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa Nilai E Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (!empty($filters['status_mahasiswa'])) {
+                $fileName = 'Daftar Mahasiswa Status ' . ucfirst($filters['status_mahasiswa']) . '.xlsx';
+            } elseif (!empty($filters['status_ews'])) {
+                $fileName = 'Daftar Mahasiswa Status EWS ' . ucfirst($filters['status_ews']) . '.xlsx';
+            } elseif (!empty($filters['status_kelulusan']) && !empty($filters['tahun_masuk'])) {
+                $fileName = 'Daftar Mahasiswa ' . ucfirst($filters['status_kelulusan']) . ' Angkatan ' . $filters['tahun_masuk'] . '.xlsx';
+            } elseif (!empty($filters['status_kelulusan'])) {
+                $fileName = 'Daftar Mahasiswa Status Kelulusan ' . ucfirst($filters['status_kelulusan']) . '.xlsx';
+            }
+
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(

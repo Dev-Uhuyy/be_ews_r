@@ -47,6 +47,50 @@ class CapaianMahasiswaController extends Controller
     }
 
     /**
+     * Export tren IPS all mahasiswa ke XLSX
+     */
+    public function exportTrenIPSAll(Request $request)
+    {
+        try {
+            $tahunMasuk = $request->query('tahun_masuk', null);
+
+            // Validasi tahun_masuk jika diberikan
+            if ($tahunMasuk !== null && (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100)) {
+                return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
+            }
+
+            $trenIps = $this->capaianMahasiswaService->getTrenIPSAll($tahunMasuk);
+
+            if (empty($trenIps)) {
+                return $this->errorResponse('Tidak ditemukan data untuk diexport', 404);
+            }
+
+            $fileName = 'Capaian Mahasiswa ' . ($tahunMasuk ? 'Angkatan ' . $tahunMasuk . ' ' : '') . date('Y-m-d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+
+            \Maatwebsite\Excel\Facades\Excel::store(
+                new \App\Exports\TrenIPSAllExport($trenIps), 
+                $filePath, 
+                'public'
+            );
+
+            return response()->json([
+                'meta' => [
+                    'status' => 'success',
+                    'message' => 'File export tren IPS berhasil digenerate',
+                    'timestamp' => now()->toIso8601String()
+                ],
+                'data' => [
+                    'url' => asset('storage/' . $filePath)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportTrenIPSAll');
+        }
+    }
+
+    /**
      * Get capaian mahasiswa (rata-rata IPS, mahasiswa naik/turun IP)
      * Query params:
      *   ?tahun_masuk=2023 (optional - filter by angkatan)
@@ -127,6 +171,45 @@ class CapaianMahasiswaController extends Controller
             );
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'getMahasiswaMKGagal');
+        }
+    }
+
+    /**
+     * Export data mahasiswa dengan MK gagal ke XLSX
+     */
+    public function exportMahasiswaMKGagal(Request $request)
+    {
+        try {
+            $search = $request->query('search', null);
+
+            $mahasiswaMKGagal = $this->capaianMahasiswaService->getMahasiswaMKGagalExport($search);
+
+            if ($mahasiswaMKGagal->isEmpty()) {
+                return $this->errorResponse('Tidak ditemukan data untuk diexport', 404);
+            }
+
+            $fileName = 'Daftar Mahasiswa MK Gagal ' . date('Y-m-d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+
+            \Maatwebsite\Excel\Facades\Excel::store(
+                new \App\Exports\MahasiswaMKGagalExport($mahasiswaMKGagal), 
+                $filePath, 
+                'public'
+            );
+
+            return response()->json([
+                'meta' => [
+                    'status' => 'success',
+                    'message' => 'File export mahasiswa MK gagal berhasil digenerate',
+                    'timestamp' => now()->toIso8601String()
+                ],
+                'data' => [
+                    'url' => asset('storage/' . $filePath)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportMahasiswaMKGagal');
         }
     }
 }

@@ -47,9 +47,11 @@ Route::prefix('ews')->group(function () {
 
     //capaian mahasiswa
     Route::get('tren-ips/all', [CapaianMahasiswaController::class, 'getTrenIPSAll']);
+    Route::get('tren-ips/all/export', [CapaianMahasiswaController::class, 'exportTrenIPSAll']);
     Route::get('card-capaian', [CapaianMahasiswaController::class, 'getCardCapaianMahasiswa']);
     Route::get('top-mk-gagal', [CapaianMahasiswaController::class, 'getTopTenMKGagalAll']);
     Route::get('mahasiswa/mk-gagal', [CapaianMahasiswaController::class, 'getMahasiswaMKGagal']);
+    Route::get('mahasiswa/mk-gagal/export', [CapaianMahasiswaController::class, 'exportMahasiswaMKGagal']);
 
     //statistik kelulusan
     Route::get('statistik-kelulusan', [KoorStatistikKelulusanController::class, 'getCardStatistikKelulusan']);
