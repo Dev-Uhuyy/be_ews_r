@@ -7,7 +7,11 @@ use App\Services\Mahasiswa\TindakLanjutService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class MhsTindakLanjutController extends Controller
+/**
+ * @tags Mahasiswa - Tindak Lanjut
+ */
+
+class TindakLanjutController extends Controller
 {
     protected $tindakLanjutService;
 
