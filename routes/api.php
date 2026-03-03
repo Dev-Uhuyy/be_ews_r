@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Koor\DashboardController as KoorDashboardController;
@@ -12,9 +11,10 @@ use App\Http\Controllers\Koor\EwsController;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
 use App\Http\Controllers\Dosen\StatusMahasiswaController as DosenStatusMahasiswaController;
 use App\Http\Controllers\Dosen\StatistikKelulusanController as DosenStatistikKelulusanController;
-use App\Http\Controllers\Mahasiswa\DashboardController;
+use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 use App\Http\Controllers\Mahasiswa\KhsKrsController;
 use App\Http\Controllers\Mahasiswa\PeringatanController;
+use App\Http\Controllers\Mahasiswa\TindakLanjutController as MahasiswaTindakLanjutController;
 
 // Public route - Login
 Route::controller(AuthController::class)->group(function () {
@@ -53,14 +53,17 @@ Route::prefix('ews')->group(function () {
     Route::get('mahasiswa/mk-gagal', [CapaianMahasiswaController::class, 'getMahasiswaMKGagal']);
     Route::get('mahasiswa/mk-gagal/export', [CapaianMahasiswaController::class, 'exportMahasiswaMKGagal']);
 
-    //statistik kelulusan
+    // statistik kelulusan
     Route::get('statistik-kelulusan', [KoorStatistikKelulusanController::class, 'getCardStatistikKelulusan']);
     Route::get('table-statistik-kelulusan', [KoorStatistikKelulusanController::class, 'getTableStatistikKelulusan']);
 
-    // Tindak Lanjut Prodi
-    Route::get('surat-rekomitmen', [TindakLanjutProdiController::class, 'getSuratRekomitmen']);
-    Route::get('surat-rekomitmen/export', [TindakLanjutProdiController::class, 'exportSuratRekomitmenCsv']);
-    Route::patch('surat-rekomitmen/{id_rekomitmen}', [TindakLanjutProdiController::class, 'updateStatusRekomitmen']);
+    // Tindak Lanjut Prodi (Consolidated)
+    Route::prefix('tindak-lanjut')->group(function () {
+        Route::get('cards', [TindakLanjutProdiController::class, 'getCardSummary']);
+        Route::get('/', [TindakLanjutProdiController::class, 'getTindakLanjut']);
+        Route::get('export', [TindakLanjutProdiController::class, 'exportCsv']);
+        Route::patch('{id}', [TindakLanjutProdiController::class, 'updateStatus']);
+    });
 
     // Early Warning System
     Route::post('mahasiswa/{mahasiswaId}/recalculate-status', [EwsController::class, 'recalculateMahasiswaStatus']);
@@ -88,14 +91,22 @@ Route::middleware(['auth:sanctum', 'role:dosen'])->prefix('dosen')->group(functi
 
 Route::middleware(['auth:sanctum', 'role:mahasiswa'])->prefix('mahasiswa')->group(function () {
     // Dashboard Mahasiswa
-    Route::get('dashboard', [DashboardController::class, 'getDashboardMahasiswa']);
+    Route::get('dashboard', [MahasiswaDashboardController::class, 'getDashboardMahasiswa']);
 
     // Status Akademik
-    Route::get('card-status-akademik', [DashboardController::class, 'getCardStatusAkademik']);
+    Route::get('card-status-akademik', [MahasiswaDashboardController::class, 'getCardStatusAkademik']);
     Route::get('khs-krs', [KhsKrsController::class, 'getKhsKrsMahasiswa']);
     Route::get('khs-krs/{khsKrsId}', [KhsKrsController::class, 'getDetailKhsKrs']);
 
     // peringatan
     Route::get('peringatan', [PeringatanController::class, 'getPeringatan']);
+
+    // Tindak Lanjut
+    Route::prefix('tindak-lanjut')->group(function () {
+        Route::get('cards', [MahasiswaTindakLanjutController::class, 'getCardSummary']);
+        Route::get('/', [MahasiswaTindakLanjutController::class, 'index']);
+        Route::post('/', [MahasiswaTindakLanjutController::class, 'store']);
+        Route::get('template/{kategori}', [MahasiswaTindakLanjutController::class, 'getTemplate']);
+    });
 });
 });

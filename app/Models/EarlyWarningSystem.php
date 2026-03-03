@@ -12,22 +12,18 @@ class EarlyWarningSystem extends Model
         'akademik_mahasiswa_id',
         'status',
         'status_kelulusan',
-        'status_rekomitmen',
-        'id_rekomitmen',
-        'link_rekomitmen',
-        'tanggal_pengajuan_rekomitmen',
         'SPS1',
         'SPS2',
         'SPS3',
     ];
 
-    protected $casts = [
-        'tanggal_pengajuan_rekomitmen' => 'date',
-    ];
-
-
     public function akademik_mahasiswa()
     {
         return $this->belongsTo(AkademikMahasiswa::class,'akademik_mahasiswa_id', 'id');
+    }
+
+    public function tindak_lanjuts()
+    {
+        return $this->hasMany(TindakLanjut::class, 'id_ews');
     }
 }

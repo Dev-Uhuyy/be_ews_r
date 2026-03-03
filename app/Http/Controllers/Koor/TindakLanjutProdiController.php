@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Koor;
 use App\Services\Koor\TindakLanjutProdiService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Exports\TindakLanjutExport;
 
 /**
  * @tags Koor - Tindak Lanjut Prodi
@@ -19,32 +20,36 @@ class TindakLanjutProdiController extends Controller
     }
 
     /**
-     * Export data surat rekomitmen mahasiswa ke XLSX
+     * Get data kartu statistik (dashboard cards)
      */
-    public function exportSuratRekomitmenCsv(Request $request)
+    public function getCardSummary()
+    {
+        try {
+            $summary = $this->tindakLanjutProdiService->getCardSummary();
+            return $this->successResponse($summary, 'Data statistik tindak lanjut berhasil diambil');
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'getCardSummary');
+        }
+    }
+
+    /**
+     * Export data tindak lanjut mahasiswa ke XLSX
+     */
+    public function exportCsv(Request $request)
     {
         try {
             $search = $request->query('search');
             $tahunMasuk = $request->query('tahun_masuk');
-            $statusRekomitmen = $request->query('status_rekomitmen');
+            $category = $request->query('kategori');
+            $status = $request->query('status');
 
-            // Validasi tahun_masuk jika diberikan
-            if ($tahunMasuk !== null && (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100)) {
-                return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
-            }
+            $data = $this->tindakLanjutProdiService->getTindakLanjutExport($search, $tahunMasuk, $category, $status);
 
-            // Validasi status_rekomitmen jika diberikan
-            if ($statusRekomitmen !== null && !in_array(strtolower($statusRekomitmen), ['diterima', 'ditolak', 'belum diverifikasi'])) {
-                return $this->errorResponse('Parameter status_rekomitmen harus berupa "diterima", "ditolak", atau "belum diverifikasi"', 400);
-            }
-
-            $suratRekomitmen = $this->tindakLanjutProdiService->getSuratRekomitmenExport($search, $tahunMasuk, $statusRekomitmen);
-
-            if ($suratRekomitmen->isEmpty()) {
+            if ($data->isEmpty()) {
                 return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
             }
 
-            $fileName = 'Surat Rekomitmen ' . date('Y-m-d') . '.xlsx';
+            $fileName = 'Tindak Lanjut ' . date('Y-m-d') . '.xlsx';
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
@@ -56,7 +61,7 @@ class TindakLanjutProdiController extends Controller
             return response()->json([
                 'meta' => [
                     'status' => 'success',
-                    'message' => 'File export surat rekomitmen berhasil digenerate',
+                    'message' => 'File export tindak lanjut berhasil digenerate',
                     'timestamp' => now()->toIso8601String()
                 ],
                 'data' => [
@@ -65,87 +70,68 @@ class TindakLanjutProdiController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            return $this->exceptionError($e, 'exportSuratRekomitmenCsv');
+            return $this->exceptionError($e, 'exportCsv');
         }
     }
 
     /**
-     * Get data surat rekomitmen mahasiswa
+     * Get data tindak lanjut mahasiswa (tabel)
      * Query params:
-     *   ?search=keyword (search by id_tiket)
-     *   ?tahun_masuk=2023 (optional - filter by angkatan)
-     *   ?status_rekomitmen=diterima|ditolak|belum diverifikasi (optional - filter by status tindak lanjut)
-     *   ?per_page=10 (items per page)
-     *
-     * Returns: id_tiket, nama, nim, tanggal_pengajuan, dosen_wali, status_tindak_lanjut, link_rekomitmen
+     *   ?search=keyword (search by nama/nim)
+     *   ?tahun_masuk=2023 (optional)
+     *   ?kategori=rekomitmen|pindah_prodi (optional)
+     *   ?status=diterima|ditolak|belum diverifikasi (optional)
+     *   ?per_page=10
      */
-    public function getSuratRekomitmen(Request $request)
+    public function getTindakLanjut(Request $request)
     {
         try {
             $search = $request->query('search');
             $tahunMasuk = $request->query('tahun_masuk');
-            $statusRekomitmen = $request->query('status_rekomitmen');
+            $category = $request->query('kategori');
+            $status = $request->query('status');
             $perPage = $request->query('per_page', 10);
 
-            // Validasi tahun_masuk jika diberikan
-            if ($tahunMasuk !== null && (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100)) {
-                return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
+            // Validasi kategori
+            if ($category !== null && !in_array(strtolower($category), ['rekomitmen', 'pindah_prodi'])) {
+                return $this->errorResponse('Parameter kategori harus berupa "rekomitmen" atau "pindah_prodi"', 400);
             }
 
-            // Validasi status_rekomitmen jika diberikan
-            if ($statusRekomitmen !== null && !in_array(strtolower($statusRekomitmen), ['diterima', 'ditolak', 'belum diverifikasi'])) {
-                return $this->errorResponse('Parameter status_rekomitmen harus berupa "diterima", "ditolak", atau "belum diverifikasi"', 400);
-            }
-
-            // Validasi per_page
-            if (!is_numeric($perPage) || $perPage < 1 || $perPage > 100) {
-                return $this->errorResponse('Parameter per_page harus berupa angka antara 1-100', 400);
-            }
-
-            $suratRekomitmen = $this->tindakLanjutProdiService->getSuratRekomitmen($search, $tahunMasuk, $statusRekomitmen, $perPage);
-
-            // Check if data is found
-            if ($suratRekomitmen->isEmpty()) {
-                return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
-            }
+            $data = $this->tindakLanjutProdiService->getTindakLanjutData($search, $tahunMasuk, $category, $status, $perPage);
 
             return $this->paginationResponse(
-                $suratRekomitmen,
-                'Data surat rekomitmen tindak lanjut prodi berhasil diambil'
+                $data,
+                'Data tindak lanjut prodi berhasil diambil'
             );
         } catch (\Exception $e) {
-            return $this->exceptionError($e, 'getSuratRekomitmen');
+            return $this->exceptionError($e, 'getTindakLanjut');
         }
     }
 
     /**
-     * Update status rekomitmen mahasiswa
-     * Path params: {id_rekomitmen}
-     * Body: {"status_rekomitmen": "diterima|ditolak"}
+     * Update status tindak lanjut mahasiswa
      */
-    public function updateStatusRekomitmen(Request $request, $id_rekomitmen)
+    public function updateStatus(Request $request, $id)
     {
         try {
-            $status = $request->input('status_rekomitmen');
+            $status = $request->input('status');
 
-            // Validasi status_rekomitmen ada
             if (!$status) {
-                return $this->errorResponse('Parameter status_rekomitmen wajib diisi', 400);
+                return $this->errorResponse('Parameter status wajib diisi', 400);
             }
 
-            // Validasi nilai status_rekomitmen
             if (!in_array(strtolower($status), ['diterima', 'ditolak'])) {
-                return $this->errorResponse('Parameter status_rekomitmen harus berupa "diterima" atau "ditolak"', 400);
+                return $this->errorResponse('Parameter status harus berupa "diterima" atau "ditolak"', 400);
             }
 
-            $result = $this->tindakLanjutProdiService->updateStatusRekomitmen($id_rekomitmen, $status);
+            $result = $this->tindakLanjutProdiService->updateStatus($id, $status);
             if ($result['success']) {
-                return $this->successResponse(null, 'Status rekomitmen berhasil diperbarui');
+                return $this->successResponse($result['data'], $result['message']);
             } else {
                 return $this->errorResponse($result['message'], 404);
             }
         } catch (\Exception $e) {
-            return $this->exceptionError($e, 'updateStatusRekomitmen');
+            return $this->exceptionError($e, 'updateStatus');
         }
     }
 }

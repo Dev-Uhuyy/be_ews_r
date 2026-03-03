@@ -2,75 +2,113 @@
 
 namespace App\Services\Koor;
 
-use App\Models\EarlyWarningSystem;
 use Illuminate\Support\Facades\DB;
 
 class TindakLanjutProdiService
 {
     /**
-     * Get data surat rekomitmen mahasiswa
-     * @param string|null $search Search by id_rekomitmen
+     * Get data tindak lanjut mahasiswa
+     * @param string|null $search Search by Nama/NIM
      * @param int|null $tahunMasuk Filter by angkatan
-     * @param string|null $statusRekomitmen Filter by status_rekomitmen (yes/no)
-     * @param int $perPage Items per page
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * @param string|null $category Filter by category (rekomitmen/pindah_prodi)
+     * @param string|null $status Filter by status
+     * @return \Illuminate\Database\Query\Builder
      */
-    private function getSuratRekomitmenQuery($search = null, $tahunMasuk = null, $statusRekomitmen = null)
+    private function getTindakLanjutQuery($search = null, $tahunMasuk = null, $category = null, $status = null)
     {
-        $query = EarlyWarningSystem::select(
-                    'early_warning_system.id_rekomitmen as id_tiket',
+        $query = DB::table('tindak_lanjuts')
+                ->select(
+                    'tindak_lanjuts.id',
                     'users.name as nama',
                     'mahasiswa.nim',
-                    'early_warning_system.tanggal_pengajuan_rekomitmen as tanggal_pengajuan',
+                    'tindak_lanjuts.tanggal_pengajuan',
                     'dosen_users.name as dosen_wali',
-                    'early_warning_system.status_rekomitmen as status_tindak_lanjut',
-                    'early_warning_system.link_rekomitmen'
+                    'tindak_lanjuts.status as status_tindak_lanjut',
+                    'tindak_lanjuts.link',
+                    'tindak_lanjuts.kategori',
+                    'tindak_lanjuts.catatan'
                 )
+                ->join('early_warning_system', 'tindak_lanjuts.id_ews', '=', 'early_warning_system.id')
                 ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
                 ->join('users', 'mahasiswa.user_id', '=', 'users.id')
                 ->leftJoin('dosen', 'akademik_mahasiswa.dosen_wali_id', '=', 'dosen.id')
                 ->leftJoin('users as dosen_users', 'dosen.user_id', '=', 'dosen_users.id')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-                ->whereNotNull('early_warning_system.id_rekomitmen');
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
         if ($search) {
-            $query->where('early_warning_system.id_rekomitmen', 'LIKE', '%' . $search . '%');
+            $query->where(function($q) use ($search) {
+                $q->where('users.name', 'LIKE', '%' . $search . '%')
+                  ->orWhere('mahasiswa.nim', 'LIKE', '%' . $search . '%');
+            });
         }
 
         if ($tahunMasuk) {
             $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
         }
 
-        if ($statusRekomitmen) {
-            $query->where('early_warning_system.status_rekomitmen', $statusRekomitmen);
+        if ($category) {
+            $query->where('tindak_lanjuts.kategori', $category);
         }
 
-        return $query->orderBy('early_warning_system.tanggal_pengajuan_rekomitmen', 'desc')
+        if ($status) {
+            $query->where('tindak_lanjuts.status', $status);
+        }
+
+        return $query->orderBy('tindak_lanjuts.tanggal_pengajuan', 'desc')
                     ->orderBy('mahasiswa.nim', 'asc');
     }
 
-    public function getSuratRekomitmen($search = null, $tahunMasuk = null, $statusRekomitmen = null, $perPage = 10)
+    public function getTindakLanjutData($search = null, $tahunMasuk = null, $category = null, $status = null, $perPage = 10)
     {
-        return $this->getSuratRekomitmenQuery($search, $tahunMasuk, $statusRekomitmen)->paginate($perPage);
+        return $this->getTindakLanjutQuery($search, $tahunMasuk, $category, $status)->paginate($perPage);
     }
 
-    public function getSuratRekomitmenExport($search = null, $tahunMasuk = null, $statusRekomitmen = null)
+    public function getTindakLanjutExport($search = null, $tahunMasuk = null, $category = null, $status = null)
     {
-        return $this->getSuratRekomitmenQuery($search, $tahunMasuk, $statusRekomitmen)->get();
+        return $this->getTindakLanjutQuery($search, $tahunMasuk, $category, $status)->get();
     }
 
-    public function updateStatusRekomitmen($idRekomitmen, $status)
+    public function getCardSummary()
     {
-        // Update status rekomitmen
-        $rekomitmen = EarlyWarningSystem::where('id_rekomitmen', $idRekomitmen)->first();
+        $baseQuery = DB::table('tindak_lanjuts')
+            ->join('early_warning_system', 'tindak_lanjuts.id_ews', '=', 'early_warning_system.id')
+            ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
-        if (!$rekomitmen) {
-            return ['success' => false, 'message' => 'Rekomitmen tidak ditemukan'];
+        return [
+            'total_rekomitmen' => (clone $baseQuery)->where('tindak_lanjuts.kategori', 'rekomitmen')->count(),
+            'total_pindah_prodi' => (clone $baseQuery)->where('tindak_lanjuts.kategori', 'pindah_prodi')->count(),
+            'dalam_proses' => (clone $baseQuery)->where('tindak_lanjuts.status', 'belum_diverifikasi')->count(),
+            'selesai' => (clone $baseQuery)->where('tindak_lanjuts.status', 'diterima')->count(),
+        ];
+    }
+
+    public function updateStatus($id, $status)
+    {
+        $affected = DB::table('tindak_lanjuts')
+            ->where('id', $id)
+            ->update([
+                'status' => $status,
+                'updated_at' => now()
+            ]);
+
+        if ($affected === 0) {
+            // Check if record exists
+            $exists = DB::table('tindak_lanjuts')->where('id', $id)->exists();
+            if (!$exists) {
+                return ['success' => false, 'message' => 'Data tidak ditemukan'];
+            }
+            // If exists but affected is 0, it means the status was already the same
         }
-        $rekomitmen->status_rekomitmen = $status;
-        $rekomitmen->save();
 
-        return ['success' => true, 'message' => 'Status rekomitmen berhasil diperbarui'];
+        $updatedData = DB::table('tindak_lanjuts')->where('id', $id)->first();
+
+        return [
+            'success' => true,
+            'message' => 'Status berhasil diperbarui',
+            'data' => $updatedData
+        ];
     }
 }
