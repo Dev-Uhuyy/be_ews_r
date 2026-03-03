@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Services\Dosen\StatusMahasiswaService;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Dosen - Status Mahasiswa
+ */
 class StatusMahasiswaController extends Controller
 {
     protected $statusMahasiswaService;

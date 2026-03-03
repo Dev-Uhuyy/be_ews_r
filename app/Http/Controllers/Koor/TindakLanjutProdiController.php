@@ -6,6 +6,9 @@ use App\Services\Koor\TindakLanjutProdiService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Koor - Tindak Lanjut Prodi
+ */
 class TindakLanjutProdiController extends Controller
 {
     protected $tindakLanjutProdiService;
@@ -45,8 +48,8 @@ class TindakLanjutProdiController extends Controller
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\SuratRekomitmenExport($suratRekomitmen), 
-                $filePath, 
+                new \App\Exports\SuratRekomitmenExport($suratRekomitmen),
+                $filePath,
                 'public'
             );
 

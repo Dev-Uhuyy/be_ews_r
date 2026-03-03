@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Http\Controllers\Controller;
 use App\Services\Mahasiswa\DashboardService;
 
+/**
+ * @tags Mahasiswa - Dashboard
+ */
 class DashboardController extends Controller
 {
     protected $dashboardService;
