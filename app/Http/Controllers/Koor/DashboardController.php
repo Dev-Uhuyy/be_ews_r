@@ -126,10 +126,10 @@ class DashboardController extends Controller
 
             $fileName = 'Ringkasan Mahasiswa ' . date('Y-m-d') . '.xlsx';
             $filePath = 'exports/' . $fileName;
-            
+
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TableRingkasanMahasiswaExport($tableRingkasan), 
-                $filePath, 
+                new \App\Exports\TableRingkasanMahasiswaExport($tableRingkasan),
+                $filePath,
                 'public'
             );
 

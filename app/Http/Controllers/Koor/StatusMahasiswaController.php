@@ -113,8 +113,8 @@ class StatusMahasiswaController extends Controller
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TableRingkasanStatusExport($tableData), 
-                $filePath, 
+                new \App\Exports\TableRingkasanStatusExport($tableData),
+                $filePath,
                 'public'
             );
 
@@ -276,7 +276,7 @@ class StatusMahasiswaController extends Controller
         try {
             $search = $request->query('search', null);
             $mode = $request->query('mode', 'detailed'); // default to detailed for export
-            
+
             $filtersResult = $this->validateAndExtractFilters($request);
             if (isset($filtersResult['error'])) {
                 return $this->errorResponse($filtersResult['error'], 400);
@@ -323,8 +323,8 @@ class StatusMahasiswaController extends Controller
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\MahasiswaAllExport($mahasiswaAll), 
-                $filePath, 
+                new \App\Exports\MahasiswaAllExport($mahasiswaAll),
+                $filePath,
                 'public'
             );
 
