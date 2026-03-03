@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Services\Mahasiswa\KhsKrsService;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Mahasiswa - KHS/KRS
+ */
 class KhsKrsController extends Controller
 {
     protected $khsKrsService;

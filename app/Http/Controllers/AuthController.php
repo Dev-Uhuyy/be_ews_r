@@ -26,11 +26,39 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * @tags Auth
+ */
 class AuthController extends Controller
 {
     /**
-     * Login method
-     * POST api/v1/login
+     * Login
+     *
+     * **🎉 Auto Token Injection - Seperti Postman!**
+     *
+     * Setelah login berhasil:
+     * 1. Token otomatis tersimpan
+     * 2. Token otomatis di-inject ke SEMUA request berikutnya
+     * 3. **TIDAK PERLU** klik tombol "Authorize" 🔓
+     * 4. **TIDAK PERLU** copy-paste token manual
+     * 5. Langsung bisa test endpoint lain! 🚀
+     *
+     * **How it works:**
+     * ```javascript
+     * // Mirip Postman post-response script:
+     * var res = pm.response.json();
+     * pm.environment.set('token', res.data.access_token);
+     *
+     * // Otomatis inject ke semua request:
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * **Console Commands:**
+     * - `getToken()` - Lihat token yang tersimpan
+     * - `clearToken()` - Hapus token (logout)
+     *
+     * @tags Auth
+     * @unauthenticated
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse

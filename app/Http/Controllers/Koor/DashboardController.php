@@ -6,6 +6,9 @@ use App\Services\Koor\DashboardService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Koor - Dashboard
+ */
 class DashboardController extends Controller
 {
     protected $dashboardService;
@@ -16,7 +19,8 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get complete dashboard data (status mahasiswa, rata IPK per angkatan, status kelulusan)
+     * Get Dashboard Koordinator
+     * @tags Koor - Dashboard
      */
     public function getDashboard()
     {

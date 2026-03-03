@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Services\Dosen\DashboardService;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Dosen - Dashboard
+ */
 class DashboardController extends Controller
 {
     protected $dashboardService;

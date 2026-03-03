@@ -6,6 +6,9 @@ use App\Services\Koor\StatusMahasiswaService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Koor - Status Mahasiswa
+ */
 class StatusMahasiswaController extends Controller
 {
     protected $statusMahasiswaService;

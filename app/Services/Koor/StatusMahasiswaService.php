@@ -18,7 +18,7 @@ class StatusMahasiswaService
                     'mahasiswa.id as mahasiswa_id',
                     'mahasiswa.nim',
                     'users.name as nama_lengkap',
-                    'dosen_users.name as nama_dosen_wali',
+                    DB::raw("CONCAT(COALESCE(CONCAT(dosen.gelar_depan, ' '), ''), dosen_users.name, COALESCE(CONCAT(' ', dosen.gelar_belakang), '')) as nama_dosen_wali"),
                     //'mahasiswa.status_mahasiswa',
                     'akademik_mahasiswa.semester_aktif',
                     'akademik_mahasiswa.tahun_masuk',
@@ -49,6 +49,48 @@ class StatusMahasiswaService
         $totalMahasiswa = $query->count();
 
         $mahasiswaList = $query->orderBy('mahasiswa.nim', 'asc')->paginate($perPage);
+
+        // Tambahkan informasi detail nilai D dan E untuk setiap mahasiswa
+        $mahasiswaList->getCollection()->transform(function ($mahasiswa) {
+            // Hitung nilai D dan E dari KHS (nilai TERAKHIR per mata kuliah)
+            $khsRecords = DB::table('khs_krs_mahasiswa as khs1')
+                ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
+                ->whereIn('khs1.id', function($query) use ($mahasiswa) {
+                    $query->select(DB::raw('MAX(id)'))
+                        ->from('khs_krs_mahasiswa as khs2')
+                        ->where('khs2.mahasiswa_id', $mahasiswa->mahasiswa_id)
+                        ->groupBy('khs2.matakuliah_id');
+                })
+                ->where('khs1.mahasiswa_id', $mahasiswa->mahasiswa_id)
+                ->whereIn('khs1.nilai_akhir_huruf', ['D', 'E'])
+                ->select(
+                    'khs1.nilai_akhir_huruf',
+                    'mata_kuliahs.sks'
+                )
+                ->get();
+
+            $jumlahNilaiD = 0;
+            $sksNilaiD = 0;
+            $jumlahNilaiE = 0;
+            $sksNilaiE = 0;
+
+            foreach ($khsRecords as $khs) {
+                if ($khs->nilai_akhir_huruf === 'D') {
+                    $jumlahNilaiD++;
+                    $sksNilaiD += $khs->sks;
+                } elseif ($khs->nilai_akhir_huruf === 'E') {
+                    $jumlahNilaiE++;
+                    $sksNilaiE += $khs->sks;
+                }
+            }
+
+            $mahasiswa->jumlah_nilai_d = $jumlahNilaiD;
+            $mahasiswa->sks_nilai_d = $sksNilaiD;
+            $mahasiswa->jumlah_nilai_e = $jumlahNilaiE;
+            $mahasiswa->sks_nilai_e = $sksNilaiE;
+
+            return $mahasiswa;
+        });
 
         // Hitung rata-rata IPS per semester untuk angkatan ini
         $rataIpsPerSemester = [];
@@ -214,7 +256,7 @@ class StatusMahasiswaService
             'status_mahasiswa' => $mahasiswa->status_mahasiswa ?? null,
             'dosen_wali' => [
                 'id' => $akademikMhs->dosen_wali->id ?? null,
-                'nama' => $akademikMhs->dosen_wali->user->name ?? null,
+                'nama' => $akademikMhs->dosen_wali->nama_lengkap ?? null,
             ],
             'akademik' => [
                 'id' => $akademikMhs->id ?? null,
@@ -312,7 +354,7 @@ class StatusMahasiswaService
                         'mahasiswa.id as mahasiswa_id',
                         'mahasiswa.nim',
                         'users.name as nama_lengkap',
-                        'dosen_users.name as nama_dosen_wali'
+                        DB::raw("CONCAT(COALESCE(CONCAT(dosen.gelar_depan, ' '), ''), dosen_users.name, COALESCE(CONCAT(' ', dosen.gelar_belakang), '')) as nama_dosen_wali")
                     )
                     ->join('akademik_mahasiswa', 'mahasiswa.id', '=', 'akademik_mahasiswa.mahasiswa_id')
                     ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
@@ -326,7 +368,7 @@ class StatusMahasiswaService
                         'mahasiswa.nim',
                         'users.name as nama_lengkap',
                         'mahasiswa.status_mahasiswa',
-                        'dosen_users.name as nama_dosen_wali',
+                        DB::raw("CONCAT(COALESCE(CONCAT(dosen.gelar_depan, ' '), ''), dosen_users.name, COALESCE(CONCAT(' ', dosen.gelar_belakang), '')) as nama_dosen_wali"),
                         'akademik_mahasiswa.semester_aktif',
                         'akademik_mahasiswa.tahun_masuk',
                         'akademik_mahasiswa.ipk',
