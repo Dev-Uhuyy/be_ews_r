@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
  * @tags Mahasiswa - Tindak Lanjut
  */
 
-class TindakLanjutController extends Controller
+class MhsTindakLanjutController extends Controller
 {
     protected $tindakLanjutService;
 
