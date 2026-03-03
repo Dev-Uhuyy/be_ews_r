@@ -26,7 +26,7 @@ class TindakLanjutExport implements FromCollection, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
-            'ID Tiket',
+            'ID Surat',
             'Nama',
             'NIM',
             'Kategori',

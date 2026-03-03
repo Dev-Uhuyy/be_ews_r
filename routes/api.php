@@ -14,7 +14,7 @@ use App\Http\Controllers\Dosen\StatistikKelulusanController as DosenStatistikKel
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 use App\Http\Controllers\Mahasiswa\KhsKrsController;
 use App\Http\Controllers\Mahasiswa\PeringatanController;
-use App\Http\Controllers\Mahasiswa\TindakLanjutController as MahasiswaTindakLanjutController;
+use App\Http\Controllers\Mahasiswa\MhsTindakLanjutController;
 
 // Public route - Login
 Route::controller(AuthController::class)->group(function () {
@@ -103,10 +103,10 @@ Route::middleware(['auth:sanctum', 'role:mahasiswa'])->prefix('mahasiswa')->grou
 
     // Tindak Lanjut
     Route::prefix('tindak-lanjut')->group(function () {
-        Route::get('cards', [MahasiswaTindakLanjutController::class, 'getCardSummary']);
-        Route::get('/', [MahasiswaTindakLanjutController::class, 'index']);
-        Route::post('/', [MahasiswaTindakLanjutController::class, 'store']);
-        Route::get('template/{kategori}', [MahasiswaTindakLanjutController::class, 'getTemplate']);
+        Route::get('cards', [MhsTindakLanjutController::class, 'getCardSummary']);
+        Route::get('/', [MhsTindakLanjutController::class, 'index']);
+        Route::post('/', [MhsTindakLanjutController::class, 'store']);
+        Route::get('template/{kategori}', [MhsTindakLanjutController::class, 'getTemplate']);
     });
 });
 });

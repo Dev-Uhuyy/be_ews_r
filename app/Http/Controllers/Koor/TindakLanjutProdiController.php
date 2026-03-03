@@ -53,7 +53,7 @@ class TindakLanjutProdiController extends Controller
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\SuratRekomitmenExport($suratRekomitmen),
+                new TindakLanjutExport($data),
                 $filePath,
                 'public'
             );

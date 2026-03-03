@@ -7,7 +7,7 @@ use App\Services\Mahasiswa\TindakLanjutService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class TindakLanjutController extends Controller
+class MhsTindakLanjutController extends Controller
 {
     protected $tindakLanjutService;
 
