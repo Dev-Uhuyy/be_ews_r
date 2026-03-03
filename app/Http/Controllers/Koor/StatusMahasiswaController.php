@@ -18,6 +18,23 @@ class StatusMahasiswaController extends Controller
         $this->statusMahasiswaService = $statusMahasiswaService;
     }
 
+    /**
+     * Get Detail Mahasiswa per Angkatan
+     *
+     * Menampilkan detail mahasiswa berdasarkan tahun masuk dengan informasi lengkap:
+     * - Nama, NIM, IPK, SKS lulus
+     * - Jumlah & SKS nilai D
+     * - Jumlah & SKS nilai E
+     * - Status Eligible/Tidak
+     * - Nama Dosen Wali (dengan gelar)
+     * - Status EWS
+     *
+     * @urlParam tahunMasuk integer required Tahun masuk mahasiswa (2000-2100). Example: 2023
+     * @queryParam search string Search by nama mahasiswa. Example: John
+     * @queryParam per_page integer Items per page (1-100). Example: 10
+     *
+     * @tags Koor - Status Mahasiswa
+     */
     public function getDetailAngkatan(Request $request, $tahunMasuk)
     {
         try {
@@ -61,6 +78,22 @@ class StatusMahasiswaController extends Controller
         }
     }
 
+    /**
+     * Get Detail Mahasiswa Lengkap
+     *
+     * Menampilkan detail lengkap satu mahasiswa:
+     * - Data akademik (IPK, SKS, semester)
+     * - Data dosen wali (dengan gelar)
+     * - IP per semester
+     * - Mata kuliah dengan nilai D (detail)
+     * - Mata kuliah dengan nilai E (detail)
+     * - Riwayat SPS
+     * - Status EWS & kelulusan
+     *
+     * @urlParam mahasiswaId integer required ID mahasiswa. Example: 1
+     *
+     * @tags Koor - Status Mahasiswa
+     */
     public function getDetailMahasiswa($mahasiswaId)
     {
         try {
@@ -84,6 +117,20 @@ class StatusMahasiswaController extends Controller
         }
     }
 
+    /**
+     * Get Table Ringkasan Status per Angkatan
+     *
+     * Menampilkan ringkasan per angkatan:
+     * - Jumlah mahasiswa
+     * - IPK < 2
+     * - Mangkir
+     * - Cuti
+     * - Status Perhatian
+     *
+     * **Note:** Exclude mahasiswa yang sudah lulus dan DO
+     *
+     * @tags Koor - Status Mahasiswa
+     */
     public function getTableRingkasanStatus()
     {
         try {
@@ -101,7 +148,12 @@ class StatusMahasiswaController extends Controller
     }
 
     /**
-     * Export table ringkasan status per angkatan ke XLSX
+     * Export Table Ringkasan Status ke XLSX
+     *
+     * Export data ringkasan status per angkatan dalam format Excel.
+     * File berisi: jumlah mahasiswa, IPK < 2, mangkir, cuti, perhatian.
+     *
+     * @tags Koor - Status Mahasiswa
      */
     public function exportTableRingkasanStatusCsv(Request $request)
     {
@@ -138,122 +190,67 @@ class StatusMahasiswaController extends Controller
     }
 
     /**
-     * Helper to validate and extract filters from request
-     */
-    private function validateAndExtractFilters(Request $request)
-    {
-        $filters = [];
-
-        // Validasi dan extract status_mahasiswa
-        if ($request->has('status_mahasiswa')) {
-            $statusMahasiswa = $request->query('status_mahasiswa');
-            $validStatusMahasiswa = ['aktif', 'cuti', 'mangkir', 'lulus', 'do'];
-            if (!in_array(strtolower($statusMahasiswa), $validStatusMahasiswa)) {
-                return ['error' => 'Parameter status_mahasiswa harus salah satu dari: aktif, cuti, mangkir, lulus, do'];
-            }
-            $filters['status_mahasiswa'] = $statusMahasiswa;
-        }
-
-        // Validasi dan extract status_ews
-        if ($request->has('status_ews')) {
-            $statusEws = $request->query('status_ews');
-            $validStatusEws = ['tepat_waktu', 'normal', 'perhatian', 'kritis'];
-            if (!in_array($statusEws, $validStatusEws)) {
-                return ['error' => 'Parameter status_ews harus salah satu dari: tepat_waktu, normal, perhatian, kritis'];
-            }
-            $filters['status_ews'] = $statusEws;
-        }
-
-        // Validasi dan extract status_kelulusan
-        if ($request->has('status_kelulusan')) {
-            $statusKelulusan = $request->query('status_kelulusan');
-            $validStatusKelulusan = ['eligible', 'noneligible'];
-            if (!in_array($statusKelulusan, $validStatusKelulusan)) {
-                return ['error' => 'Parameter status_kelulusan harus salah satu dari: eligible, noneligible'];
-            }
-            $filters['status_kelulusan'] = $statusKelulusan;
-        }
-
-        // Validasi dan extract tahun_masuk
-        if ($request->has('tahun_masuk')) {
-            $tahunMasuk = $request->query('tahun_masuk');
-            if (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100) {
-                return ['error' => 'Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)'];
-            }
-            $filters['tahun_masuk'] = $tahunMasuk;
-        }
-
-        // Validasi dan extract semester_aktif
-        if ($request->has('semester_aktif')) {
-            $semesterAktif = $request->query('semester_aktif');
-            if (!is_numeric($semesterAktif) || $semesterAktif < 1 || $semesterAktif > 14) {
-                return ['error' => 'Parameter semester_aktif harus berupa angka antara 1-14'];
-            }
-            $filters['semester_aktif'] = $semesterAktif;
-        }
-
-        // Validasi dan extract yes/no fields
-        $yesNoFields = ['mk_nasional', 'mk_fakultas', 'mk_prodi', 'nilai_d_melebihi_batas', 'nilai_e', 'semester_1_3', 'ipk_rendah', 'mk_ulang', 'sks_kurang'];
-        foreach ($yesNoFields as $field) {
-            if ($request->has($field)) {
-                $value = strtolower($request->query($field));
-                if (!in_array($value, ['yes', 'no'])) {
-                    return ['error' => "Parameter {$field} harus berupa 'yes' atau 'no'"];
-                }
-                $filters[$field] = $value;
-            }
-        }
-
-        return ['filters' => $filters];
-    }
-
-    /**
-     * Get all mahasiswa with complete details
-     * Query params:
-     *   ?search=keyword (search by name or NIM - works for both modes)
-     *   ?per_page=10 (items per page)
-     *   ?mode=simple|detailed (simple=nama/nim/doswal with filters, detailed=all fields without filters)
+     * Get All Mahasiswa dengan Filter Lengkap
      *
-     * Filters (ONLY work with mode=simple):
-     *   ?status_mahasiswa=aktif|cuti|mangkir (filter by status)
-     *   ?status_ews=tepat_waktu|normal|perhatian|kritis (filter by EWS status)
-     *   ?status_kelulusan=eligible|noneligible (filter by kelulusan status)
-     *   ?tahun_masuk=2023 (filter by angkatan)
-     *   ?semester_aktif=6 (filter by semester)
-     *   ?semester_1_3=yes (filter semester 1-3 only)
-     *   ?ipk_rendah=yes (filter IPK < 2)
-     *   ?mk_ulang=yes (filter mahasiswa dengan mata kuliah ulang)
-     *   ?sks_kurang=yes (filter SKS lulus < 144)
-     *   ?mk_nasional=yes|no
-     *   ?mk_fakultas=yes|no
-     *   ?mk_prodi=yes|no
-     *   ?nilai_d_melebihi_batas=yes|no
-     *   ?nilai_e=yes|no
+     * @queryParam search string Search by nama atau NIM. Example: John
+     * @queryParam per_page integer Items per page 1-100. Example: 10
+     * @queryParam mode string Mode simple atau detailed. Example: simple
+     * @queryParam status_mahasiswa string Filter aktif cuti mangkir. Example: aktif
+     * @queryParam status_ews string Filter tepat_waktu normal perhatian kritis. Example: perhatian
+     * @queryParam status_kelulusan string Filter eligible noneligible. Example: eligible
+     * @queryParam tahun_masuk integer Filter angkatan tahun. Example: 2023
+     * @queryParam semester_aktif integer Filter semester 1-14. Example: 6
+     * @queryParam semester_1_3 string Mahasiswa semester 1-3 yes no. Example: yes
+     * @queryParam ipk_rendah string Mahasiswa IPK kurang dari 2 yes no. Example: yes
+     * @queryParam mk_ulang string Mahasiswa dengan MK ulang yes no. Example: yes
+     * @queryParam sks_kurang string Mahasiswa SKS kurang dari 144 yes no. Example: yes
+     * @queryParam mk_nasional string Sudah ambil MK Nasional yes no. Example: yes
+     * @queryParam mk_fakultas string Sudah ambil MK Fakultas yes no. Example: yes
+     * @queryParam mk_prodi string Sudah ambil MK Prodi yes no. Example: yes
+     * @queryParam nilai_d_melebihi_batas string Nilai D lebih dari 5 persen yes no. Example: yes
+     * @queryParam nilai_e string Punya nilai E yes no. Example: yes
      *
-     * Note: All modes exclude mahasiswa with status 'lulus' and 'do'
+     * @tags Koor - Status Mahasiswa
      */
     public function getMahasiswaAll(Request $request)
     {
         try {
+            // Validasi semua parameters
+            $validated = $request->validate([
+                'search' => 'nullable|string|max:255',
+                'per_page' => 'nullable|integer|min:1|max:100',
+                'mode' => 'nullable|string|in:simple,detailed',
+                'status_mahasiswa' => 'nullable|string|in:aktif,cuti,mangkir',
+                'status_ews' => 'nullable|string|in:tepat_waktu,normal,perhatian,kritis',
+                'status_kelulusan' => 'nullable|string|in:eligible,noneligible',
+                'tahun_masuk' => 'nullable|integer|min:2000|max:2100',
+                'semester_aktif' => 'nullable|integer|min:1|max:14',
+                'semester_1_3' => 'nullable|string|in:yes,no',
+                'ipk_rendah' => 'nullable|string|in:yes,no',
+                'mk_ulang' => 'nullable|string|in:yes,no',
+                'sks_kurang' => 'nullable|string|in:yes,no',
+                'mk_nasional' => 'nullable|string|in:yes,no',
+                'mk_fakultas' => 'nullable|string|in:yes,no',
+                'mk_prodi' => 'nullable|string|in:yes,no',
+                'nilai_d_melebihi_batas' => 'nullable|string|in:yes,no',
+                'nilai_e' => 'nullable|string|in:yes,no',
+            ]);
+
             $search = $request->query('search', null);
             $perPage = $request->query('per_page', 10);
             $mode = $request->query('mode', 'simple');
 
-            // Validasi per_page
-            if (!is_numeric($perPage) || $perPage < 1 || $perPage > 100) {
-                return $this->errorResponse('Parameter per_page harus berupa angka antara 1-100', 400);
-            }
+            // Extract filters from request
+            $filters = [];
+            $filterFields = ['status_mahasiswa', 'status_ews', 'status_kelulusan', 'tahun_masuk', 'semester_aktif',
+                            'semester_1_3', 'ipk_rendah', 'mk_ulang', 'sks_kurang', 'mk_nasional',
+                            'mk_fakultas', 'mk_prodi', 'nilai_d_melebihi_batas', 'nilai_e'];
 
-            // Validasi mode
-            if (!in_array($mode, ['simple', 'detailed'])) {
-                return $this->errorResponse('Parameter mode hanya boleh "simple" atau "detailed"', 400);
+            foreach ($filterFields as $field) {
+                if ($request->has($field)) {
+                    $filters[$field] = $request->query($field);
+                }
             }
-
-            $filtersResult = $this->validateAndExtractFilters($request);
-            if (isset($filtersResult['error'])) {
-                return $this->errorResponse($filtersResult['error'], 400);
-            }
-            $filters = $filtersResult['filters'];
 
             $mahasiswaAll = $this->statusMahasiswaService->getMahasiswaAll($search, $perPage, $mode, $filters);
 
@@ -272,19 +269,63 @@ class StatusMahasiswaController extends Controller
     }
 
     /**
-     * Export data semua mahasiswa ke XLSX
+     * Export All Mahasiswa ke XLSX
+     *
+     * Export data mahasiswa dengan filter yang sama seperti getMahasiswaAll.
+     * File akan di-generate dan di-download sebagai .xlsx
+     *
+     * @queryParam search string Search by nama atau NIM. Example: John
+     * @queryParam mode string Mode export: simple atau detailed (default: detailed). Example: detailed
+     * @queryParam status_mahasiswa string Filter by status: aktif, cuti, mangkir. Example: aktif
+     * @queryParam status_ews string Filter: tepat_waktu, normal, perhatian, kritis. Example: perhatian
+     * @queryParam status_kelulusan string Filter: eligible, noneligible. Example: eligible
+     * @queryParam tahun_masuk integer Filter by angkatan. Example: 2023
+     * @queryParam semester_aktif integer Filter by semester. Example: 6
+     * @queryParam mk_nasional string Filter syarat MK (yes/no). Example: yes
+     * @queryParam mk_fakultas string Filter syarat MK (yes/no). Example: yes
+     * @queryParam mk_prodi string Filter syarat MK (yes/no). Example: yes
+     * @queryParam nilai_d_melebihi_batas string Filter nilai D (yes/no). Example: yes
+     * @queryParam nilai_e string Filter nilai E (yes/no). Example: yes
+     *
+     * @tags Koor - Status Mahasiswa
      */
     public function exportMahasiswaAllCsv(Request $request)
     {
         try {
+            // Validasi semua parameters
+            $validated = $request->validate([
+                'search' => 'nullable|string|max:255',
+                'mode' => 'nullable|string|in:simple,detailed',
+                'status_mahasiswa' => 'nullable|string|in:aktif,cuti,mangkir',
+                'status_ews' => 'nullable|string|in:tepat_waktu,normal,perhatian,kritis',
+                'status_kelulusan' => 'nullable|string|in:eligible,noneligible',
+                'tahun_masuk' => 'nullable|integer|min:2000|max:2100',
+                'semester_aktif' => 'nullable|integer|min:1|max:14',
+                'semester_1_3' => 'nullable|string|in:yes,no',
+                'ipk_rendah' => 'nullable|string|in:yes,no',
+                'mk_ulang' => 'nullable|string|in:yes,no',
+                'sks_kurang' => 'nullable|string|in:yes,no',
+                'mk_nasional' => 'nullable|string|in:yes,no',
+                'mk_fakultas' => 'nullable|string|in:yes,no',
+                'mk_prodi' => 'nullable|string|in:yes,no',
+                'nilai_d_melebihi_batas' => 'nullable|string|in:yes,no',
+                'nilai_e' => 'nullable|string|in:yes,no',
+            ]);
+
             $search = $request->query('search', null);
             $mode = $request->query('mode', 'detailed'); // default to detailed for export
 
-            $filtersResult = $this->validateAndExtractFilters($request);
-            if (isset($filtersResult['error'])) {
-                return $this->errorResponse($filtersResult['error'], 400);
+            // Extract filters from request
+            $filters = [];
+            $filterFields = ['status_mahasiswa', 'status_ews', 'status_kelulusan', 'tahun_masuk', 'semester_aktif',
+                            'semester_1_3', 'ipk_rendah', 'mk_ulang', 'sks_kurang', 'mk_nasional',
+                            'mk_fakultas', 'mk_prodi', 'nilai_d_melebihi_batas', 'nilai_e'];
+
+            foreach ($filterFields as $field) {
+                if ($request->has($field)) {
+                    $filters[$field] = $request->query($field);
+                }
             }
-            $filters = $filtersResult['filters'];
 
             $mahasiswaAll = $this->statusMahasiswaService->getMahasiswaAllExport($search, $mode, $filters);
 
