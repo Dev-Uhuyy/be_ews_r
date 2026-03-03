@@ -9,6 +9,9 @@ use App\Jobs\RecalculateAllEwsJob;
 use App\Models\AkademikMahasiswa;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Koor - EWS Management
+ */
 class EwsController extends Controller
 {
     protected $ewsService;

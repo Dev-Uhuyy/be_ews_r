@@ -29,7 +29,7 @@ return [
         /*
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
-        'description' => 'EWS (Early Warning System) API Documentation',
+        'description' => 'EWS (Early Warning System) API - Token otomatis ter-inject ke semua request setelah login! 🚀',
     ],
 
     /*

@@ -6,6 +6,9 @@ use App\Services\Koor\CapaianMahasiswaService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Koor - Capaian Mahasiswa
+ */
 class CapaianMahasiswaController extends Controller
 {
     protected $capaianMahasiswaService;
@@ -69,8 +72,8 @@ class CapaianMahasiswaController extends Controller
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TrenIPSAllExport($trenIps), 
-                $filePath, 
+                new \App\Exports\TrenIPSAllExport($trenIps),
+                $filePath,
                 'public'
             );
 
@@ -192,8 +195,8 @@ class CapaianMahasiswaController extends Controller
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\MahasiswaMKGagalExport($mahasiswaMKGagal), 
-                $filePath, 
+                new \App\Exports\MahasiswaMKGagalExport($mahasiswaMKGagal),
+                $filePath,
                 'public'
             );
 

@@ -6,6 +6,9 @@ use App\Services\Koor\StatistikKelulusanService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Koor - Statistik Kelulusan
+ */
 class StatistikKelulusanController extends Controller
 {
     protected $statistikKelulusanService;
