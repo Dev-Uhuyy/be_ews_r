@@ -182,10 +182,6 @@ Table early_warning_system {
   akademik_mahasiswa_id bigint [not null]
   status varchar(50) [default: 'tepat_waktu', note: 'tepat_waktu, normal, perhatian, kritis']
   status_kelulusan varchar(50) [null]
-  status_rekomitmen varchar(50) [null]
-  id_rekomitmen varchar(255) [null]
-  link_rekomitmen text [null]
-  tanggal_pengajuan_rekomitmen date [null]
   SPS1 text [null]
   SPS2 text [null]
   SPS3 text [null]
@@ -193,6 +189,20 @@ Table early_warning_system {
   updated_at timestamp [null]
 
   Note: 'Early Warning System records for student monitoring'
+}
+
+Table tindak_lanjuts {
+  id bigint [pk, increment]
+  id_ews bigint [not null]
+  kategori varchar(50) [note: 'rekomitmen, pindah_prodi']
+  link varchar(255) [null]
+  catatan text [null]
+  status varchar(50) [default: 'belum_diverifikasi', note: 'diterima, belum_diverifikasi']
+  tanggal_pengajuan datetime [null]
+  created_at timestamp [null]
+  updated_at timestamp [null]
+
+  Note: 'Tindak Lanjut (Follow-up actions) for EWS - rekomitmen or pindah prodi'
 }
 
 // Relationships
@@ -229,3 +239,6 @@ Ref: khs_krs_mahasiswa.kelompok_id > kelompok_mata_kuliah.id [delete: cascade]
 
 // Akademik Mahasiswa relationships
 Ref: early_warning_system.akademik_mahasiswa_id > akademik_mahasiswa.id [delete: cascade]
+
+// Early Warning System relationships
+Ref: tindak_lanjuts.id_ews > early_warning_system.id [delete: cascade]
