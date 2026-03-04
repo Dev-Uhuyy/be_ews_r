@@ -242,3 +242,4 @@ Ref: early_warning_system.akademik_mahasiswa_id > akademik_mahasiswa.id [delete:
 
 // Early Warning System relationships
 Ref: tindak_lanjuts.id_ews > early_warning_system.id [delete: cascade]
+//
