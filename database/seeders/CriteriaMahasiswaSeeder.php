@@ -58,106 +58,118 @@ class CriteriaMahasiswaSeeder extends Seeder
             return;
         }
 
-        $this->logInfo('Memulai seeding data mahasiswa berdasarkan kriteria (Events Disabled)...');
+        $this->logInfo('Memulai seeding data mahasiswa berdasarkan kriteria (Angkatan 2020-2025, Events Disabled)...');
 
-        AkademikMahasiswa::withoutEvents(function () {
-            // 1. IPK Rendah (< 2) & Semester 1-3
-            $this->seedCriteria('IPK Rendah & Semester 1-3', 50, [
-                'ipk' => 1.5,
-                'semester_aktif' => rand(1, 3),
-                'tahun_masuk' => 2024,
-            ]);
+        $years = range(2020, 2025);
+        $tahunSekarang = 2026;
 
-            // 2. IPK Rendah (< 2) & Angkatan 2023
-            $this->seedCriteria('IPK Rendah & Angkatan 2023', 50, [
-                'ipk' => 1.7,
-                'tahun_masuk' => 2023,
-                'semester_aktif' => 4,
-            ]);
+        AkademikMahasiswa::withoutEvents(function () use ($years, $tahunSekarang) {
+            foreach ($years as $year) {
+                // Calculate realistic semester based on year (2026)
+                // 2025 -> 2, 2024 -> 4, 2023 -> 6, 2022 -> 8, 2021 -> 10, 2020 -> 12
+                $defaultSemester = min(14, max(1, ($tahunSekarang - $year) * 2));
 
-            // 3. SKS Kurang (< 144) & Angkatan 2021
-            $this->seedCriteria('SKS Kurang & Angkatan 2021', 50, [
-                'sks_lulus' => 100,
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-            ]);
+                // 1. IPK Rendah (< 2) & Semester 1-3 
+                // (Only really relevant for 2025 in this simulation, but we seed anyway)
+                if ($year == 2025) {
+                    $this->seedCriteria("IPK Rendah & Sem 1-3 (Angkatan $year)", 10, [
+                        'ipk' => 1.5,
+                        'semester_aktif' => 2,
+                        'tahun_masuk' => $year,
+                    ]);
+                }
 
-            // 4. MK Ulang & Angkatan 2021
-            $this->seedCriteria('MK Ulang & Angkatan 2021', 50, [
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-                'with_repeats' => true,
-            ]);
+                // 2. IPK Rendah (< 2) & Angkatan [Year]
+                $this->seedCriteria("IPK Rendah & Angkatan $year", 10, [
+                    'ipk' => 1.7,
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 5. MK Nasional & Angkatan 2021
-            $this->seedCriteria('MK Nasional & Angkatan 2021', 50, [
-                'mk_nasional' => 'yes',
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-            ]);
+                // 3. SKS Kurang (< 144) & Angkatan [Year]
+                $this->seedCriteria("SKS Kurang & Angkatan $year", 10, [
+                    'sks_lulus' => 100,
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 6. MK Fakultas & Angkatan 2021
-            $this->seedCriteria('MK Fakultas & Angkatan 2021', 50, [
-                'mk_fakultas' => 'yes',
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-            ]);
+                // 4. MK Ulang & Angkatan [Year]
+                $this->seedCriteria("MK Ulang & Angkatan $year", 10, [
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                    'with_repeats' => true,
+                ]);
 
-            // 7. MK Prodi & Angkatan 2021
-            $this->seedCriteria('MK Prodi & Angkatan 2021', 50, [
-                'mk_prodi' => 'yes',
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-            ]);
+                // 5. MK Nasional & Angkatan [Year]
+                $this->seedCriteria("MK Nasional & Angkatan $year", 10, [
+                    'mk_nasional' => 'yes',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 8. Nilai D Melebihi Batas & Angkatan 2021
-            $this->seedCriteria('Nilai D Melebihi Batas & Angkatan 2021', 50, [
-                'nilai_d_melebihi_batas' => 'yes',
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-            ]);
+                // 6. MK Fakultas & Angkatan [Year]
+                $this->seedCriteria("MK Fakultas & Angkatan $year", 10, [
+                    'mk_fakultas' => 'yes',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 9. Nilai E & Angkatan 2021
-            $this->seedCriteria('Nilai E & Angkatan 2021', 50, [
-                'nilai_e' => 'yes',
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-            ]);
+                // 7. MK Prodi & Angkatan [Year]
+                $this->seedCriteria("MK Prodi & Angkatan $year", 10, [
+                    'mk_prodi' => 'yes',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 10. Status Mahasiswa (Mangkir)
-            $this->seedCriteria('Status Mahasiswa Mangkir', 50, [
-                'status_mahasiswa' => 'mangkir',
-                'tahun_masuk' => 2022,
-                'semester_aktif' => 6,
-            ]);
+                // 8. Nilai D Melebihi Batas & Angkatan [Year]
+                $this->seedCriteria("Nilai D Melebihi Batas & Angkatan $year", 10, [
+                    'nilai_d_melebihi_batas' => 'yes',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 11. Status EWS (Kritis)
-            $this->seedCriteria('Status EWS Kritis', 50, [
-                'status_ews' => 'kritis',
-                'tahun_masuk' => 2020,
-                'semester_aktif' => 10,
-            ]);
+                // 9. Nilai E & Angkatan [Year]
+                $this->seedCriteria("Nilai E & Angkatan $year", 10, [
+                    'nilai_e' => 'yes',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 12. Status Kelulusan (Non-Eligible) & Angkatan 2021
-            $this->seedCriteria('Status Kelulusan Non-Eligible & Angkatan 2021', 50, [
-                'status_kelulusan' => 'noneligible',
-                'tahun_masuk' => 2021,
-                'semester_aktif' => 8,
-            ]);
+                // 10. Status Mahasiswa (Mangkir) & Angkatan [Year]
+                $this->seedCriteria("Status Mangkir & Angkatan $year", 10, [
+                    'status_mahasiswa' => 'mangkir',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
 
-            // 13. Status Kelulusan (Eligible)
-            $this->seedCriteria('Status Kelulusan Eligible', 50, [
-                'status_kelulusan' => 'eligible',
-                'tahun_masuk' => 2020,
-                'semester_aktif' => 12,
-                'ipk' => 3.5,
-                'sks_lulus' => 144,
-                'mk_nasional' => 'no',
-                'mk_fakultas' => 'no',
-                'mk_prodi' => 'no',
-                'nilai_d_melebihi_batas' => 'no',
-                'nilai_e' => 'no',
-            ]);
+                // 11. Status EWS Kritis & Angkatan [Year]
+                $this->seedCriteria("EWS Kritis & Angkatan $year", 10, [
+                    'status_ews' => 'kritis',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
+
+                // 12. Status Kelulusan (Non-Eligible) & Angkatan [Year]
+                $this->seedCriteria("Non-Eligible & Angkatan $year", 10, [
+                    'status_kelulusan' => 'noneligible',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                ]);
+
+                // 13. Status Kelulusan (Eligible) & Angkatan [Year]
+                $this->seedCriteria("Eligible & Angkatan $year", 10, [
+                    'status_kelulusan' => 'eligible',
+                    'tahun_masuk' => $year,
+                    'semester_aktif' => $defaultSemester,
+                    'ipk' => 3.5,
+                    'sks_lulus' => 144,
+                    'mk_nasional' => 'no',
+                    'mk_fakultas' => 'no',
+                    'mk_prodi' => 'no',
+                    'nilai_d_melebihi_batas' => 'no',
+                    'nilai_e' => 'no',
+                ]);
+            }
         });
 
         $this->logInfo('Seeding selesai!');
