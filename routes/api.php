@@ -62,6 +62,7 @@ Route::prefix('ews')->group(function () {
         Route::get('cards', [TindakLanjutProdiController::class, 'getCardSummary']);
         Route::get('/', [TindakLanjutProdiController::class, 'getTindakLanjut']);
         Route::get('export', [TindakLanjutProdiController::class, 'exportCsv']);
+        Route::patch('bulk-update', [TindakLanjutProdiController::class, 'bulkUpdateStatus']);
         Route::patch('{id}', [TindakLanjutProdiController::class, 'updateStatus']);
     });
 

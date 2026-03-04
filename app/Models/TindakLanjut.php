@@ -12,7 +12,6 @@ class TindakLanjut extends Model
         'id_ews',
         'kategori',
         'link',
-        'catatan',
         'status',
         'tanggal_pengajuan',
     ];

@@ -12,11 +12,9 @@ class TindakLanjutSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Clean up legacy categories/data if needed (optional since we have a new table,
         // but user asked to remove "permohonan/keluhan" style data if exists)
         DB::table('tindak_lanjuts')->truncate();
 
-        // 2. Get some academic student IDs who are NOT 'lulus' or 'do'
         $akmIds = DB::table('akademik_mahasiswa')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
@@ -44,13 +42,13 @@ class TindakLanjutSeeder extends Seeder
                 ]);
             }
 
-            // Seed rekomitmen
+            // Seed
             DB::table('tindak_lanjuts')->insert([
                 'id_ews' => $ewsId,
                 'kategori' => $index % 2 == 0 ? 'rekomitmen' : 'pindah_prodi',
                 'link' => 'https://docs.google.com/document/d/example-' . $index,
                 'catatan' => 'Seeded data for testing ' . ($index % 2 == 0 ? 'rekomitmen' : 'pindah_prodi'),
-                'status' => $index % 3 == 0 ? 'diterima' : 'belum_diverifikasi',
+                'status' => $index % 3 == 0 ? 'telah_diverifikasi' : 'belum_diverifikasi',
                 'tanggal_pengajuan' => now()->subDays($index),
                 'created_at' => now()->subDays($index),
                 'updated_at' => now()->subDays($index),

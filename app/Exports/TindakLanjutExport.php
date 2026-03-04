@@ -33,8 +33,7 @@ class TindakLanjutExport implements FromCollection, WithHeadings, WithMapping
             'Tanggal Pengajuan',
             'Dosen Wali',
             'Status',
-            'Link Berkas',
-            'Catatan Mahasiswa'
+            'Link Berkas'
         ];
     }
 
@@ -48,8 +47,7 @@ class TindakLanjutExport implements FromCollection, WithHeadings, WithMapping
             $row->tanggal_pengajuan,
             $row->dosen_wali,
             ucwords(str_replace('_', ' ', $row->status_tindak_lanjut)),
-            $row->link,
-            $row->catatan
+            $row->link
         ];
     }
 }

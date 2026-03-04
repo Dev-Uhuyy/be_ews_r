@@ -39,6 +39,7 @@ class MhsTindakLanjutController extends Controller
         }
     }
 
+
     /**
      * Get summary cards for the authenticated student.
      */
@@ -67,7 +68,6 @@ class MhsTindakLanjutController extends Controller
             $request->validate([
                 'kategori' => 'required|in:rekomitmen,pindah_prodi',
                 'link' => 'required|url',
-                'catatan' => 'nullable|string',
             ]);
 
             $mahasiswa = Auth::user()->mahasiswa;
@@ -76,7 +76,7 @@ class MhsTindakLanjutController extends Controller
             }
 
             $mahasiswaId = $mahasiswa->akademikmahasiswa->id;
-            $result = $this->tindakLanjutService->submit($mahasiswaId, $request->only(['kategori', 'link', 'catatan']));
+            $result = $this->tindakLanjutService->submit($mahasiswaId, $request->only(['kategori', 'link']));
 
             if ($result['success']) {
                 return $this->successResponse($result['data'], $result['message']);

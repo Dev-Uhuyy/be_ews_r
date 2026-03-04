@@ -25,8 +25,7 @@ class TindakLanjutProdiService
                     'dosen_users.name as dosen_wali',
                     'tindak_lanjuts.status as status_tindak_lanjut',
                     'tindak_lanjuts.link',
-                    'tindak_lanjuts.kategori',
-                    'tindak_lanjuts.catatan'
+                    'tindak_lanjuts.kategori'
                 )
                 ->join('early_warning_system', 'tindak_lanjuts.id_ews', '=', 'early_warning_system.id')
                 ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
@@ -81,7 +80,7 @@ class TindakLanjutProdiService
             'total_rekomitmen' => (clone $baseQuery)->where('tindak_lanjuts.kategori', 'rekomitmen')->count(),
             'total_pindah_prodi' => (clone $baseQuery)->where('tindak_lanjuts.kategori', 'pindah_prodi')->count(),
             'dalam_proses' => (clone $baseQuery)->where('tindak_lanjuts.status', 'belum_diverifikasi')->count(),
-            'selesai' => (clone $baseQuery)->where('tindak_lanjuts.status', 'diterima')->count(),
+            'selesai' => (clone $baseQuery)->where('tindak_lanjuts.status', 'telah_diverifikasi')->count(),
         ];
     }
 
@@ -95,12 +94,10 @@ class TindakLanjutProdiService
             ]);
 
         if ($affected === 0) {
-            // Check if record exists
             $exists = DB::table('tindak_lanjuts')->where('id', $id)->exists();
             if (!$exists) {
                 return ['success' => false, 'message' => 'Data tidak ditemukan'];
             }
-            // If exists but affected is 0, it means the status was already the same
         }
 
         $updatedData = DB::table('tindak_lanjuts')->where('id', $id)->first();
@@ -109,6 +106,25 @@ class TindakLanjutProdiService
             'success' => true,
             'message' => 'Status berhasil diperbarui',
             'data' => $updatedData
+        ];
+    }
+
+    public function bulkUpdateStatus($ids, $status)
+    {
+        $affected = DB::table('tindak_lanjuts')
+            ->whereIn('id', $ids)
+            ->update([
+                'status' => $status,
+                'updated_at' => now()
+            ]);
+
+        $updatedData = DB::table('tindak_lanjuts')->whereIn('id', $ids)->get();
+
+        return [
+            'success' => true,
+            'message' => $affected . ' status berhasil diperbarui',
+            'data' => $updatedData,
+            'affected' => $affected
         ];
     }
 }

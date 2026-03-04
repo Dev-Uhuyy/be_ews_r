@@ -25,7 +25,7 @@ class TindakLanjutService
 
         return [
             'dalam_proses' => (clone $baseQuery)->where('status', 'belum_diverifikasi')->count(),
-            'selesai' => (clone $baseQuery)->where('status', 'diterima')->count(),
+            'selesai' => (clone $baseQuery)->where('status', 'telah_diverifikasi')->count(),
         ];
     }
 
@@ -45,7 +45,6 @@ class TindakLanjutService
                 'id_ews' => $ews->id,
                 'kategori' => $data['kategori'],
                 'link' => $data['link'],
-                'catatan' => $data['catatan'] ?? null,
                 'status' => 'belum_diverifikasi',
                 'tanggal_pengajuan' => now(),
             ]);
