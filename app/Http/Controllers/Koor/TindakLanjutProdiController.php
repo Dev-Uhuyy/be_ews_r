@@ -53,7 +53,7 @@ class TindakLanjutProdiController extends Controller
             $filePath = 'exports/' . $fileName;
 
             \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\SuratRekomitmenExport($data),
+                new \App\Exports\TindakLanjutExport($data),
                 $filePath,
                 'public'
             );
@@ -80,7 +80,7 @@ class TindakLanjutProdiController extends Controller
      *   ?search=keyword (search by nama/nim)
      *   ?tahun_masuk=2023 (optional)
      *   ?kategori=rekomitmen|pindah_prodi (optional)
-     *   ?status=diterima|ditolak|belum diverifikasi (optional)
+     *   ?status=telah_diverifikasi|belum_diverifikasi (optional)
      *   ?per_page=10
      */
     public function getTindakLanjut(Request $request)
@@ -120,8 +120,8 @@ class TindakLanjutProdiController extends Controller
                 return $this->errorResponse('Parameter status wajib diisi', 400);
             }
 
-            if (!in_array(strtolower($status), ['diterima', 'ditolak'])) {
-                return $this->errorResponse('Parameter status harus berupa "diterima" atau "ditolak"', 400);
+            if (strtolower($status) !== 'telah_diverifikasi') {
+                return $this->errorResponse('Parameter status harus berupa "telah_diverifikasi"', 400);
             }
 
             $result = $this->tindakLanjutProdiService->updateStatus($id, $status);
@@ -132,6 +132,34 @@ class TindakLanjutProdiController extends Controller
             }
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'updateStatus');
+        }
+    }
+
+    /**
+     * Bulk update status tindak lanjut mahasiswa
+     */
+    public function bulkUpdateStatus(Request $request)
+    {
+        try {
+            $ids = $request->input('ids');
+            $status = $request->input('status');
+
+            if (!$ids || !is_array($ids)) {
+                return $this->errorResponse('Parameter ids (array) wajib diisi', 400);
+            }
+
+            if (!$status) {
+                return $this->errorResponse('Parameter status wajib diisi', 400);
+            }
+
+            if (strtolower($status) !== 'telah_diverifikasi') {
+                return $this->errorResponse('Parameter status harus berupa "telah_diverifikasi"', 400);
+            }
+
+            $result = $this->tindakLanjutProdiService->bulkUpdateStatus($ids, $status);
+            return $this->successResponse($result['data'], $result['message']);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'bulkUpdateStatus');
         }
     }
 }

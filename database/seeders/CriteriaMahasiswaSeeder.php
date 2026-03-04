@@ -69,7 +69,7 @@ class CriteriaMahasiswaSeeder extends Seeder
                 // 2025 -> 2, 2024 -> 4, 2023 -> 6, 2022 -> 8, 2021 -> 10, 2020 -> 12
                 $defaultSemester = min(14, max(1, ($tahunSekarang - $year) * 2));
 
-                // 1. IPK Rendah (< 2) & Semester 1-3 
+                // 1. IPK Rendah (< 2) & Semester 1-3
                 // (Only really relevant for 2025 in this simulation, but we seed anyway)
                 if ($year == 2025) {
                     $this->seedCriteria("IPK Rendah & Sem 1-3 (Angkatan $year)", 10, [
@@ -178,7 +178,7 @@ class CriteriaMahasiswaSeeder extends Seeder
     private function seedCriteria(string $label, int $count, array $overrides): void
     {
         $this->logInfo("Seeding $label...");
-        
+
         $dosen = Dosen::first();
         $mataKuliahs = MataKuliah::all();
         $randomKelompok = KelompokMataKuliah::first();
@@ -190,7 +190,7 @@ class CriteriaMahasiswaSeeder extends Seeder
                 $tahunMasuk = $overrides['tahun_masuk'] ?? 2023;
                 $nim = 'TEST.' . $tahunMasuk . '.' . $uniqueInt;
                 $email = "test.{$uniqueInt}@ews.com";
-                
+
                 $user = User::updateOrCreate(
                     ['email' => $email],
                     [
@@ -198,7 +198,7 @@ class CriteriaMahasiswaSeeder extends Seeder
                         'password' => Hash::make('password'),
                     ]
                 );
-                
+
                 if (!$user->wasRecentlyCreated && !$user->hasRole('mahasiswa')) {
                     $user->syncRoles(['mahasiswa']);
                 } elseif ($user->wasRecentlyCreated) {
@@ -242,12 +242,12 @@ class CriteriaMahasiswaSeeder extends Seeder
                     ]
                 );
 
-                // Create/Update TindakLanjut record
                 TindakLanjut::updateOrCreate(
                     ['id_ews' => $ews->id],
                     [
                         'kategori' => 'rekomitmen',
                         'status' => 'belum_diverifikasi',
+                        'link' => 'https://drive.google.com/file/d/1example_link_' . $uniqueInt . '/view',
                         'tanggal_pengajuan' => now(),
                     ]
                 );
