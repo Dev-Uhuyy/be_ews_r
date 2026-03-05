@@ -270,6 +270,8 @@ class CapaianMahasiswaService
             ->join('akademik_mahasiswa', 'khs1.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->leftJoin('dosen', 'kelompok_mata_kuliah.dosen_pengampu_id', '=', 'dosen.id')
+            ->leftJoin('users as dosen_users', 'dosen.user_id', '=', 'dosen_users.id')
             ->whereIn('khs1.id', function($subquery) {
                 $subquery->select(DB::raw('MAX(id)'))
                     ->from('khs_krs_mahasiswa as khs2')
@@ -291,7 +293,15 @@ class CapaianMahasiswaService
                 'mata_kuliahs.name as nama_matkul',
                 'mata_kuliahs.kode as kode_matkul',
                 'kelompok_mata_kuliah.kode as kode_kelompok',
-                'khs1.absen as presensi'
+                'khs1.absen as presensi',
+                DB::raw("COALESCE(
+                    CONCAT(
+                        CASE WHEN dosen.gelar_depan IS NOT NULL THEN CONCAT(TRIM(dosen.gelar_depan), ' ') ELSE '' END,
+                        dosen_users.name,
+                        CASE WHEN dosen.gelar_belakang IS NOT NULL THEN CONCAT(' ', TRIM(dosen.gelar_belakang)) ELSE '' END
+                    ),
+                    '-'
+                ) as dosen_pengampu")
             )
             ->orderBy('mata_kuliahs.kode')
             ->orderBy('users.name');
