@@ -30,7 +30,7 @@ class MahasiswaMKGagalExport implements FromCollection, WithHeadings, WithMappin
             'NIM',
             'Nama Mata Kuliah',
             'Kode Mata Kuliah',
-            'Kelompok',
+            'Dosen Pengampu',
             'Presensi (%)'
         ];
     }
@@ -42,7 +42,7 @@ class MahasiswaMKGagalExport implements FromCollection, WithHeadings, WithMappin
             $row->nim,
             $row->nama_matkul,
             $row->kode_matkul,
-            $row->kode_kelompok,
+            $row->dosen_pengampu,
             $row->presensi ?? 0
         ];
     }
