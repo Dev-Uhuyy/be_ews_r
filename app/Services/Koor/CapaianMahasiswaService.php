@@ -324,7 +324,7 @@ class CapaianMahasiswaService
 
         if (!$query) {
             return collect([]);
-        }
+        }   
 
         return $query->get();
     }
