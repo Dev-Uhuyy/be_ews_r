@@ -292,7 +292,7 @@ class StatusMahasiswaService
                 'nilai_d_melebihi_batas' => $akademikMhs->nilai_d_melebihi_batas ?? 'no',
                 'nilai_e' => $akademikMhs->nilai_e ?? 'no',
                 'total_sks_nilai_d' => $totalSksNilaiD,
-                'max_sks_nilai_d' => round(($akademikMhs->sks_lulus ?? 144) * 0.05, 1), // 5% dari SKS lulus
+                'max_sks_nilai_d' => 7.2, // Tetap 5% dari 144 SKS standar untuk konsistensi
             ],
             'status_ews' => $ews->status ?? null,
             'status_kelulusan' => $ews->status_kelulusan ?? null,

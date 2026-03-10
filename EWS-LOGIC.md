@@ -37,7 +37,10 @@ Mahasiswa dinyatakan **eligible** jika memenuhi **SEMUA** syarat berikut:
 4. ✅ **MK Fakultas Selesai** (mk_fakultas = 'yes')
 5. ✅ **MK Prodi Selesai** (mk_prodi = 'yes')
 6. ✅ **TIDAK ada nilai E** (nilai_e = 'no')
-7. ✅ **Nilai D tidak melebihi 5% dari SKS lulus** (nilai_d_melebihi_batas = 'no')
+7. ✅ **Nilai D tidak melebihi batas** (nilai_d_melebihi_batas = 'no')
+   - Maksimal 2 mata kuliah dengan nilai D
+   - Total SKS nilai D tidak melebihi 7.2 SKS (5% dari 144 SKS standar)
+   - Contoh: 3 SKS + 3 SKS = 6 SKS ✅ | 2 SKS + 2 SKS + 2 SKS = 6 SKS ❌
 
 Jika salah satu syarat tidak terpenuhi, status menjadi **Non-eligible**.
 
@@ -302,10 +305,12 @@ Sistem secara otomatis mengupdate field `nilai_d_melebihi_batas` dan `nilai_e` s
 $latestKhs = get nilai terakhir per mata kuliah
 
 $totalSksNilaiD = 0;
+$countMKNilaiD = 0; // Hitung jumlah mata kuliah dengan nilai D
 $adaNilaiE = false;
 
 foreach ($latestKhs as $khs) {
     if ($khs->nilai_akhir_huruf === 'D') {
+        $countMKNilaiD++;
         $totalSksNilaiD += $khs->sks;
     }
     if ($khs->nilai_akhir_huruf === 'E') {
@@ -313,9 +318,11 @@ foreach ($latestKhs as $khs) {
     }
 }
 
-// Cek batas 5% dari SKS lulus
-$maxSksNilaiD = $sks_lulus * 0.05;
-$nilaiDMelebihiBatas = ($totalSksNilaiD > $maxSksNilaiD);
+// Cek apakah nilai D melebihi batas:
+// 1. Maksimal 2 mata kuliah yang boleh mendapat nilai D
+// 2. Total SKS tidak melebihi 7.2 SKS (5% dari 144 SKS standar)
+$maxSksNilaiD = 7.2; // Tetap 5% dari 144 SKS untuk konsistensi
+$nilaiDMelebihiBatas = ($countMKNilaiD > 2) || ($totalSksNilaiD > $maxSksNilaiD);
 
 // Update akademik_mahasiswa
 nilai_d_melebihi_batas = $nilaiDMelebihiBatas ? 'yes' : 'no';
@@ -325,7 +332,11 @@ nilai_e = $adaNilaiE ? 'yes' : 'no';
 **Catatan Penting:**
 - Hanya nilai **TERAKHIR** per mata kuliah yang dihitung
 - Jika mahasiswa retake dan dapat nilai lebih baik, nilai lama tidak dihitung
-- Batas nilai D: 5% dari SKS lulus (misal 144 SKS → maksimal 7.2 SKS nilai D)
+- **Batas nilai D:** 
+  - Maksimal **2 mata kuliah** dengan nilai D
+  - Total SKS nilai D tidak melebihi **7.2 SKS** (5% dari 144 SKS standar kelulusan)
+  - Berlaku untuk semua mahasiswa terlepas dari total SKS lulus mereka
+  - Contoh: 3 SKS + 3 SKS (2 MK) ✅ | 2 SKS + 2 SKS + 2 SKS (3 MK) ❌
 
 ---
 

@@ -57,19 +57,23 @@ class EwsService
             ->get();
 
         $totalSksNilaiD = 0;
+        $countMKNilaiD = 0; // Hitung jumlah mata kuliah dengan nilai D
         $adaNilaiE = false;
 
         foreach ($latestKhs as $khs) {
             if ($khs->nilai_akhir_huruf === 'D') {
+                $countMKNilaiD++;
                 $totalSksNilaiD += $khs->sks;
             } elseif ($khs->nilai_akhir_huruf === 'E') {
                 $adaNilaiE = true;
             }
         }
 
-        // Cek apakah nilai D melebihi batas 5% dari SKS lulus
-        $maxSksNilaiD = $akademik->sks_lulus * 0.05; // 5% dari SKS lulus
-        $nilaiDMelebihiBatas = $totalSksNilaiD > $maxSksNilaiD;
+        // Cek apakah nilai D melebihi batas:
+        // 1. Maksimal 2 mata kuliah yang boleh mendapat nilai D
+        // 2. Total SKS tidak melebihi 7.2 SKS (5% dari 144 SKS standar kelulusan)
+        $maxSksNilaiD = 7.2; // Tetap 5% dari 144 SKS untuk konsistensi
+        $nilaiDMelebihiBatas = ($countMKNilaiD > 2) || ($totalSksNilaiD > $maxSksNilaiD);
 
         // Update akademik mahasiswa
         $akademik->update([
