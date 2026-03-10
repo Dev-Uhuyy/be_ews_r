@@ -70,7 +70,9 @@ Menampilkan distribusi status kelulusan mahasiswa bimbingan.
 - SKS Lulus >= 144
 - Semua MK Wajib (Nasional, Fakultas, Prodi) selesai
 - Tidak ada nilai E
-- Nilai D tidak melebihi 5% dari SKS lulus
+- Nilai D tidak melebihi batas:
+  - Maksimal 2 mata kuliah dengan nilai D
+  - Total SKS nilai D tidak melebihi 7.2 SKS (tetap untuk semua mahasiswa)
 
 **Logic:**
 1. Query `early_warning_system` untuk mahasiswa dengan dosen wali sesuai
