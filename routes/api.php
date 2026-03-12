@@ -37,6 +37,7 @@ Route::prefix('ews')->group(function () {
     //General
     Route::get('mahasiswa/detail/{mahasiswaId}', [KoorStatusMahasiswaController::class, 'getDetailMahasiswa']);
     Route::get('mahasiswa/detail-angkatan/{tahunMasuk}', [KoorStatusMahasiswaController::class, 'getDetailAngkatan']);
+    Route::get('mahasiswa/detail-angkatan/{tahunMasuk}/export', [KoorStatusMahasiswaController::class, 'exportDetailAngkatanCsv']);
     Route::get('mahasiswa/all', [KoorStatusMahasiswaController::class, 'getMahasiswaAll']);
     Route::get('mahasiswa/all/export', [KoorStatusMahasiswaController::class, 'exportMahasiswaAllCsv']);
 

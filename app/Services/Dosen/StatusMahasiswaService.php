@@ -43,7 +43,8 @@ class StatusMahasiswaService
                 'early_warning_system.status_kelulusan',
                 'early_warning_system.SPS1',
                 'early_warning_system.SPS2',
-                'early_warning_system.SPS3'
+                'early_warning_system.SPS3',
+                'akademik_mahasiswa.mahasiswa_id'
             )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
@@ -66,10 +67,18 @@ class StatusMahasiswaService
 
         $paginatedData = $query->orderBy('mahasiswa.nim', 'asc')->paginate($perPage);
 
-        // Tambahkan informasi detail nilai D dan E untuk setiap mahasiswa
-        $paginatedData->getCollection()->transform(function ($mahasiswa) {
-            // Hitung nilai D dan E dari KHS (nilai TERAKHIR per mata kuliah)
-            $khsRecords = DB::table('khs_krs_mahasiswa as khs1')
+        // Get mandatory MKs once to avoid N+1 queries.
+        // Using prodi_id = 1 as it is the only prodi in the system.
+        $mandatoryMKsByCategory = DB::table('mata_kuliahs')
+            ->whereIn('tipe_mk', ['nasional', 'fakultas', 'prodi'])
+            ->where('prodi_id', 1)
+            ->get()
+            ->groupBy('tipe_mk');
+
+        // Tambahkan informasi detail nilai D dan E serta MK yang belum lulus
+        $paginatedData->getCollection()->transform(function ($mahasiswa) use ($mandatoryMKsByCategory) {
+            // Get all latest grades for this student (nilai TERAKHIR per mata kuliah)
+            $latestKhs = DB::table('khs_krs_mahasiswa as khs1')
                 ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
                 ->whereIn('khs1.id', function($query) use ($mahasiswa) {
                     $query->select(DB::raw('MAX(id)'))
@@ -78,32 +87,52 @@ class StatusMahasiswaService
                         ->groupBy('khs2.matakuliah_id');
                 })
                 ->where('khs1.mahasiswa_id', $mahasiswa->mahasiswa_id)
-                ->whereIn('khs1.nilai_akhir_huruf', ['D', 'E'])
                 ->select(
-                    'khs1.nilai_akhir_huruf',
-                    'mata_kuliahs.sks'
+                    'mata_kuliahs.id as matakuliah_id',
+                    'mata_kuliahs.name as nama',
+                    'mata_kuliahs.kode',
+                    'mata_kuliahs.sks',
+                    'mata_kuliahs.tipe_mk',
+                    'khs1.nilai_akhir_huruf'
                 )
                 ->get();
 
-            $jumlahNilaiD = 0;
-            $sksNilaiD = 0;
-            $jumlahNilaiE = 0;
-            $sksNilaiE = 0;
+            // 1. Nilai E
+            $matkulNilaiE = $latestKhs->where('nilai_akhir_huruf', 'E');
+            $mahasiswa->jumlah_nilai_e = $matkulNilaiE->count();
+            $mahasiswa->sks_nilai_e = $matkulNilaiE->sum('sks');
+            $mahasiswa->nilai_e_detail = $matkulNilaiE->pluck('nama')->toArray();
+            
+            // Map output nilai_e: 'yes' means requirement met (NO E grades)
+            $mahasiswa->nilai_e = ($mahasiswa->jumlah_nilai_e === 0) ? 'yes' : 'no';
 
-            foreach ($khsRecords as $khs) {
-                if ($khs->nilai_akhir_huruf === 'D') {
-                    $jumlahNilaiD++;
-                    $sksNilaiD += $khs->sks;
-                } elseif ($khs->nilai_akhir_huruf === 'E') {
-                    $jumlahNilaiE++;
-                    $sksNilaiE += $khs->sks;
+            // 2. Nilai D
+            $matkulNilaiD = $latestKhs->where('nilai_akhir_huruf', 'D');
+            $mahasiswa->jumlah_nilai_d = $matkulNilaiD->count();
+            $mahasiswa->sks_nilai_d = $matkulNilaiD->sum('sks');
+            $mahasiswa->nilai_d_detail = $matkulNilaiD->pluck('nama')->toArray();
+
+            // 3. MK Nasional/Fakultas/Prodi Missing (jika status 'no')
+            $categories = ['nasional', 'fakultas', 'prodi'];
+            foreach ($categories as $cat) {
+                $field = "mk_$cat";
+                $detailField = "mk_{$cat}_detail";
+                
+                if ($mahasiswa->$field === 'no') {
+                    $prodiMandatory = $mandatoryMKsByCategory->get($cat) ?? collect();
+                    
+                    $missing = [];
+                    foreach ($prodiMandatory as $mk) {
+                        $studentGrade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
+                        if (!$studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
+                            $missing[] = $mk->name;
+                        }
+                    }
+                    $mahasiswa->$detailField = $missing;
+                } else {
+                    $mahasiswa->$detailField = [];
                 }
             }
-
-            $mahasiswa->jumlah_nilai_d = $jumlahNilaiD;
-            $mahasiswa->sks_nilai_d = $sksNilaiD;
-            $mahasiswa->jumlah_nilai_e = $jumlahNilaiE;
-            $mahasiswa->sks_nilai_e = $sksNilaiE;
 
             return $mahasiswa;
         });
@@ -419,11 +448,13 @@ class StatusMahasiswaService
             }
 
             if (!empty($filters['nilai_d_melebihi_batas'])) {
-                $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', $filters['nilai_d_melebihi_batas']);
+                $dbValue = ($filters['nilai_d_melebihi_batas'] === 'yes') ? 'no' : 'yes';
+                $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', $dbValue);
             }
 
             if (!empty($filters['nilai_e'])) {
-                $query->where('akademik_mahasiswa.nilai_e', $filters['nilai_e']);
+                $dbValue = ($filters['nilai_e'] === 'yes') ? 'no' : 'yes';
+                $query->where('akademik_mahasiswa.nilai_e', $dbValue);
             }
 
             // Filter SPS (requires early_warning_system join)
