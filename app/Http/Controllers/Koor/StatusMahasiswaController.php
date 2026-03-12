@@ -79,6 +79,56 @@ class StatusMahasiswaController extends Controller
     }
 
     /**
+     * Export Detail Mahasiswa per Angkatan ke XLSX
+     *
+     * Export data detail mahasiswa per angkatan ke format Excel.
+     * Termasuk detail MK Nasional, Fakultas, Prodi, serta nilai D dan E.
+     *
+     * @urlParam tahunMasuk integer required Tahun masuk mahasiswa. Example: 2023
+     * @queryParam search string Search by nama mahasiswa. Example: John
+     *
+     * @tags Koor - Status Mahasiswa
+     */
+    public function exportDetailAngkatanCsv(Request $request, $tahunMasuk)
+    {
+        try {
+            // Validasi tahun_masuk
+            if (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100) {
+                return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
+            }
+
+            $search = $request->query('search', null);
+            $data = $this->statusMahasiswaService->getDetailAngkatanExport($tahunMasuk, $search);
+
+            if ($data->isEmpty()) {
+                return $this->errorResponse('Tidak ditemukan data untuk diexport', 404);
+            }
+
+            $fileName = "Detail Angkatan $tahunMasuk " . date('Y-m-d') . '.xlsx';
+            $filePath = 'exports/' . $fileName;
+
+            \Maatwebsite\Excel\Facades\Excel::store(
+                new \App\Exports\MahasiswaDetailAngkatanExport($data),
+                $filePath,
+                'public'
+            );
+
+            return response()->json([
+                'meta' => [
+                    'status' => 'success',
+                    'message' => 'File export detail angkatan berhasil digenerate',
+                    'timestamp' => now()->toIso8601String()
+                ],
+                'data' => [
+                    'url' => asset('storage/' . $filePath)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportDetailAngkatanCsv');
+        }
+    }
+
+    /**
      * Get Detail Mahasiswa Lengkap
      *
      * Menampilkan detail lengkap satu mahasiswa:
