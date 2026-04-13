@@ -3,39 +3,46 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\ProdiBelongsTo;
 
 class MataKuliah extends Model
 {
+    use ProdiBelongsTo;
     protected $table = 'mata_kuliahs';
 
+    // Semua field dari parent (sti-api) + tambahan EWS (prodi_id, koordinator_mk, tipe_mk)
     protected $fillable = [
-        'prodi_id',
+        'prodi_id',       // +EWS
         'kode',
         'name',
-        'koordinator_mk',
         'sks',
         'semester',
-        'tipe_mk',
+        'tipe_mk',        // +EWS enum('nasional','fakultas','prodi','peminatan')
+        'koordinator_mk', // +EWS FK ke dosen
         'peminatan_id',
     ];
+
+    // ─── Relasi dari parent (sti-api) ────────────────────────────────────────
 
     public function peminatan()
     {
         return $this->belongsTo(MataKuliahPeminatan::class, 'peminatan_id');
     }
 
-    public function kelompok_mata_kuliah()
-    {
-        return $this->hasMany(KelompokMataKuliah::class, 'mata_kuliah_id');
-    }
-
-    public function prodi()
-    {
-        return $this->belongsTo(Prodi::class, 'prodi_id', 'id');
-    }
+    // ─── Relasi EWS-specific ─────────────────────────────────────────────────
 
     public function koordinator()
     {
         return $this->belongsTo(Dosen::class, 'koordinator_mk', 'id');
+    }
+
+    public function kelompokMataKuliah()
+    {
+        return $this->hasMany(KelompokMataKuliah::class, 'mata_kuliah_id');
+    }
+
+    public function khsKrs()
+    {
+        return $this->hasMany(KhsKrsMahasiswa::class, 'matakuliah_id');
     }
 }

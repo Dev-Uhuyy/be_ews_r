@@ -32,35 +32,68 @@ use Illuminate\Support\Facades\Http;
 class AuthController extends Controller
 {
     /**
-     * Login
+     * Login Kaprodi
+     *
+     * Endpoint asisten autentikasi untuk Login sebagai Kaprodi. Default Kaprodi test acc:
+     * - Email: kaprodi_a11@ews.com
+     * - Password: password
+     * 
+     * @tags Auth
+     * @unauthenticated
+     */
+    public function loginKaprodi(Request $request) 
+    { 
+        $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
+        return $this->login($request); 
+    }
+
+    /**
+     * Login Dekan
+     *
+     * Endpoint asisten autentikasi untuk Login sebagai Dekan. Default Dekan test acc:
+     * - Email: dekan@ews.com
+     * - Password: password
+     * 
+     * @tags Auth
+     * @unauthenticated
+     */
+    public function loginDekan(Request $request) 
+    { 
+        $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
+        return $this->login($request); 
+    }
+
+    /**
+     * Login Mahasiswa
+     *
+     * Endpoint asisten autentikasi untuk Login sebagai Mahasiswa. Default Mhs test acc:
+     * - Email: dummy_A11_mhs1@ews.com (atau sesuaikan)
+     * - Password: password
+     * 
+     * @tags Auth
+     * @unauthenticated
+     */
+    public function loginMahasiswa(Request $request) 
+    { 
+        $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
+        return $this->login($request); 
+    }
+
+    /**
+     * Login General
+     *
+     * Login utama.
      *
      * **🎉 Auto Token Injection - Seperti Postman!**
      *
-     * Setelah login berhasil:
-     * 1. Token otomatis tersimpan
-     * 2. Token otomatis di-inject ke SEMUA request berikutnya
-     * 3. **TIDAK PERLU** klik tombol "Authorize" 🔓
-     * 4. **TIDAK PERLU** copy-paste token manual
-     * 5. Langsung bisa test endpoint lain! 🚀
-     *
-     * **How it works:**
-     * ```javascript
-     * // Mirip Postman post-response script:
-     * var res = pm.response.json();
-     * pm.environment.set('token', res.data.access_token);
-     *
-     * // Otomatis inject ke semua request:
-     * Authorization: Bearer {token}
-     * ```
-     *
-     * **Console Commands:**
-     * - `getToken()` - Lihat token yang tersimpan
-     * - `clearToken()` - Hapus token (logout)
-     *
+     * Setelah login berhasil, token ter-inject ke semua request berkat session memory browser.
+     * 
      * @tags Auth
      * @unauthenticated
      *
      * @param Request $request
+     * @bodyParam email string required Email user terdaftar
+     * @bodyParam password string required Password user terdaftar
      * @return \Illuminate\Http\JsonResponse
      */
     public function login(Request $request)
@@ -111,10 +144,10 @@ class AuthController extends Controller
                 ],
             ];
 
-            // Handle response berdasarkan role
+            // Handle response berdasarkan role EWS
             if ($roles->first() == 'mahasiswa') {
                 $check_profile_completion = true;
-                $requiredFields = ['nim', 'ipk', 'telepon', 'transkrip'];
+                $requiredFields = ['nim', 'telepon', 'transkrip'];
 
                 if ($user->mahasiswa) {
                     foreach ($requiredFields as $field) {
@@ -127,11 +160,12 @@ class AuthController extends Controller
                     $data['user']['foto'] = $this->getStudentImageUrl($user->mahasiswa->nim);
                     $res = array_merge($data, [
                         'mahasiswa' => [
-                            'id' => $user->mahasiswa->id,
-                            'nim' => $user->mahasiswa->nim,
-                            'ipk' => $user->mahasiswa->ipk,
-                            'telepon' => $user->mahasiswa->telepon,
-                            'transkrip' => $user->mahasiswa->transkrip,
+                            'id'           => $user->mahasiswa->id,
+                            'nim'          => $user->mahasiswa->nim,
+                            'telepon'      => $user->mahasiswa->telepon,
+                            'transkrip'    => $user->mahasiswa->transkrip,
+                            'minat'        => $user->mahasiswa->minat,
+                            'prodi'        => $user->prodi?->nama,
                             'is_completed' => $check_profile_completion,
                         ],
                     ]);
@@ -139,70 +173,31 @@ class AuthController extends Controller
                 }
             }
 
-            if ($roles->first() == 'alumnus') {
-                if ($user->alumni) {
-                    $check_profile_completion = true;
-                    $requiredFields = ['jenis_kelamin', 'nim', 'telepon', 'tahun_masuk', 'bulan_lulus', 'angkatan_wisuda', 'status'];
-                    foreach ($requiredFields as $field) {
-                        if (is_null($user->alumni->$field) || empty($user->alumni->$field)) {
-                            $check_profile_completion = false;
-                            break;
-                        }
-                    }
-
-                    $res = array_merge($data, [
-                        'alumni' => [
-                            'id' => $user->alumni->id,
-                            'nama' => $user->alumni->nama,
-                            'email' => $user->alumni->email,
-                            'jenis_kelamin' => $user->alumni->jenis_kelamin,
-                            'nim' => $user->alumni->nim,
-                            'telepon' => $user->alumni->telepon,
-                            'tahun_masuk' => $user->alumni->tahun_masuk,
-                            'bulan_lulus' => $user->alumni->bulan_lulus,
-                            'tahun_lulus' => $user->alumni->tahun_lulus,
-                            'angkatan_wisuda' => $user->alumni->angkatan_wisuda,
-                            'status' => $user->alumni->status,
-                            'masa_tunggu' => $user->alumni->masa_tunggu,
-                            'foto_profil' => $user->alumni->foto_profil,
-                            'is_completed' => $check_profile_completion,
-                        ],
-                    ]);
-                    return $this->successResponse($res);
-                }
+            if ($roles->first() == 'kaprodi') {
+                $user->load('dosen.prodi', 'prodi');
+                $res = array_merge($data, [
+                    'kaprodi' => [
+                        'prodi_id'  => $user->prodi_id,
+                        'prodi'     => $user->prodi?->nama,
+                        'kode_prodi'=> $user->prodi?->kode_prodi,
+                    ],
+                ]);
+                return $this->successResponse($res);
             }
 
-            if ($roles->first() == 'mitra') {
-                if ($user->mitra) {
-                    $check_profile_completion = true;
-                    $requiredFields = ['nama_perusahaan', 'bidang_usaha', 'email', 'telepon', 'alamat', 'kota', 'negara'];
-                    foreach ($requiredFields as $field) {
-                        if (is_null($user->mitra->$field) || empty($user->mitra->$field)) {
-                            $check_profile_completion = false;
-                            break;
-                        }
-                    }
-
-                    $res = array_merge($data, [
-                        'mitra' => [
-                            'id' => $user->mitra->id,
-                            'nama_perusahaan' => $user->mitra->nama_perusahaan,
-                            'bidang_usaha' => $user->mitra->bidang_usaha,
-                            'email' => $user->mitra->email,
-                            'telepon' => $user->mitra->telepon,
-                            'alamat' => $user->mitra->alamat,
-                            'kota' => $user->mitra->kota,
-                            'negara' => $user->mitra->negara,
-                            'website' => $user->mitra->website,
-                            'logo' => $user->mitra->logo,
-                            'is_completed' => $check_profile_completion,
-                        ],
-                    ]);
-                    return $this->successResponse($res);
-                }
+            if ($roles->first() == 'dekan') {
+                $user->load('prodi');
+                $res = array_merge($data, [
+                    'dekan' => [
+                        'scope' => 'fakultas', // dekan lihat semua prodi
+                    ],
+                ]);
+                return $this->successResponse($res);
             }
 
+            // Role lain (alumnus, mitra, dll) tidak dalam scope EWS
             return $this->successResponse($data);
+
         } catch (Exception $e) {
             return $this->exceptionError(
                 $e,
@@ -270,9 +265,10 @@ class AuthController extends Controller
             $check_profile_completion = true;
 
             if ($roles == 'mahasiswa') {
-                $user->load('mahasiswa');
+                $user->load('mahasiswa.akademikMahasiswa');
                 if ($user->mahasiswa) {
-                    $requiredFields = ['nim', 'ipk', 'telepon', 'transkrip'];
+                    // ipk sudah dipindah ke tabel akademik_mahasiswa oleh migration EWS
+                    $requiredFields = ['nim', 'telepon', 'transkrip'];
                     foreach ($requiredFields as $field) {
                         if (is_null($user->mahasiswa->$field)) {
                             $check_profile_completion = false;
@@ -282,79 +278,20 @@ class AuthController extends Controller
                     $baseUserData['user']['foto'] = $this->getStudentImageUrl($user->mahasiswa->nim);
                     return $this->successResponse(array_merge($baseUserData, [
                         'mahasiswa' => [
-                            'id' => $user->mahasiswa->id,
-                            'nim' => $user->mahasiswa->nim,
-                            'ipk' => $user->mahasiswa->ipk,
-                            'telepon' => $user->mahasiswa->telepon,
-                            'transkrip' => $user->mahasiswa->transkrip,
-                            'minat' => $user->mahasiswa->minat,
+                            'id'           => $user->mahasiswa->id,
+                            'nim'          => $user->mahasiswa->nim,
+                            'ipk'          => $user->mahasiswa->akademikMahasiswa?->ipk,
+                            'telepon'      => $user->mahasiswa->telepon,
+                            'transkrip'    => $user->mahasiswa->transkrip,
+                            'minat'        => $user->mahasiswa->minat,
+                            'semester_aktif' => $user->mahasiswa->akademikMahasiswa?->semester_aktif,
                             'is_completed' => $check_profile_completion,
                         ],
                     ]));
                 }
             }
 
-            if ($roles == 'alumnus') {
-                $user->load('alumni');
-                if ($user->alumni) {
-                    $requiredFields = ['jenis_kelamin', 'nim', 'telepon', 'tahun_masuk', 'bulan_lulus', 'tahun_lulus', 'angkatan_wisuda', 'status'];
-                    foreach ($requiredFields as $field) {
-                        if (is_null($user->alumni->$field) || empty($user->alumni->$field)) {
-                            $check_profile_completion = false;
-                            break;
-                        }
-                    }
-
-                    return $this->successResponse(array_merge($baseUserData, [
-                        'alumni' => [
-                            'id' => $user->alumni->id,
-                            'nama' => $user->alumni->nama,
-                            'email' => $user->alumni->email,
-                            'jenis_kelamin' => $user->alumni->jenis_kelamin,
-                            'nim' => $user->alumni->nim,
-                            'telepon' => $user->alumni->telepon,
-                            'tahun_masuk' => $user->alumni->tahun_masuk,
-                            'bulan_lulus' => $user->alumni->bulan_lulus,
-                            'tahun_lulus' => $user->alumni->tahun_lulus,
-                            'angkatan_wisuda' => $user->alumni->angkatan_wisuda,
-                            'status' => $user->alumni->status,
-                            'masa_tunggu' => $user->alumni->masa_tunggu,
-                            'foto_profil' => $user->alumni->foto_profil,
-                            'is_completed' => $check_profile_completion,
-                        ],
-                    ]));
-                }
-            }
-
-            if ($roles == 'mitra') {
-                $user->load('mitra');
-                if ($user->mitra) {
-                    $requiredFields = ['nama_perusahaan', 'bidang_usaha', 'email', 'telepon', 'alamat', 'kota', 'negara'];
-                    foreach ($requiredFields as $field) {
-                        if (is_null($user->mitra->$field) || empty($user->mitra->$field)) {
-                            $check_profile_completion = false;
-                            break;
-                        }
-                    }
-
-                    return $this->successResponse(array_merge($baseUserData, [
-                        'mitra' => [
-                            'id' => $user->mitra->id,
-                            'nama_perusahaan' => $user->mitra->nama_perusahaan,
-                            'bidang_usaha' => $user->mitra->bidang_usaha,
-                            'email' => $user->mitra->email,
-                            'telepon' => $user->mitra->telepon,
-                            'alamat' => $user->mitra->alamat,
-                            'kota' => $user->mitra->kota,
-                            'negara' => $user->mitra->negara,
-                            'website' => $user->mitra->website,
-                            'logo' => $user->mitra->logo,
-                            'is_completed' => $check_profile_completion,
-                        ],
-                    ]));
-                }
-            }
-
+            // alumnus / mitra tidak dalam scope EWS — kembalikan data dasar
             return $this->successResponse($baseUserData);
         } catch (Exception $e) {
             return $this->exceptionError(

@@ -26,7 +26,9 @@ class IpsMahasiswa extends Model
         'ips_14',
     ];
 
-public function mahasiswa()
+    // ─── Relasi ───────────────────────────────────────────────────────────────
+
+    public function mahasiswa()
     {
         return $this->belongsTo(Mahasiswa::class, 'mahasiswa_id', 'id');
     }

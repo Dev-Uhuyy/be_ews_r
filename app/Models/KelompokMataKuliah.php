@@ -14,18 +14,20 @@ class KelompokMataKuliah extends Model
         'dosen_pengampu_id',
     ];
 
-    public function mata_kuliah()
+    // ─── Relasi ───────────────────────────────────────────────────────────────
+
+    public function mataKuliah()
     {
-        return $this->belongsTo(MataKuliah::class, 'mata_kuliah_id');
+        return $this->belongsTo(MataKuliah::class, 'mata_kuliah_id', 'id');
     }
 
-    public function dosen_pengampu()
+    public function dosenPengampu()
     {
-        return $this->belongsTo(Dosen::class, 'dosen_pengampu_id');
+        return $this->belongsTo(Dosen::class, 'dosen_pengampu_id', 'id');
     }
 
-    public function khs_krs_mahasiswa()
+    public function khsKrs()
     {
-        return $this->hasMany(KhsKrsMahasiswa::class, 'kelompok_id');
+        return $this->hasMany(KhsKrsMahasiswa::class, 'kelompok_id', 'id');
     }
 }

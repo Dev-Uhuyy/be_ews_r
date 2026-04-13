@@ -10,20 +10,22 @@ class EarlyWarningSystem extends Model
 
     protected $fillable = [
         'akademik_mahasiswa_id',
-        'status',
+        'status',          // enum('tepat_waktu','normal','perhatian','kritis')
         'status_kelulusan',
-        'SPS1',
-        'SPS2',
-        'SPS3',
+        'SPS1',            // enum('yes','no')
+        'SPS2',            // enum('yes','no')
+        'SPS3',            // enum('yes','no')
     ];
 
-    public function akademik_mahasiswa()
+    // ─── Relasi ───────────────────────────────────────────────────────────────
+
+    public function akademikMahasiswa()
     {
-        return $this->belongsTo(AkademikMahasiswa::class,'akademik_mahasiswa_id', 'id');
+        return $this->belongsTo(AkademikMahasiswa::class, 'akademik_mahasiswa_id', 'id');
     }
 
-    public function tindak_lanjuts()
+    public function tindakLanjut()
     {
-        return $this->hasMany(TindakLanjut::class, 'id_ews');
+        return $this->hasMany(TindakLanjut::class, 'id_ews', 'id');
     }
 }

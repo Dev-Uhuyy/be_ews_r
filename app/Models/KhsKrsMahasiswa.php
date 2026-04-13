@@ -13,26 +13,39 @@ class KhsKrsMahasiswa extends Model
         'matakuliah_id',
         'kelompok_id',
         'semester_ambil',
+        'status',             // enum('B','U') — Baru/Ulang
         'absen',
-        'status',
         'nilai_uts',
         'nilai_uas',
         'nilai_akhir_angka',
         'nilai_akhir_huruf',
     ];
 
+    // ─── Relasi ───────────────────────────────────────────────────────────────
+
     public function mahasiswa()
     {
-        return $this->belongsTo(Mahasiswa::class, 'mahasiswa_id');
+        return $this->belongsTo(Mahasiswa::class, 'mahasiswa_id', 'id');
     }
 
+    public function mataKuliah()
+    {
+        return $this->belongsTo(MataKuliah::class, 'matakuliah_id', 'id');
+    }
+
+    // Alias untuk backwards compatibility
     public function mata_kuliah()
     {
-        return $this->belongsTo(MataKuliah::class, 'matakuliah_id');
+        return $this->mataKuliah();
+    }
+
+    public function kelompok()
+    {
+        return $this->belongsTo(KelompokMataKuliah::class, 'kelompok_id', 'id');
     }
 
     public function kelompok_mata_kuliah()
     {
-        return $this->belongsTo(KelompokMataKuliah::class, 'kelompok_id');
+        return $this->kelompok();
     }
 }

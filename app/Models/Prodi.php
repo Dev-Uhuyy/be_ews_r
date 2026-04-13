@@ -3,23 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Prodi extends Model
 {
-    protected $table = 'prodi';
+    use SoftDeletes;
+
+    protected $table = 'prodis';
 
     protected $fillable = [
         'nama',
+        'kode_prodi',
     ];
 
-    public function prodi_users()
-    {
-        return $this->hasMany(ProdiUser::class, 'prodi_id', 'id');
-    }
+    // ─── Relasi ───────────────────────────────────────────────────────────────
 
-    public function mahasiswas()
+    public function users()
     {
-        return $this->hasMany(Mahasiswa::class, 'prodi_id', 'id');
+        return $this->hasMany(User::class, 'prodi_id', 'id');
     }
 
     public function dosens()
@@ -27,7 +28,17 @@ class Prodi extends Model
         return $this->hasMany(Dosen::class, 'prodi_id', 'id');
     }
 
-    public function mata_kuliah_peminatans()
+    public function mahasiswas()
+    {
+        return $this->hasMany(Mahasiswa::class, 'prodi_id', 'id');
+    }
+
+    public function mataKuliahs()
+    {
+        return $this->hasMany(MataKuliah::class, 'prodi_id', 'id');
+    }
+
+    public function mataKuliahPeminatans()
     {
         return $this->hasMany(MataKuliahPeminatan::class, 'prodi_id', 'id');
     }

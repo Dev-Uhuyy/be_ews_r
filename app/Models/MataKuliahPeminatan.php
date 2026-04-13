@@ -3,26 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\ProdiBelongsTo;
 
 class MataKuliahPeminatan extends Model
 {
+    use ProdiBelongsTo;
     protected $table = 'mata_kuliah_peminatans';
 
+    // Semua field dari parent (sti-api) + tambahan EWS (prodi_id)
     protected $fillable = [
         'peminatan',
-        'prodi_id',
+        'prodi_id',  // +EWS
     ];
 
-    public function matakuliah()
+    // ─── Relasi dari parent (sti-api) ────────────────────────────────────────
+
+    public function mataKuliah()
     {
         return $this->hasMany(MataKuliah::class, 'peminatan_id');
     }
 
-    public function prodi()
-    {
-        return $this->belongsTo(Prodi::class);
-    }
+    // ─── Relasi EWS-specific ─────────────────────────────────────────────────
 }
-
-
-

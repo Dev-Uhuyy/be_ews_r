@@ -10,18 +10,16 @@ class TindakLanjut extends Model
 
     protected $fillable = [
         'id_ews',
-        'kategori',
+        'kategori',          // enum('rekomitmen','pindah_prodi')
         'link',
-        'status',
+        'status',            // enum('belum_diverifikasi','telah_diverifikasi')
         'tanggal_pengajuan',
     ];
 
-    protected $casts = [
-        'tanggal_pengajuan' => 'datetime',
-    ];
+    // ─── Relasi ───────────────────────────────────────────────────────────────
 
-    public function ews()
+    public function earlyWarningSystem()
     {
-        return $this->belongsTo(EarlyWarningSystem::class, 'id_ews');
+        return $this->belongsTo(EarlyWarningSystem::class, 'id_ews', 'id');
     }
 }
