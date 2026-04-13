@@ -96,16 +96,10 @@ class CapaianMahasiswaController extends Controller
                 'public'
             );
 
-            return response()->json([
-                'meta' => [
-                    'status' => 'success',
-                    'message' => 'File export tren IPS berhasil digenerate',
-                    'timestamp' => now()->toIso8601String()
-                ],
-                'data' => [
-                    'url' => asset('storage/' . $filePath)
-                ]
-            ]);
+            return $this->successResponse(
+                ['url' => asset('storage/' . $filePath)],
+                'File export tren IPS berhasil digenerate'
+            );
 
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportTrenIPSAll');
@@ -238,16 +232,10 @@ class CapaianMahasiswaController extends Controller
                 'public'
             );
 
-            return response()->json([
-                'meta' => [
-                    'status' => 'success',
-                    'message' => 'File export mahasiswa MK gagal berhasil digenerate',
-                    'timestamp' => now()->toIso8601String()
-                ],
-                'data' => [
-                    'url' => asset('storage/' . $filePath)
-                ]
-            ]);
+            return $this->successResponse(
+                ['url' => asset('storage/' . $filePath)],
+                'File export mahasiswa MK gagal berhasil digenerate'
+            );
 
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportMahasiswaMKGagal');

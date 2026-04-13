@@ -113,16 +113,10 @@ class StatusMahasiswaController extends Controller
                 'public'
             );
 
-            return response()->json([
-                'meta' => [
-                    'status' => 'success',
-                    'message' => 'File export detail angkatan berhasil digenerate',
-                    'timestamp' => now()->toIso8601String()
-                ],
-                'data' => [
-                    'url' => asset('storage/' . $filePath)
-                ]
-            ]);
+            return $this->successResponse(
+                ['url' => asset('storage/' . $filePath)],
+                'File export detail angkatan berhasil digenerate'
+            );
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportDetailAngkatanCsv');
         }
@@ -252,16 +246,10 @@ class StatusMahasiswaController extends Controller
                 'public'
             );
 
-            return response()->json([
-                'meta' => [
-                    'status' => 'success',
-                    'message' => 'File export ringkasan status berhasil digenerate',
-                    'timestamp' => now()->toIso8601String()
-                ],
-                'data' => [
-                    'url' => asset('storage/' . $filePath)
-                ]
-            ]);
+            return $this->successResponse(
+                ['url' => asset('storage/' . $filePath)],
+                'File export ringkasan status berhasil digenerate'
+            );
 
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportTableRingkasanStatusCsv');
@@ -451,16 +439,10 @@ class StatusMahasiswaController extends Controller
                 'public'
             );
 
-            return response()->json([
-                'meta' => [
-                    'status' => 'success',
-                    'message' => 'File export mahasiswa berhasil digenerate',
-                    'timestamp' => now()->toIso8601String()
-                ],
-                'data' => [
-                    'url' => asset('storage/' . $filePath)
-                ]
-            ]);
+            return $this->successResponse(
+                ['url' => asset('storage/' . $filePath)],
+                'File export mahasiswa berhasil digenerate'
+            );
 
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportMahasiswaAllCsv');

@@ -14,6 +14,7 @@ class StatusMahasiswaService
     {
         // Get detail mahasiswa per angkatan
         // Exclude mahasiswa yang sudah lulus dan DO
+        $query = AkademikMahasiswa::query()
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
                 ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
                 ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
@@ -201,6 +202,7 @@ class StatusMahasiswaService
 
     public function getDetailAngkatanExport($tahunMasuk, $search = null)
     {
+        $query = AkademikMahasiswa::query()
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
                 ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
                 ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')

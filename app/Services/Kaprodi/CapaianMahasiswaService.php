@@ -55,7 +55,7 @@ class CapaianMahasiswaService
             // Ambil semester aktif mayoritas untuk angkatan ini
             $semesterAktifQuery = DB::table('akademik_mahasiswa')
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk);
+                ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk)
                 ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
                 ->select('akademik_mahasiswa.semester_aktif');
 
@@ -74,7 +74,7 @@ class CapaianMahasiswaService
                 $avgIpsPrev2Query = DB::table('ips_mahasiswa')
                     ->join('akademik_mahasiswa', 'ips_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
                     ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                    ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk);
+                    ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk)
                     ->whereNotNull('ips_mahasiswa.ips_' . $semesterPrev2)
                     ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
@@ -83,7 +83,7 @@ class CapaianMahasiswaService
                 $avgIpsPrev1Query = DB::table('ips_mahasiswa')
                     ->join('akademik_mahasiswa', 'ips_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
                     ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                    ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk);
+                    ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk)
                     ->whereNotNull('ips_mahasiswa.ips_' . $semesterPrev1)
                     ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
@@ -103,7 +103,7 @@ class CapaianMahasiswaService
             $mkGagalQuery = DB::table('khs_krs_mahasiswa')
                 ->join('akademik_mahasiswa', 'khs_krs_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk);
+                ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk)
                 ->where('khs_krs_mahasiswa.nilai_akhir_huruf', 'E')
                 ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
@@ -114,7 +114,7 @@ class CapaianMahasiswaService
                 ->select('khs_krs_mahasiswa.mahasiswa_id', 'khs_krs_mahasiswa.matakuliah_id', DB::raw('COUNT(*) as jumlah'))
                 ->join('akademik_mahasiswa', 'khs_krs_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
                 ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk);
+                ->where('akademik_mahasiswa.tahun_masuk', $item->tahun_masuk)
                 ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
             $mkUlang = $this->applyProdiScope($mkUlangQuery)
@@ -282,7 +282,7 @@ class CapaianMahasiswaService
             ->join('mata_kuliahs', 'khs_krs_mahasiswa.matakuliah_id', '=', 'mata_kuliahs.id')
             ->join('akademik_mahasiswa', 'khs_krs_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-            ->where('khs_krs_mahasiswa.nilai_akhir_huruf', 'E');
+            ->where('khs_krs_mahasiswa.nilai_akhir_huruf', 'E')
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
             ->select('khs_krs_mahasiswa.matakuliah_id', DB::raw('COUNT(*) as jumlah_gagal'));
 

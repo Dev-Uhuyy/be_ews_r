@@ -188,16 +188,10 @@ class DashboardController extends Controller
                 'public'
             );
 
-            return response()->json([
-                'meta' => [
-                    'status' => 'success',
-                    'message' => 'File export ringkasan mahasiswa berhasil digenerate',
-                    'timestamp' => now()->toIso8601String()
-                ],
-                'data' => [
-                    'url' => asset('storage/' . $filePath)
-                ]
-            ]);
+            return $this->successResponse(
+                ['url' => asset('storage/' . $filePath)],
+                'File export ringkasan mahasiswa berhasil digenerate'
+            );
 
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportTableRingkasanMahasiswaCsv');
