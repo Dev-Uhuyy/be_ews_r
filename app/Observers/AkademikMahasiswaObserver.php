@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Models\AkademikMahasiswa;
-use App\Services\Koor\EwsService;
+use App\Services\Kaprodi\EwsService;
 use Illuminate\Support\Facades\Log;
 
 class AkademikMahasiswaObserver

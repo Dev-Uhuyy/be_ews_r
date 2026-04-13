@@ -8,9 +8,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
+ * Mahasiswa - Modul Tindak Lanjut 
+ * 
+ * Modul ini diakses oleh Mahasiswa untuk mengajukan *Follow-Up* (tindak lanjut) ketika
+ * berstatus Kritis/Perhatian. Mahasiswa dapat mengajukan form Rekomitmen atau Pindah Prodi,
+ * meng-upload URL dokumen SP (Surat Peringatan), dan melihat history respon dari Kaprodi.
+ * 
  * @tags Mahasiswa - Tindak Lanjut
+ * @unauthenticated false
  */
-
 class MhsTindakLanjutController extends Controller
 {
     protected $tindakLanjutService;
@@ -21,7 +27,11 @@ class MhsTindakLanjutController extends Controller
     }
 
     /**
-     * Get list of follow-up tickets for the authenticated student.
+     * Riwayat Pengajuan (History)
+     * 
+     * Mengambil seluruh data pengajuan tindak lanjut EWS historis (beserta keterangan dan status approval dari Kaprodi).
+     * 
+     * @response 200 { "data": [ { "id": 1, "kategori": "rekomitmen", "link": "https://drive.google...", "status": "menunggu", "keterangan": null } ] }
      */
     public function index()
     {
@@ -41,7 +51,12 @@ class MhsTindakLanjutController extends Controller
 
 
     /**
-     * Get summary cards for the authenticated student.
+     * Card Summary Notifikasi
+     * 
+     * Mengembalikan ringkasan total pengajuan berstatus: disetujui, ditolak, dan menunggu. 
+     * Sangat berguna untuk di-inject ke UI *Badge Notification* Mahasiswa.
+     * 
+     * @response 200 { "data": { "menunggu": 1, "disetujui": 0, "ditolak": 0 } }
      */
     public function getCardSummary()
     {
@@ -60,7 +75,16 @@ class MhsTindakLanjutController extends Controller
     }
 
     /**
-     * Submit a new follow-up ticket.
+     * Ajukan Tindak Lanjut Baru (Create)
+     * 
+     * Membuat tiket pengajuan (rekomitmen akademik / perpindahan program studi) ke sisi Kaprodi.
+     * Sistem akan otomatis menolak jika masih ada tiket yang menggantung berstatus "menunggu".
+     * 
+     * @param Request $request
+     * @bodyParam kategori string required Kategori formulir. Example: rekomitmen ATAU pindah_prodi
+     * @bodyParam link string required URL/Link drive dokumen PDF bukti komitmen/pernyataan orang tua. Example: https://docs.google.com/viewer
+     * @response 200 { "meta": {"status":"success", "message": "Tindak lanjut berhasil diajukan"}, "data": {"id": 2, "status": "menunggu"} }
+     * @response 400 { "meta": {"status":"error", "message": "Gagal: Masih ada pengajuan yang belum diproses kaprodi"} }
      */
     public function store(Request $request)
     {
@@ -89,7 +113,13 @@ class MhsTindakLanjutController extends Controller
     }
 
     /**
-     * Provide download link/template info.
+     * Info Unduhan Template Form
+     * 
+     * Endpoint pembantu bagi Mahasiswa untuk mendownload/mendapatkan URL statis dokumen PDF template.
+     * Template ini harus di-print, ditandatangani, dan di-upload ulang via link Drive saat fungsi `store` (create).
+     * 
+     * @param string $kategori Jenis form (rekomitmen / pindah_prodi)
+     * @response 200 { "data": { "template_url": "http://domain.com/templates/template_rekomitmen.pdf" } }
      */
     public function getTemplate($kategori)
     {

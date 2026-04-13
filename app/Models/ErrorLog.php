@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class ErrorLog extends Model
 {
     protected $table = 'error_logs';
+
+    // Sama dengan parent (sti-api) — tidak ada perubahan
     protected $fillable = [
         'user_id',
         'method',
@@ -16,4 +18,7 @@ class ErrorLog extends Model
         'payload',
     ];
 
+    protected $casts = [
+        'payload' => 'array',
+    ];
 }

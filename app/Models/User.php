@@ -9,10 +9,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
+use App\Traits\ProdiBelongsTo;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes, ProdiBelongsTo;
 
     /**
      * The attributes that are mass assignable.
@@ -25,7 +26,9 @@ class User extends Authenticatable
         'password',
         'access_token',
         'refresh_token',
-        'bo_token'
+        'fcm_token',
+        'bo_token',
+        'prodi_id',
     ];
 
     /**
@@ -47,9 +50,11 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
+
+    // ─── Relasi dari parent (sti-api) yang dipakai EWS ──────────────────────
 
     public function mahasiswa()
     {
@@ -61,8 +66,8 @@ class User extends Authenticatable
         return $this->hasOne(Dosen::class, 'user_id', 'id');
     }
 
-    public function prodi_users()
+    public function activityLogs()
     {
-        return $this->belongsTo(Prodi::class, 'prodi_id', 'id');
+        return $this->hasMany(ErrorLog::class, 'user_id', 'id');
     }
 }

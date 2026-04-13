@@ -28,13 +28,62 @@ abstract class Controller
     }
 
 
+    protected function getProdiInfo()
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user) return null;
+
+        // Eager load if needed, but normally $user->prodi relies on prodi_id
+        if ($user->hasRole('kaprodi')) {
+            return [
+                'role' => 'kaprodi',
+                'scope_data' => 'Prodi Spesifik',
+                'nama_prodi' => $user->prodi?->nama ?? 'Unknown Prodi',
+                'kode_prodi' => $user->prodi?->kode_prodi ?? 'Unknown',
+            ];
+        }
+
+        if ($user->hasRole('dekan')) {
+            if (request()->has('prodi_id') && request('prodi_id') != '') {
+                $prodi = \App\Models\Prodi::find(request('prodi_id'));
+                return [
+                    'role' => 'dekan',
+                    'scope_data' => 'Filter Prodi Spesifik',
+                    'nama_prodi' => $prodi?->nama ?? 'Unknown Prodi',
+                ];
+            }
+            return [
+                'role' => 'dekan',
+                'scope_data' => 'Seluruh Fakultas (Semua Prodi)',
+            ];
+        }
+
+        if ($user->hasRole('mahasiswa')) {
+             return [
+                'role' => 'mahasiswa',
+                'scope_data' => 'Data Pribadi',
+                'nama_prodi' => $user->prodi?->nama ?? 'Unknown Prodi',
+            ];
+        }
+
+        return null;
+    }
+
     public function successResponse($data, $message = 'Success', $status = 200)
     {
-        return response()->json([
+        $response = [
             'success' => true,
             'message' => $message,
-            'data' => $data
-        ], $status);
+        ];
+
+        $prodiInfo = $this->getProdiInfo();
+        if ($prodiInfo) {
+            $response['info_akses'] = $prodiInfo;
+        }
+
+        $response['data'] = $data;
+
+        return response()->json($response, $status);
     }
 
     public function errorResponse($message, $status = 400, $errors = null)
@@ -64,6 +113,11 @@ abstract class Controller
             'success' => true,
             'message' => $message,
         ];
+
+        $prodiInfo = $this->getProdiInfo();
+        if ($prodiInfo) {
+            $response['info_akses'] = $prodiInfo;
+        }
 
         // Add additional data first if provided (e.g., summary before data)
         if ($additionalData !== null) {
