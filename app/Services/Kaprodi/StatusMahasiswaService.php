@@ -304,7 +304,7 @@ class StatusMahasiswaService
     public function getDetailMahasiswa($mahasiswaId)
     {
         // Get detail mahasiswa dengan relasi yang dibutuhkan
-        $mahasiswa = Mahasiswa::with([
+        $mahasiswa = Mahasiswa::filterByProdi()->with([
                 'user',
                 'akademikmahasiswa.dosen_wali.user',
                 'akademikmahasiswa.early_warning_systems',

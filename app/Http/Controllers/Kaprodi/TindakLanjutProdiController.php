@@ -58,16 +58,10 @@ class TindakLanjutProdiController extends Controller
                 'public'
             );
 
-            return response()->json([
-                'meta' => [
-                    'status' => 'success',
-                    'message' => 'File export tindak lanjut berhasil digenerate',
-                    'timestamp' => now()->toIso8601String()
-                ],
-                'data' => [
-                    'url' => asset('storage/' . $filePath)
-                ]
-            ]);
+            return $this->successResponse(
+                ['url' => asset('storage/' . $filePath)],
+                'File export tindak lanjut berhasil digenerate'
+            );
 
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportCsv');
