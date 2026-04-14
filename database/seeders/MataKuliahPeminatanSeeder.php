@@ -9,28 +9,32 @@ use Illuminate\Database\Seeder;
 class MataKuliahPeminatanSeeder extends Seeder
 {
     /**
-     * Seed peminatan per prodi.
+     * Seed peminatan per prodi dengan data realistis.
      * Gunakan firstOrCreate agar aman dijalankan berulang.
      */
     public function run(): void
     {
-        // Peminatan untuk prodi Teknik Informatika (A11) — sesuai bidang_kajian dosen
-        $peminatans = [
-            ['kode_prodi' => 'A11', 'peminatan' => 'SC'],    // Software Computing
-            ['kode_prodi' => 'A11', 'peminatan' => 'RPLD'],  // Rekayasa PL & Data
-            ['kode_prodi' => 'A11', 'peminatan' => 'SK3D'],  // Sistem Komputer 3D
+        $prodis = Prodi::all();
+
+        $peminatanMap = [
+            'A11' => ['SC', 'RPLD', 'SK3D'], // Teknik Informatika
+            'A12' => ['EIS', 'EB', 'DATA'],  // Sistem Informasi: Enterprise Info System, E-Business, Data Science
+            'A14' => ['DG', 'MM', 'AN'],     // DKV: Desain Grafis, Multimedia, Animasi
+            'A15' => ['PR', 'JR', 'BROAD'],  // Ilkom: Public Relations, Jurnalistik, Broadcasting
         ];
 
-        foreach ($peminatans as $data) {
-            $prodi = Prodi::where('kode_prodi', $data['kode_prodi'])->first();
-
-            if (!$prodi) continue;
-
-            MataKuliahPeminatan::firstOrCreate(
-                ['peminatan' => $data['peminatan'], 'prodi_id' => $prodi->id]
-            );
+        foreach ($prodis as $prodi) {
+            $kode = $prodi->kode_prodi;
+            
+            if (isset($peminatanMap[$kode])) {
+                foreach ($peminatanMap[$kode] as $peminatan) {
+                    MataKuliahPeminatan::firstOrCreate(
+                        ['peminatan' => $peminatan, 'prodi_id' => $prodi->id]
+                    );
+                }
+            }
         }
 
-        $this->command->info('✔ MataKuliahPeminatanSeeder: ' . MataKuliahPeminatan::count() . ' peminatan tersedia.');
+        $this->command->info('✔ MataKuliahPeminatanSeeder: ' . MataKuliahPeminatan::count() . ' peminatan tersedia (spesifik prodi).');
     }
 }

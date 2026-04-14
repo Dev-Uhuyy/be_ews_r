@@ -15,21 +15,25 @@ class AkademikMahasiswaSeeder extends Seeder
      */
     public function run(): void
     {
-        $dosen = Dosen::first();
-
-        if (!$dosen) {
-            $this->command->error('✖ Dosen tidak ditemukan. Jalankan DosenSeeder terlebih dahulu.');
-            return;
-        }
-
         $mahasiswas = Mahasiswa::all();
 
         if ($mahasiswas->isEmpty()) {
             $this->command->warn('⚠ Tidak ada mahasiswa ditemukan.');
             return;
         }
+        
+        $dosenCache = [];
 
         foreach ($mahasiswas as $mhs) {
+            if (!array_key_exists($mhs->prodi_id, $dosenCache)) {
+                $dosenProdi = Dosen::where('prodi_id', $mhs->prodi_id)->first();
+                $dosenCache[$mhs->prodi_id] = $dosenProdi;
+            }
+            
+            $dosen = $dosenCache[$mhs->prodi_id];
+            
+            if (!$dosen) continue;
+
             AkademikMahasiswa::firstOrCreate(
                 ['mahasiswa_id' => $mhs->id],
                 [
@@ -50,6 +54,6 @@ class AkademikMahasiswaSeeder extends Seeder
             );
         }
 
-        $this->command->info('✔ AkademikMahasiswaSeeder: ' . $mahasiswas->count() . ' record akademik dibuat.');
+        $this->command->info('✔ AkademikMahasiswaSeeder: ' . $mahasiswas->count() . ' record akademik dibuat (multi-prodi).');
     }
 }
