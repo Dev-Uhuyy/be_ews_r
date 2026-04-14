@@ -90,15 +90,19 @@ Route::prefix('ews')->group(function () {
         // Dashboard Fakultas
         Route::get('dashboard',                  [DekanDashboardController::class,     'getDashboard']);
         Route::get('table-ringkasan-mahasiswa',   [DekanDashboardController::class,     'getTableRingkasanMahasiswa']);
+        Route::get('table-ringkasan-mahasiswa/export', [DekanDashboardController::class, 'exportTableRingkasanMahasiswaCsv']);
         Route::get('mahasiswa/detail/{mahasiswaId}', [DekanStatusMahasiswaController::class, 'getDetailMahasiswa']);
 
         // Overview semua prodi
         Route::get('mahasiswa/detail-angkatan/{tahunMasuk}', [DekanStatusMahasiswaController::class, 'getDetailAngkatan']);
+        Route::get('mahasiswa/detail-angkatan/{tahunMasuk}/export', [DekanStatusMahasiswaController::class, 'exportDetailAngkatanCsv']);
         Route::get('mahasiswa/all',                           [DekanStatusMahasiswaController::class, 'getMahasiswaAll']);
+        Route::get('mahasiswa/all/export',                    [DekanStatusMahasiswaController::class, 'exportMahasiswaAllCsv']);
 
         // Status EWS & Management
         Route::get('distribusi-status-ews',     [\App\Http\Controllers\Dekan\EwsController::class, 'getDistribusiStatusEws']);
         Route::get('table-ringkasan-status',     [DekanStatusMahasiswaController::class, 'getTableRingkasanStatus']);
+        Route::get('table-ringkasan-status/export', [DekanStatusMahasiswaController::class, 'exportTableRingkasanStatusCsv']);
         Route::post('mahasiswa/{mahasiswaId}/recalculate-status', [\App\Http\Controllers\Dekan\EwsController::class, 'recalculateMahasiswaStatus']);
         Route::post('recalculate-all-status',                     [\App\Http\Controllers\Dekan\EwsController::class, 'recalculateAllStatus']);
 
@@ -108,13 +112,17 @@ Route::prefix('ews')->group(function () {
 
         // Capaian Mahasiswa
         Route::get('tren-ips/all',               [\App\Http\Controllers\Dekan\CapaianMahasiswaController::class, 'getTrenIPSAll']);
+        Route::get('tren-ips/all/export',        [\App\Http\Controllers\Dekan\CapaianMahasiswaController::class, 'exportTrenIPSAll']);
         Route::get('card-capaian',               [\App\Http\Controllers\Dekan\CapaianMahasiswaController::class, 'getCardCapaianMahasiswa']);
         Route::get('top-mk-gagal',               [\App\Http\Controllers\Dekan\CapaianMahasiswaController::class, 'getTopTenMKGagalAll']);
+        Route::get('mahasiswa/mk-gagal',          [\App\Http\Controllers\Dekan\CapaianMahasiswaController::class, 'getMahasiswaMKGagal']);
+        Route::get('mahasiswa/mk-gagal/export',   [\App\Http\Controllers\Dekan\CapaianMahasiswaController::class, 'exportMahasiswaMKGagal']);
 
         // Tindak Lanjut Prodi
         Route::prefix('tindak-lanjut')->group(function () {
             Route::get('cards',          [\App\Http\Controllers\Dekan\TindakLanjutProdiController::class, 'getCardSummary']);
             Route::get('/',              [\App\Http\Controllers\Dekan\TindakLanjutProdiController::class, 'getTindakLanjut']);
+            Route::get('export',         [\App\Http\Controllers\Dekan\TindakLanjutProdiController::class, 'exportCsv']);
             Route::patch('{id}',         [\App\Http\Controllers\Dekan\TindakLanjutProdiController::class, 'updateStatus']);
         });
     });

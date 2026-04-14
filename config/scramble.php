@@ -141,7 +141,7 @@ return [
         'sanctum' => [
             'type' => 'http',
             'scheme' => 'bearer',
-            'bearerFormat' => 'token',
+            'bearerFormat' => 'Bearer',
         ],
     ],
 ];

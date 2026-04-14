@@ -19,6 +19,8 @@ class UserSeeder extends Seeder
     {
         $prodiA11 = Prodi::where('kode_prodi', 'A11')->first();
         $prodiA12 = Prodi::where('kode_prodi', 'A12')->first();
+        $prodiA14 = Prodi::where('kode_prodi', 'A14')->first();
+        $prodiA15 = Prodi::where('kode_prodi', 'A15')->first();
 
         // 1. Akun Kaprodi (Kepala Program Studi) - A11
         $kaprodiA11 = User::firstOrCreate(
@@ -44,6 +46,32 @@ class UserSeeder extends Seeder
         );
         if (!$kaprodiA12->hasRole('kaprodi')) {
             $kaprodiA12->assignRole('kaprodi');
+        }
+
+        // Akun Kaprodi - A14
+        $kaprodiA14 = User::firstOrCreate(
+            ['email' => 'kaprodi_a14@ews.com'],
+            [
+                'name'     => 'Kaprodi DKV Test',
+                'password' => Hash::make('password'),
+                'prodi_id' => $prodiA14?->id,
+            ]
+        );
+        if (!$kaprodiA14->hasRole('kaprodi')) {
+            $kaprodiA14->assignRole('kaprodi');
+        }
+
+        // Akun Kaprodi - A15
+        $kaprodiA15 = User::firstOrCreate(
+            ['email' => 'kaprodi_a15@ews.com'],
+            [
+                'name'     => 'Kaprodi Ilkom Test',
+                'password' => Hash::make('password'),
+                'prodi_id' => $prodiA15?->id,
+            ]
+        );
+        if (!$kaprodiA15->hasRole('kaprodi')) {
+            $kaprodiA15->assignRole('kaprodi');
         }
 
         // 2. Akun Dekan
@@ -76,6 +104,8 @@ class UserSeeder extends Seeder
 
         $this->command->line('  kaprodi_a11@ews.com / password  (role: kaprodi - TI)');
         $this->command->line('  kaprodi_a12@ews.com / password  (role: kaprodi - SI)');
+        $this->command->line('  kaprodi_a14@ews.com / password  (role: kaprodi - DKV)');
+        $this->command->line('  kaprodi_a15@ews.com / password  (role: kaprodi - Ilkom)');
         $this->command->line('  dekan@ews.com       / password  (role: dekan)');
         $this->command->line('  mahasiswa@ews.com   / password  (role: mahasiswa)');
     }
