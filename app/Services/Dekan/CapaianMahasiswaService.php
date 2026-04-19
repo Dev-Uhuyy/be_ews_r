@@ -24,7 +24,7 @@ class CapaianMahasiswaService
         }
         return $query;
     }
-    //angkatan, tren ips(naik/turun), mk_gagal ada berapa, mk_ulang ada berapa
+    // angkatan, tren ips(naik/turun), mk_gagal ada berapa, mk_ulang ada berapa
     public function getTrenIPSAll($tahunMasuk = null)
     {
         $query = AkademikMahasiswa::select(
@@ -135,6 +135,163 @@ class CapaianMahasiswaService
         return $resultWithTren;
     }
 
+    /**
+     * Get tren IPS all for batch prodis - NO N+1 QUERIES
+     * Returns data keyed by prodi_id
+     */
+    public function getTrenIPSAllBatch(array $prodiIds, $tahunMasuk = null)
+    {
+        $result = [];
+
+        // Bulk query for semua prodis - angkatan data
+        $query = AkademikMahasiswa::select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk',
+                DB::raw('AVG(akademik_mahasiswa.ipk) as rata_ipk'),
+                DB::raw('COUNT(DISTINCT akademik_mahasiswa.mahasiswa_id) as jumlah_mahasiswa')
+            )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereNotNull('akademik_mahasiswa.ipk')
+            ->where('akademik_mahasiswa.ipk', '>', 0)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds);
+
+        if ($tahunMasuk) {
+            $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
+        }
+
+        $dataByProdiAngkatan = $query->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
+            ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+            ->get()
+            ->groupBy('prodi_id');
+
+        // Bulk query untuk semester aktif mayoritas per angkatan per prodi
+        $semesterByProdiAngkatan = DB::table('akademik_mahasiswa')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk', 'akademik_mahasiswa.semester_aktif')
+            ->select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk',
+                'akademik_mahasiswa.semester_aktif',
+                DB::raw('COUNT(*) as jumlah')
+            )
+            ->get()
+            ->groupBy('prodi_id')
+            ->map(function ($items) {
+                return $items->sortByDesc('jumlah')->groupBy('tahun_masuk')
+                    ->map(function ($angktn) {
+                        return $angktn->first()->semester_aktif;
+                    });
+            });
+
+        // Bulk query untuk IPS rata-rata per semester per prodi per angkatan
+        $ipsByProdiAngkatanSemester = DB::table('ips_mahasiswa')
+            ->join('akademik_mahasiswa', 'ips_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
+            ->select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk',
+                DB::raw('AVG(ips_mahasiswa.ips_1) as avg_ips_1'),
+                DB::raw('AVG(ips_mahasiswa.ips_2) as avg_ips_2'),
+                DB::raw('AVG(ips_mahasiswa.ips_3) as avg_ips_3'),
+                DB::raw('AVG(ips_mahasiswa.ips_4) as avg_ips_4'),
+                DB::raw('AVG(ips_mahasiswa.ips_5) as avg_ips_5'),
+                DB::raw('AVG(ips_mahasiswa.ips_6) as avg_ips_6'),
+                DB::raw('AVG(ips_mahasiswa.ips_7) as avg_ips_7'),
+                DB::raw('AVG(ips_mahasiswa.ips_8) as avg_ips_8')
+            )
+            ->get()
+            ->groupBy('prodi_id');
+
+        // Bulk query for mk_gagal count per prodi per angkatan
+        $mkGagalByProdiAngkatan = DB::table('khs_krs_mahasiswa')
+            ->join('akademik_mahasiswa', 'khs_krs_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->where('khs_krs_mahasiswa.nilai_akhir_huruf', 'E')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
+            ->select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk',
+                DB::raw('COUNT(*) as jumlah_gagal')
+            )
+            ->get()
+            ->groupBy('prodi_id');
+
+        // Bulk query for mk_ulang count per prodi per angkatan
+        $mkUlangByProdiAngkatan = DB::table('khs_krs_mahasiswa')
+            ->select('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk', DB::raw('COUNT(*) as jumlah'))
+            ->join('akademik_mahasiswa', 'khs_krs_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk', 'khs_krs_mahasiswa.mahasiswa_id', 'khs_krs_mahasiswa.matakuliah_id')
+            ->havingRaw('COUNT(*) > 1')
+            ->get()
+            ->groupBy('prodi_id')
+            ->map(function ($items) {
+                return $items->groupBy('tahun_masuk')->map(function ($angktn) {
+                    return $angktn->count();
+                });
+            });
+
+        foreach ($prodiIds as $prodiId) {
+            $dataAngkatan = $dataByProdiAngkatan->get($prodiId, collect());
+            $semesterData = $semesterByProdiAngkatan->get($prodiId, collect());
+            $ipsData = $ipsByProdiAngkatanSemester->get($prodiId, collect());
+            $mkGagalData = $mkGagalByProdiAngkatan->get($prodiId, collect())->keyBy('tahun_masuk');
+            $mkUlangData = $mkUlangByProdiAngkatan->get($prodiId, collect());
+
+            $trenData = [];
+
+            foreach ($dataAngkatan as $item) {
+                $tahun = $item->tahun_masuk;
+                $semesterAktif = $semesterData->get($tahun);
+                $ipsRow = $ipsData->first();
+
+                $tren = 'stabil';
+
+                if ($semesterAktif && $semesterAktif >= 3) {
+                    $semesterPrev2 = $semesterAktif - 2;
+                    $semesterPrev1 = $semesterAktif - 1;
+
+                    $avgIpsPrev2 = $ipsRow ? ($ipsRow->{'avg_ips_' . $semesterPrev2} ?? null) : null;
+                    $avgIpsPrev1 = $ipsRow ? ($ipsRow->{'avg_ips_' . $semesterPrev1} ?? null) : null;
+
+                    if ($avgIpsPrev2 !== null && $avgIpsPrev1 !== null) {
+                        if ($avgIpsPrev1 > $avgIpsPrev2) {
+                            $tren = 'naik';
+                        } elseif ($avgIpsPrev1 < $avgIpsPrev2) {
+                            $tren = 'turun';
+                        }
+                    }
+                }
+
+                $mkGagal = $mkGagalData->get($tahun)?->jumlah_gagal ?? 0;
+                $mkUlang = $mkUlangData->get($tahun, 0);
+
+                $trenData[] = [
+                    'tahun_masuk' => $tahun,
+                    'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
+                    'tren_ips' => $tren,
+                    'mk_gagal' => $mkGagal,
+                    'mk_ulang' => $mkUlang,
+                ];
+            }
+
+            $result[$prodiId] = $trenData;
+        }
+
+        return $result;
+    }
+
     //rata2 ips mahasiswa, mahasiswa turun ip, mahasiswa naik ip nanti pake params untuk angkatan
     public function getCardCapaianMahasiswa($tahunMasuk = null)
     {
@@ -234,6 +391,145 @@ class CapaianMahasiswaService
             'total_naik_ip' => $totalNaik,
             'tren_per_angkatan' => $trenPerAngkatan,
         ];
+    }
+
+    /**
+     * Get card capaian mahasiswa for batch prodis - NO N+1 QUERIES
+     * Returns data keyed by prodi_id
+     */
+    public function getCardCapaianMahasiswaBatch(array $prodiIds, $tahunMasuk = null)
+    {
+        $result = [];
+
+        // Bulk query: angkatan per prodi
+        $angkatanData = AkademikMahasiswa::select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk'
+            )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
+            ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+            ->get()
+            ->groupBy('prodi_id');
+
+        // Bulk query: semester aktif mayoritas per prodi per angkatan
+        $semesterData = DB::table('akademik_mahasiswa')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk', 'akademik_mahasiswa.semester_aktif')
+            ->select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk',
+                'akademik_mahasiswa.semester_aktif',
+                DB::raw('COUNT(*) as jumlah')
+            )
+            ->get()
+            ->groupBy('prodi_id')
+            ->map(function ($items) {
+                return $items->sortByDesc('jumlah')->groupBy('tahun_masuk')
+                    ->map(function ($angktn) {
+                        return $angktn->first()->semester_aktif;
+                    });
+            });
+
+        // Bulk query: IPS per mahasiswa per prodi per angkatan (for comparing semester)
+        $ipsMahasiswaData = DB::table('ips_mahasiswa')
+            ->join('akademik_mahasiswa', 'ips_mahasiswa.mahasiswa_id', '=', 'akademik_mahasiswa.mahasiswa_id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk', 'ips_mahasiswa.mahasiswa_id')
+            ->select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk',
+                'ips_mahasiswa.mahasiswa_id',
+                DB::raw('AVG(ips_mahasiswa.ips_1) as avg_ips_1'),
+                DB::raw('AVG(ips_mahasiswa.ips_2) as avg_ips_2'),
+                DB::raw('AVG(ips_mahasiswa.ips_3) as avg_ips_3'),
+                DB::raw('AVG(ips_mahasiswa.ips_4) as avg_ips_4'),
+                DB::raw('AVG(ips_mahasiswa.ips_5) as avg_ips_5'),
+                DB::raw('AVG(ips_mahasiswa.ips_6) as avg_ips_6'),
+                DB::raw('AVG(ips_mahasiswa.ips_7) as avg_ips_7'),
+                DB::raw('AVG(ips_mahasiswa.ips_8) as avg_ips_8')
+            )
+            ->get()
+            ->groupBy('prodi_id');
+
+        foreach ($prodiIds as $prodiId) {
+            $angkatans = $angkatanData->get($prodiId, collect());
+            $semestersByAngkatan = $semesterData->get($prodiId, collect());
+            $ipsByAngkatan = $ipsMahasiswaData->get($prodiId, collect())->groupBy('tahun_masuk');
+
+            $totalMahasiswa = 0;
+            $totalTurun = 0;
+            $totalNaik = 0;
+            $trenPerAngkatan = [];
+
+            foreach ($angkatans as $angkat) {
+                $tahun = $angkat->tahun_masuk;
+                $semesterAktif = $semestersByAngkatan->get($tahun);
+
+                if (!$semesterAktif || $semesterAktif < 3) {
+                    continue;
+                }
+
+                $semesterPrev2 = $semesterAktif - 2;
+                $semesterPrev1 = $semesterAktif - 1;
+
+                $mahasiswaIpsList = $ipsByAngkatan->get($tahun, collect());
+
+                $jumlahMahasiswa = $mahasiswaIpsList->count();
+                $naik = 0;
+                $turun = 0;
+                $stabil = 0;
+                $totalIpsPrev1 = 0;
+
+                foreach ($mahasiswaIpsList as $mhs) {
+                    $ipsPrev2 = $mhs->{'avg_ips_' . $semesterPrev2} ?? null;
+                    $ipsPrev1 = $mhs->{'avg_ips_' . $semesterPrev1} ?? null;
+
+                    if ($ipsPrev2 !== null && $ipsPrev1 !== null) {
+                        $totalIpsPrev1 += $ipsPrev1;
+                        if ($ipsPrev1 > $ipsPrev2) {
+                            $naik++;
+                        } elseif ($ipsPrev1 < $ipsPrev2) {
+                            $turun++;
+                        } else {
+                            $stabil++;
+                        }
+                    }
+                }
+
+                $rataIps = $jumlahMahasiswa > 0 ? round($totalIpsPrev1 / $jumlahMahasiswa, 2) : 0;
+
+                $totalMahasiswa += $jumlahMahasiswa;
+                $totalNaik += $naik;
+                $totalTurun += $turun;
+
+                $trenPerAngkatan[] = [
+                    'tahun_masuk' => $tahun,
+                    'semester_aktif' => $semesterAktif,
+                    'rata_ips' => $rataIps,
+                    'jumlah_mahasiswa' => $jumlahMahasiswa,
+                    'mahasiswa_naik_ip' => $naik,
+                    'mahasiswa_turun_ip' => $turun,
+                    'mahasiswa_stabil_ip' => $stabil,
+                ];
+            }
+
+            $result[$prodiId] = [
+                'total_mahasiswa' => $totalMahasiswa,
+                'total_turun_ip' => $totalTurun,
+                'total_naik_ip' => $totalNaik,
+                'tren_per_angkatan' => $trenPerAngkatan,
+            ];
+        }
+
+        return $result;
     }
 
     public function getTopTenMKGagalAll()

@@ -105,17 +105,14 @@ class StatusMahasiswaController extends Controller
             }
 
             $fileName = "Detail Angkatan $tahunMasuk " . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\MahasiswaDetailAngkatanExport($data),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export detail angkatan berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\MahasiswaDetailAngkatanExport(
+                    $data,
+                    "Detail Mahasiswa Angkatan $tahunMasuk",
+                    ["Angkatan: $tahunMasuk"]
+                ),
+                $fileName
             );
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportDetailAngkatanCsv');
@@ -209,17 +206,14 @@ class StatusMahasiswaController extends Controller
             }
 
             $fileName = 'Ringkasan Status ' . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TableRingkasanStatusExport($tableData),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export ringkasan status berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TableRingkasanStatusExport(
+                    $tableData,
+                    'Ringkasan Status Mahasiswa per Angkatan',
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {
@@ -402,21 +396,52 @@ class StatusMahasiswaController extends Controller
                 $fileName = 'Daftar Mahasiswa Status Kelulusan ' . ucfirst($filters['status_kelulusan']) . '.xlsx';
             }
 
-            $filePath = 'exports/' . $fileName;
-
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\MahasiswaAllExport($mahasiswaAll),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export mahasiswa berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\MahasiswaAllExport(
+                    $mahasiswaAll,
+                    $this->generateReportTitle($filters, 'Data Semua Mahasiswa'),
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportMahasiswaAllCsv');
         }
+    }
+
+    /**
+     * Generate report title based on filters
+     */
+    private function generateReportTitle(array $filters, string $default): string
+    {
+        if (($filters['ipk_rendah'] ?? null) === 'yes' && ($filters['semester_1_3'] ?? null) === 'yes') {
+            return 'Daftar Mahasiswa Beresiko Semester 1-3';
+        } elseif (($filters['ipk_rendah'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa IPK di Bawah 2 Angkatan {$filters['tahun_masuk']}";
+        } elseif (($filters['sks_kurang'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa SKS Kurang dari 144 Angkatan {$filters['tahun_masuk']}";
+        } elseif (($filters['mk_ulang'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa Mengulang Mata Kuliah Angkatan {$filters['tahun_masuk']}";
+        } elseif (($filters['mk_nasional'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa Mengulang MK Nasional Angkatan {$filters['tahun_masuk']}";
+        } elseif (($filters['mk_fakultas'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa Mengulang MK Fakultas Angkatan {$filters['tahun_masuk']}";
+        } elseif (($filters['mk_prodi'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa Mengulang MK Prodi Angkatan {$filters['tahun_masuk']}";
+        } elseif (($filters['nilai_d_melebihi_batas'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa Nilai D Angkatan {$filters['tahun_masuk']}";
+        } elseif (($filters['nilai_e'] ?? null) === 'yes' && !empty($filters['tahun_masuk'])) {
+            return "Daftar Mahasiswa Nilai E Angkatan {$filters['tahun_masuk']}";
+        } elseif (!empty($filters['status_mahasiswa'])) {
+            return 'Daftar Mahasiswa Status ' . ucfirst($filters['status_mahasiswa']);
+        } elseif (!empty($filters['status_ews'])) {
+            return 'Daftar Mahasiswa Status EWS ' . ucfirst($filters['status_ews']);
+        } elseif (!empty($filters['status_kelulusan']) && !empty($filters['tahun_masuk'])) {
+            return 'Daftar Mahasiswa ' . ucfirst($filters['status_kelulusan']) . ' Angkatan ' . $filters['tahun_masuk'];
+        } elseif (!empty($filters['status_kelulusan'])) {
+            return 'Daftar Mahasiswa Status Kelulusan ' . ucfirst($filters['status_kelulusan']);
+        }
+        return $default;
     }
 }

@@ -45,6 +45,9 @@ Route::prefix('ews')->group(function () {
         Route::get('table-ringkasan-mahasiswa',      [KaprodiDashboardController::class,     'getTableRingkasanMahasiswa']);
         Route::get('table-ringkasan-mahasiswa/export',[KaprodiDashboardController::class,    'exportTableRingkasanMahasiswaCsv']);
 
+        // Status Mahasiswa (alias for mahasiswa/all)
+        Route::get('status-mahasiswa',               [KaprodiStatusMahasiswaController::class, 'getMahasiswaAll']);
+
         // Mahasiswa
         Route::get('mahasiswa/detail/{mahasiswaId}',         [KaprodiStatusMahasiswaController::class, 'getDetailMahasiswa']);
         Route::get('mahasiswa/detail-angkatan/{tahunMasuk}', [KaprodiStatusMahasiswaController::class, 'getDetailAngkatan']);
@@ -91,6 +94,10 @@ Route::prefix('ews')->group(function () {
         Route::get('dashboard',                  [DekanDashboardController::class,     'getDashboard']);
         Route::get('table-ringkasan-mahasiswa',   [DekanDashboardController::class,     'getTableRingkasanMahasiswa']);
         Route::get('table-ringkasan-mahasiswa/export', [DekanDashboardController::class, 'exportTableRingkasanMahasiswaCsv']);
+
+        // Status Mahasiswa (alias for mahasiswa/all)
+        Route::get('status-mahasiswa',            [DekanStatusMahasiswaController::class, 'getMahasiswaAll']);
+
         Route::get('mahasiswa/detail/{mahasiswaId}', [DekanStatusMahasiswaController::class, 'getDetailMahasiswa']);
 
         // Overview semua prodi
@@ -137,6 +144,7 @@ Route::prefix('ews')->group(function () {
 
         // KHS / KRS
         Route::get('khs-krs',            [KhsKrsController::class, 'getKhsKrsMahasiswa']);
+        Route::get('khs-krs/export',     [KhsKrsController::class, 'exportKhsKrsCsv']);
         Route::get('khs-krs/{khsKrsId}', [KhsKrsController::class, 'getDetailKhsKrs']);
 
         // Peringatan EWS

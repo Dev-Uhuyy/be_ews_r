@@ -29,6 +29,10 @@ class EwsService
             [
                 'status' => $status,
                 'status_kelulusan' => $statusKelulusan,
+                // Update SPS fields - uppercase to match DB schema
+                'SPS1' => ($akademik->ips_semester_1 !== null && $akademik->ips_semester_1 < 2.0) ? 'yes' : 'no',
+                'SPS2' => ($akademik->ips_semester_2 !== null && $akademik->ips_semester_2 < 2.0) ? 'yes' : 'no',
+                'SPS3' => ($akademik->ips_semester_3 !== null && $akademik->ips_semester_3 < 2.0) ? 'yes' : 'no',
             ]
         );
 

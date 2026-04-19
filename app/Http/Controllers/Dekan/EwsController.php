@@ -40,7 +40,7 @@ class EwsController extends Controller
             // Jika ada filter explicit prodi_id
             if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $distribusi = $this->statusMahasiswaService->getDistribusiStatusEws($tahunMasuk);
-                
+
                 if ($tahunMasuk && array_sum($distribusi) == 0) {
                     return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
                 }
@@ -48,26 +48,25 @@ class EwsController extends Controller
                 return $this->successResponse($distribusi, 'Distribusi status EWS berhasil diambil');
             }
 
-            // Jika tidak ada filter, tampilkan gabungan per prodi
+            // Jika tidak ada filter, tampilkan gabungan per prodi (NO N+1 - batch query)
             $prodis = \App\Models\Prodi::all();
-            $dataGabungan = [];
+            $prodiIds = $prodis->pluck('id')->toArray();
 
+            $batchData = $this->statusMahasiswaService->getDistribusiStatusEwsBatch($prodiIds, $tahunMasuk);
+
+            $dataGabungan = [];
             foreach ($prodis as $prodi) {
-                request()->merge(['prodi_id' => $prodi->id]);
-                $dist = $this->statusMahasiswaService->getDistribusiStatusEws($tahunMasuk);
-                
                 $dataGabungan[] = [
                     'prodi' => [
                         'id' => $prodi->id,
                         'kode' => $prodi->kode_prodi,
                         'nama' => $prodi->nama,
                     ],
-                    'distribusi' => $dist
+                    'distribusi' => $batchData[$prodi->id] ?? [
+                        'tepat_waktu' => 0, 'normal' => 0, 'perhatian' => 0, 'kritis' => 0
+                    ]
                 ];
             }
-
-            // Clean up
-            request()->request->remove('prodi_id');
 
             return $this->successResponse(
                 $dataGabungan,
@@ -94,7 +93,7 @@ class EwsController extends Controller
             $akademik = AkademikMahasiswa::where('mahasiswa_id', $mahasiswaId)
                 ->whereHas('mahasiswa', function($query) {
                     $user = \Illuminate\Support\Facades\Auth::user();
-                    if ($user && $user->hasRole('Dekan')) {
+                    if ($user && ($user->hasRole('dekan') || $user->hasRole('Dekan'))) {
                         $query->where('prodi_id', $user->prodi_id);
                     }
                 })
@@ -134,9 +133,9 @@ class EwsController extends Controller
             // Retrieve prodiId based on role
             $prodiId = null;
             $user = \Illuminate\Support\Facades\Auth::user();
-            if ($user && $user->hasRole('Dekan')) {
+            if ($user && ($user->hasRole('dekan') || $user->hasRole('Dekan'))) {
                 $prodiId = $user->prodi_id;
-            } elseif ($user && $user->hasRole('dekan') && request()->has('prodi_id') && request('prodi_id') != '') {
+            } elseif ($user && $user->hasRole('kaprodi') && request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodiId = request('prodi_id');
             }
 

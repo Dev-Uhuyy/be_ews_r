@@ -31,25 +31,28 @@ class TindakLanjutProdiController extends Controller
                 return $this->successResponse($summary, 'Data statistik tindak lanjut berhasil diambil');
             }
 
-            // Jika tidak ada filter, tampilkan gabungan per prodi
+            // Jika tidak ada filter, tampilkan gabungan per prodi (NO N+1 - batch query)
             $prodis = \App\Models\Prodi::all();
-            $dataGabungan = [];
+            $prodiIds = $prodis->pluck('id')->toArray();
 
+            $batchData = $this->tindakLanjutProdiService->getCardSummaryBatch($prodiIds);
+
+            $dataGabungan = [];
             foreach ($prodis as $prodi) {
-                request()->merge(['prodi_id' => $prodi->id]);
-                $summary = $this->tindakLanjutProdiService->getCardSummary();
-                
                 $dataGabungan[] = [
                     'prodi' => [
                         'id' => $prodi->id,
                         'kode' => $prodi->kode_prodi,
                         'nama' => $prodi->nama,
                     ],
-                    'summary' => $summary
+                    'summary' => $batchData[$prodi->id] ?? [
+                        'total_rekomitmen' => 0,
+                        'total_pindah_prodi' => 0,
+                        'dalam_proses' => 0,
+                        'selesai' => 0
+                    ]
                 ];
             }
-
-            request()->request->remove('prodi_id');
 
             return $this->successResponse(
                 $dataGabungan,
@@ -74,21 +77,22 @@ class TindakLanjutProdiController extends Controller
             $data = $this->tindakLanjutProdiService->getTindakLanjutExport($search, $tahunMasuk, $category, $status);
 
             if ($data->isEmpty()) {
-                return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
+                return $this->successResponse(
+                    null,
+                    'Tidak ada data tindak lanjut untuk diexport dengan filter tersebut',
+                    200
+                );
             }
 
             $fileName = 'Tindak Lanjut ' . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TindakLanjutExport($data),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export tindak lanjut berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TindakLanjutExport(
+                    $data,
+                    'Daftar Tindak Lanjut Mahasiswa',
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {

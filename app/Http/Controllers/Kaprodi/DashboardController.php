@@ -180,17 +180,14 @@ class DashboardController extends Controller
             }
 
             $fileName = 'Ringkasan Mahasiswa ' . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TableRingkasanMahasiswaExport($tableRingkasan),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export ringkasan mahasiswa berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TableRingkasanMahasiswaExport(
+                    $tableRingkasan,
+                    'Ringkasan Data Mahasiswa per Angkatan',
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {

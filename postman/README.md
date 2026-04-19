@@ -1,27 +1,44 @@
-## Postman (EWS)
+# EWS Postman Collection
 
-### File yang tersedia
-- `EWS.postman_collection.json`: Collection lengkap (Auth, Kaprodi, Dekan, Mahasiswa)
-- `EWS.postman_environment.json`: Environment default untuk local
+Postman collection and environment files for the EWS (Early Warning System) Laravel API.
 
-### Cara import
-Di Postman:
-- **Import** → pilih `EWS.postman_collection.json`
-- **Import** → pilih `EWS.postman_environment.json`
-- Pilih environment **EWS - Local**
+## Files
 
-### Cara pakai cepat
-- Jalankan salah satu request login:
-  - `00 - Auth` → `Login Kaprodi` / `Login Dekan` / `Login Mahasiswa`
-  - Alternatif cepat: `00 - Auth` → `Login Kaprodi (A11/A12/A14/A15)`
-- Token akan otomatis tersimpan ke env variable `access_token`
-- Request lain akan otomatis menggunakan `Authorization: Bearer {{access_token}}`
+| File | Description |
+|------|-------------|
+| `EWS.postman_collection.json` | Complete API collection with all endpoints |
+| `EWS.postman_environment.json` | Environment variables for local development |
+| `POSTMAN_GUIDE.md` | Comprehensive usage guide |
+| `API_Documentation.md` | API endpoint documentation |
 
-### Variabel environment penting
-- `base_url`: default `http://localhost:8000`
-- `api_base`: turunan `{{base_url}}/api`
-- `access_token`: hasil login (auto-set)
-- `email_kaprodi_a11`, `email_kaprodi_a12`, `email_kaprodi_a14`, `email_kaprodi_a15`: akun Kaprodi test (ubah sesuai seed kamu)
-- `prodi_id`: opsional untuk mode Dekan (filter prodi spesifik)
-- `mahasiswa_id`, `tahun_masuk`, `khs_krs_id`, `tindak_lanjut_id`: isi sesuai data kamu
+## Quick Start
 
+1. Import both JSON files into Postman
+2. Select **EWS - Local** environment
+3. Run **Login Kaprodi (Default)** from the `00 - Auth` folder
+4. Token auto-sets - start exploring endpoints!
+
+For detailed instructions, see [POSTMAN_GUIDE.md](./POSTMAN_GUIDE.md).
+
+## Roles
+
+- **kaprodi**: Study program head - manages students in their prodi
+- **dekan**: Faculty dean - oversight of all prodi
+- **mahasiswa**: Student - view own data only
+
+## Test Accounts
+
+| Role | Email | Password |
+|------|-------|----------|
+| Kaprodi A11 | kaprodi_a11@ews.com | password |
+| Kaprodi A12 | kaprodi_a12@ews.com | password |
+| Kaprodi A14 | kaprodi_a14@ews.com | password |
+| Kaprodi A15 | kaprodi_a15@ews.com | password |
+| Dekan | dekan@ews.com | password |
+| Mahasiswa | mahasiswa@ews.com | password |
+
+## Base URL
+
+Default: `http://localhost:8000/api`
+
+Change `base_url` in the environment to match your server.

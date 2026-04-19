@@ -6,12 +6,13 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class SuratRekomitmenExport implements FromCollection, WithHeadings, WithMapping
+class SuratRekomitmenExport extends BaseExport implements FromCollection, WithHeadings, WithMapping
 {
     protected $data;
 
-    public function __construct($data)
+    public function __construct($data, string $reportTitle = 'Surat Rekomitmen', array $additionalInfo = [])
     {
+        parent::__construct($reportTitle, $additionalInfo);
         $this->data = $data;
     }
 
@@ -26,6 +27,7 @@ class SuratRekomitmenExport implements FromCollection, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
+            'No',
             'ID Tiket',
             'Nama',
             'NIM',
@@ -38,14 +40,30 @@ class SuratRekomitmenExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($row): array
     {
+        static $no = 0;
+        $no++;
         return [
-            $row->id_tiket,
-            $row->nama,
-            $row->nim,
-            $row->tanggal_pengajuan,
-            $row->dosen_wali,
-            $row->status_tindak_lanjut,
-            $row->link_rekomitmen
+            $no,
+            $row->id_tiket ?? '-',
+            $this->sanitizeForExcel($row->nama ?? '-'),
+            $row->nim ?? '-',
+            $row->tanggal_pengajuan ?? '-',
+            $this->sanitizeForExcel($row->dosen_wali ?? '-'),
+            $this->sanitizeForExcel($this->formatStatus($row->status_tindak_lanjut ?? '-')),
+            $row->link_rekomitmen ?? '-'
         ];
+    }
+
+    private function formatStatus(string $status): string
+    {
+        $map = [
+            'menunggu' => 'Menunggu',
+            'diproses' => 'Diproses',
+            'disetujui' => 'Disetujui',
+            'ditolak' => 'Ditolak',
+            'selesai' => 'Selesai',
+        ];
+        $statusLower = strtolower($status);
+        return $map[$statusLower] ?? ucfirst($status);
     }
 }

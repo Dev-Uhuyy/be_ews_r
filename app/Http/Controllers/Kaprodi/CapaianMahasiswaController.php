@@ -69,17 +69,14 @@ class CapaianMahasiswaController extends Controller
             }
 
             $fileName = 'Capaian Mahasiswa ' . ($tahunMasuk ? 'Angkatan ' . $tahunMasuk . ' ' : '') . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TrenIPSAllExport($trenIps),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export tren IPS berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TrenIPSAllExport(
+                    $trenIps,
+                    'Tren IPS per Angkatan' . ($tahunMasuk ? " Angkatan $tahunMasuk" : ''),
+                    $tahunMasuk ? ["Angkatan: $tahunMasuk"] : []
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {
@@ -186,17 +183,14 @@ class CapaianMahasiswaController extends Controller
             }
 
             $fileName = 'Daftar Mahasiswa MK Gagal ' . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\MahasiswaMKGagalExport($mahasiswaMKGagal),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export mahasiswa MK gagal berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\MahasiswaMKGagalExport(
+                    $mahasiswaMKGagal,
+                    'Daftar Mahasiswa dengan Mata Kuliah Gagal',
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {

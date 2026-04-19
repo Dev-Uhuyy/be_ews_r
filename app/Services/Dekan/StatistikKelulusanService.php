@@ -82,4 +82,61 @@ class StatistikKelulusanService
 
         return $tableData->paginate($perPage);
     }
+
+    /**
+     * Get card statistik kelulusan for batch prodis - NO N+1 QUERIES
+     * Returns data keyed by prodi_id
+     */
+    public function getCardStatistikKelulusanBatch(array $prodiIds, $tahunMasuk = null)
+    {
+        $result = [];
+
+        // Single bulk query for all stats by prodi
+        $bulkStats = AkademikMahasiswa::select(
+                    'mahasiswa.prodi_id',
+                    DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as noneligible'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as aktif'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as mangkir'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as cuti'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk < 2.5 THEN 1 ELSE 0 END) as ipk_kurang_dari_2_5'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk >= 2.5 AND akademik_mahasiswa.ipk <= 3.0 THEN 1 ELSE 0 END) as ipk_antara_2_5_3'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk > 3.0 THEN 1 ELSE 0 END) as ipk_lebih_dari_3'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_nasional = "yes" THEN 1 ELSE 0 END) as mk_nasional'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_fakultas = "yes" THEN 1 ELSE 0 END) as mk_fakultas'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_prodi = "yes" THEN 1 ELSE 0 END) as mk_prodi')
+                )
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+                ->whereIn('mahasiswa.prodi_id', $prodiIds);
+
+        if ($tahunMasuk) {
+            $bulkStats->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
+        }
+
+        $statsByProdi = $bulkStats->groupBy('mahasiswa.prodi_id')
+            ->get()
+            ->keyBy('prodi_id');
+
+        foreach ($prodiIds as $prodiId) {
+            $stats = $statsByProdi->get($prodiId);
+
+            $result[$prodiId] = [
+                'eligible' => $stats ? (int)$stats->eligible : 0,
+                'noneligible' => $stats ? (int)$stats->noneligible : 0,
+                'aktif' => $stats ? (int)$stats->aktif : 0,
+                'mangkir' => $stats ? (int)$stats->mangkir : 0,
+                'cuti' => $stats ? (int)$stats->cuti : 0,
+                'ipk_kurang_dari_2_5' => $stats ? (int)$stats->ipk_kurang_dari_2_5 : 0,
+                'ipk_antara_2_5_3' => $stats ? (int)$stats->ipk_antara_2_5_3 : 0,
+                'ipk_lebih_dari_3' => $stats ? (int)$stats->ipk_lebih_dari_3 : 0,
+                'mk_nasional' => $stats ? (int)$stats->mk_nasional : 0,
+                'mk_fakultas' => $stats ? (int)$stats->mk_fakultas : 0,
+                'mk_prodi' => $stats ? (int)$stats->mk_prodi : 0,
+            ];
+        }
+
+        return $result;
+    }
 }

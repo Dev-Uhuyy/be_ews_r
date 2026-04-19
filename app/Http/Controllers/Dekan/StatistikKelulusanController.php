@@ -32,7 +32,7 @@ class StatistikKelulusanController extends Controller
             // Jika ada specific filter prodi_id (misal ditekan dari Dropdown oleh dekan)
             if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $statistikKelulusan = $this->statistikKelulusanService->getCardStatistikKelulusan($tahunMasuk);
-                
+
                 if ($tahunMasuk && !$statistikKelulusan) {
                     return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
                 }
@@ -40,26 +40,27 @@ class StatistikKelulusanController extends Controller
                 return $this->successResponse($statistikKelulusan, 'Statistik kelulusan berhasil diambil');
             }
 
-            // Jika tidak, tampilkan perbandingan seluruh Prodi (Looping Array Gabungan)
+            // Jika tidak, tampilkan perbandingan seluruh Prodi (NO N+1 - batch query)
             $prodis = \App\Models\Prodi::all();
-            $dataGabungan = [];
+            $prodiIds = $prodis->pluck('id')->toArray();
 
+            $batchData = $this->statistikKelulusanService->getCardStatistikKelulusanBatch($prodiIds, $tahunMasuk);
+
+            $dataGabungan = [];
             foreach ($prodis as $prodi) {
-                request()->merge(['prodi_id' => $prodi->id]);
-                $stats = $this->statistikKelulusanService->getCardStatistikKelulusan($tahunMasuk);
-                
                 $dataGabungan[] = [
                     'prodi' => [
                         'id' => $prodi->id,
                         'kode' => $prodi->kode_prodi,
                         'nama' => $prodi->nama,
                     ],
-                    'statistik' => $stats
+                    'statistik' => $batchData[$prodi->id] ?? [
+                        'eligible' => 0, 'noneligible' => 0, 'aktif' => 0, 'mangkir' => 0, 'cuti' => 0,
+                        'ipk_kurang_dari_2_5' => 0, 'ipk_antara_2_5_3' => 0, 'ipk_lebih_dari_3' => 0,
+                        'mk_nasional' => 0, 'mk_fakultas' => 0, 'mk_prodi' => 0
+                    ]
                 ];
             }
-
-            // Clean up
-            request()->request->remove('prodi_id');
 
             return $this->successResponse(
                 $dataGabungan,

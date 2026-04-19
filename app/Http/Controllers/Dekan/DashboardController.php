@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dekan;
 use App\Services\Dekan\DashboardService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * @tags Dekan - Dashboard
@@ -19,52 +20,57 @@ class DashboardController extends Controller
     }
 
     /**
+     * Get all dashboard data for Dekan in a single call (no N+1)
+     * Uses batch queries to get all prodis data efficiently
+     */
+    public function getAllProdiDashboard()
+    {
+        $user = Auth::user();
+        $prodis = \App\Models\Prodi::all();
+
+        if ($prodis->isEmpty()) {
+            return [];
+        }
+
+        $prodiIds = $prodis->pluck('id')->toArray();
+        $dashboardData = $this->dashboardService->getDashboardBatch($prodiIds);
+
+        // Return as array indexed by prodi
+        return array_values($dashboardData);
+    }
+
+    /**
      * Dashboard Fakultas (Per Prodi)
-     * 
+     *
      * Mengembalikan data agregasi matriks lengkap namun **dikelompokkan per program studi**.
      * Dekan dapat langsung melihat perbandingan status keaktifan, tren IPK angkatan,
      * dan kelayakan lulus antar program studi secara sekaligus (gabungan).
-     * 
+     *
      * @tags Dekan - Dashboard
      * @response 200 { "meta": {"status":"success"}, "data": [ { "prodi": {"id": 1, "nama": "Teknik Informatika"}, "status_mahasiswa": {}, "rata_ipk_per_angkatan": [], "status_kelulusan": {} } ] }
      */
     public function getDashboard()
     {
         try {
-            $user = \Illuminate\Support\Facades\Auth::user();
-            
+            $user = Auth::user();
+
             // Jika ada explicit filter prodi_id, tampilkan 1 prodi saja
             if (request()->has('prodi_id') && request('prodi_id') != '') {
-                $dashboard = [
-                    'status_mahasiswa' => $this->dashboardService->getStatusMahasiswa(),
-                    'rata_ipk_per_angkatan' => $this->dashboardService->getRataIpkPerAngkatan(),
-                    'status_kelulusan' => $this->dashboardService->getStatusKelulusan(),
-                ];
-                return $this->successResponse($dashboard, 'Dashboard data berhasil diambil');
+                $prodiId = request('prodi_id');
+                $dashboardData = $this->dashboardService->getDashboardBatch([$prodiId]);
+
+                if (empty($dashboardData)) {
+                    return $this->errorResponse('Prodi tidak ditemukan', 404);
+                }
+
+                return $this->successResponse(
+                    array_values($dashboardData)[0],
+                    'Dashboard data berhasil diambil'
+                );
             }
 
-            // Jika tidak difilter, tampilkan "gabungan per prodi"
-            $prodis = \App\Models\Prodi::all();
-            $dashboardData = [];
-
-            foreach ($prodis as $prodi) {
-                // Pinjam (spoof) scope prodi_id ke request config secara iteratif
-                request()->merge(['prodi_id' => $prodi->id]);
-
-                $dashboardData[] = [
-                    'prodi' => [
-                        'id' => $prodi->id,
-                        'kode' => $prodi->kode_prodi,
-                        'nama' => $prodi->nama,
-                    ],
-                    'status_mahasiswa' => $this->dashboardService->getStatusMahasiswa(),
-                    'rata_ipk_per_angkatan' => $this->dashboardService->getRataIpkPerAngkatan(),
-                    'status_kelulusan' => $this->dashboardService->getStatusKelulusan(),
-                ];
-            }
-
-            // Clean up spoofed request param
-            request()->request->remove('prodi_id');
+            // Jika tidak difilter, tampilkan "gabungan per prodi" dengan batch query (no N+1)
+            $dashboardData = $this->getAllProdiDashboard();
 
             return $this->successResponse(
                 $dashboardData,
@@ -198,17 +204,14 @@ class DashboardController extends Controller
             }
 
             $fileName = 'Ringkasan Mahasiswa ' . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TableRingkasanMahasiswaExport($tableRingkasan),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export ringkasan mahasiswa berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TableRingkasanMahasiswaExport(
+                    $tableRingkasan,
+                    'Ringkasan Data Mahasiswa per Angkatan',
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {

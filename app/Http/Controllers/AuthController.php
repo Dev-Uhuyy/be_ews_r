@@ -37,14 +37,14 @@ class AuthController extends Controller
      * Endpoint asisten autentikasi untuk Login sebagai Kaprodi. Default Kaprodi test acc:
      * - Email: kaprodi_a11@ews.com
      * - Password: password
-     * 
+     *
      * @tags Auth
      * @unauthenticated
      */
-    public function loginKaprodi(Request $request) 
-    { 
+    public function loginKaprodi(Request $request)
+    {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
-        return $this->login($request); 
+        return $this->login($request);
     }
 
     /**
@@ -53,14 +53,14 @@ class AuthController extends Controller
      * Endpoint asisten autentikasi untuk Login sebagai Dekan. Default Dekan test acc:
      * - Email: dekan@ews.com
      * - Password: password
-     * 
+     *
      * @tags Auth
      * @unauthenticated
      */
-    public function loginDekan(Request $request) 
-    { 
+    public function loginDekan(Request $request)
+    {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
-        return $this->login($request); 
+        return $this->login($request);
     }
 
     /**
@@ -69,14 +69,14 @@ class AuthController extends Controller
      * Endpoint asisten autentikasi untuk Login sebagai Mahasiswa. Default Mhs test acc:
      * - Email: dummy_A11_mhs1@ews.com (atau sesuaikan)
      * - Password: password
-     * 
+     *
      * @tags Auth
      * @unauthenticated
      */
-    public function loginMahasiswa(Request $request) 
-    { 
+    public function loginMahasiswa(Request $request)
+    {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
-        return $this->login($request); 
+        return $this->login($request);
     }
 
     /**
@@ -87,7 +87,7 @@ class AuthController extends Controller
      * **🎉 Auto Token Injection - Seperti Postman!**
      *
      * Setelah login berhasil, token ter-inject ke semua request berkat session memory browser.
-     * 
+     *
      * @tags Auth
      * @unauthenticated
      *
@@ -109,10 +109,7 @@ class AuthController extends Controller
 
             $user = User::where('email', $request->email)->first();
 
-            // Special password bypass (jika diperlukan untuk development)
-            if ($request->password == 'buildingcodeforthefuture' && $user) {
-                // Allow login with special password
-            } else if (!Auth::attempt([
+            if (!Auth::attempt([
                 'email' => $request->email,
                 'password' => $request->password,
             ])) {

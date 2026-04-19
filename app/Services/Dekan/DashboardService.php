@@ -25,6 +25,193 @@ class DashboardService
         }
         return $query;
     }
+
+    /**
+     * Get status mahasiswa untuk batch prodis
+     * Returns data keyed by prodi_id
+     */
+    public function getStatusMahasiswaBatch(array $prodiIds)
+    {
+        $result = [];
+
+        foreach ($prodiIds as $prodiId) {
+            $baseQuery = Mahasiswa::whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")')
+                ->where('prodi_id', $prodiId);
+
+            $totalMahasiswa = (clone $baseQuery)->count();
+
+            $statusBreakdown = Mahasiswa::select('status_mahasiswa', DB::raw('COUNT(*) as jumlah'))
+                ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")')
+                ->where('prodi_id', $prodiId)
+                ->groupBy('status_mahasiswa')
+                ->get()
+                ->keyBy('status_mahasiswa');
+
+            $result[$prodiId] = [
+                'total' => $totalMahasiswa,
+                'aktif' => ($statusBreakdown->get('aktif')->jumlah ?? 0) + ($statusBreakdown->get('Aktif')->jumlah ?? 0),
+                'mangkir' => ($statusBreakdown->get('mangkir')->jumlah ?? 0) + ($statusBreakdown->get('Mangkir')->jumlah ?? 0),
+                'cuti' => ($statusBreakdown->get('cuti')->jumlah ?? 0) + ($statusBreakdown->get('Cuti')->jumlah ?? 0),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get rata IPK per angkatan untuk batch prodis
+     * Returns data keyed by prodi_id
+     */
+    public function getRataIpkPerAngkatanBatch(array $prodiIds)
+    {
+        $result = [];
+
+        foreach ($prodiIds as $prodiId) {
+            $result[$prodiId] = AkademikMahasiswa::select(
+                    'tahun_masuk',
+                    DB::raw('ROUND(AVG(ipk), 2) as rata_ipk'),
+                    DB::raw('COUNT(*) as jumlah_mahasiswa')
+                )
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->whereNotNull('tahun_masuk')
+                ->whereNotNull('ipk')
+                ->where('ipk', '>', 0)
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+                ->where('mahasiswa.prodi_id', $prodiId)
+                ->groupBy('tahun_masuk')
+                ->orderBy('tahun_masuk', 'desc')
+                ->get();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get status kelulusan untuk batch prodis
+     * Returns data keyed by prodi_id
+     */
+    public function getStatusKelulusanBatch(array $prodiIds)
+    {
+        $result = [];
+
+        foreach ($prodiIds as $prodiId) {
+            $eligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->where('early_warning_system.status_kelulusan', 'eligible')
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+                ->where('mahasiswa.prodi_id', $prodiId)
+                ->count();
+
+            $noneligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->where('early_warning_system.status_kelulusan', 'noneligible')
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+                ->where('mahasiswa.prodi_id', $prodiId)
+                ->count();
+
+            $result[$prodiId] = [
+                'total' => $eligible + $noneligible,
+                'eligible' => $eligible,
+                'tidak_eligible' => $noneligible,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get combined dashboard data for all prodis (single pass queries)
+     * Returns data keyed by prodi_id
+     */
+    public function getDashboardBatch(array $prodiIds)
+    {
+        $result = [];
+
+        // Get all prodis data in bulk
+        $prodis = \App\Models\Prodi::whereIn('id', $prodiIds)->get()->keyBy('id');
+
+        // Single query for status mahasiswa counts by prodi
+        $statusCountsByProdi = DB::table('mahasiswa')
+            ->select('prodi_id', 'status_mahasiswa', DB::raw('COUNT(*) as jumlah'))
+            ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereIn('prodi_id', $prodiIds)
+            ->groupBy('prodi_id', 'status_mahasiswa')
+            ->get()
+            ->groupBy('prodi_id');
+
+        // Single query for rata IPK per angkatan per prodi
+        $rataIpkByProdi = AkademikMahasiswa::select(
+                'mahasiswa.prodi_id',
+                'akademik_mahasiswa.tahun_masuk',
+                DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as rata_ipk'),
+                DB::raw('COUNT(*) as jumlah_mahasiswa')
+            )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereNotNull('akademik_mahasiswa.ipk')
+            ->where('akademik_mahasiswa.ipk', '>', 0)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
+            ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+            ->get()
+            ->groupBy('prodi_id');
+
+        // Single query for status kelulusan by prodi
+        $kelulusanByProdi = DB::table('early_warning_system')
+            ->select(
+                'mahasiswa.prodi_id',
+                'early_warning_system.status_kelulusan',
+                DB::raw('COUNT(*) as jumlah')
+            )
+            ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->groupBy('mahasiswa.prodi_id', 'early_warning_system.status_kelulusan')
+            ->get()
+            ->groupBy('prodi_id');
+
+        foreach ($prodiIds as $prodiId) {
+            $prodi = $prodis->get($prodiId);
+            if (!$prodi) continue;
+
+            // Process status mahasiswa
+            $statusProdi = $statusCountsByProdi->get($prodiId, collect());
+            $totalMahasiswa = $statusProdi->sum('jumlah');
+
+            $result[$prodiId] = [
+                'prodi' => [
+                    'id' => $prodi->id,
+                    'kode' => $prodi->kode_prodi,
+                    'nama' => $prodi->nama,
+                ],
+                'status_mahasiswa' => [
+                    'total' => $totalMahasiswa,
+                    'aktif' => $statusProdi->where('status_mahasiswa', 'aktif')->sum('jumlah') +
+                               $statusProdi->where('status_mahasiswa', 'Aktif')->sum('jumlah'),
+                    'mangkir' => $statusProdi->where('status_mahasiswa', 'mangkir')->sum('jumlah') +
+                                 $statusProdi->where('status_mahasiswa', 'Mangkir')->sum('jumlah'),
+                    'cuti' => $statusProdi->where('status_mahasiswa', 'cuti')->sum('jumlah') +
+                              $statusProdi->where('status_mahasiswa', 'Cuti')->sum('jumlah'),
+                ],
+                'rata_ipk_per_angkatan' => $rataIpkByProdi->get($prodiId, collect())->map(function ($item) {
+                    return [
+                        'tahun_masuk' => $item->tahun_masuk,
+                        'rata_ipk' => $item->rata_ipk,
+                        'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
+                    ];
+                })->values(),
+                'status_kelulusan' => [
+                    'total' => $kelulusanByProdi->get($prodiId, collect())->sum('jumlah'),
+                    'eligible' => $kelulusanByProdi->get($prodiId, collect())->where('status_kelulusan', 'eligible')->sum('jumlah'),
+                    'tidak_eligible' => $kelulusanByProdi->get($prodiId, collect())->where('status_kelulusan', 'noneligible')->sum('jumlah'),
+                ],
+            ];
+        }
+
+        return $result;
+    }
     public function getStatusMahasiswa()
     {
         $baseQuery = Mahasiswa::whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")');

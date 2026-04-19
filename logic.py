@@ -115,8 +115,9 @@ def cek_status_kelulusan(
             return "BIRU"
             
     elif is_genap and semester_saat_ini == 8:
-        # (Masih mengikuti permintaan Anda bahwa SMT 8 mengecek NFU Ganjil)
-        if kondisi_sks_biru and (jumlah_nilai_e <= 0) and (jumlah_nilai_d <= 1) and status_done_nfu_ganjil:
+        # FIXED: SMT 8 harus cek NFU Genap (bukan NFU Ganjil)
+        # Karena di SMT 8, mahasiswa sudah menyelesaikan semester genap
+        if kondisi_sks_biru and (jumlah_nilai_e <= 0) and (jumlah_nilai_d <= 1) and status_done_nfu_genap:
             return "BIRU"
 
     # --- DEFAULT ---

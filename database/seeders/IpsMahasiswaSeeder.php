@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AkademikMahasiswa;
 use App\Models\IpsMahasiswa;
 use App\Models\Mahasiswa;
 use Illuminate\Database\Seeder;
@@ -10,7 +11,7 @@ class IpsMahasiswaSeeder extends Seeder
 {
     /**
      * Buat record ips_mahasiswa untuk mahasiswa yang sudah ada.
-     * Semua IPS diisi null — akan diisi saat import data nyata.
+     * Generate realistic IPS values based on semester count.
      */
     public function run(): void
     {
@@ -21,13 +22,30 @@ class IpsMahasiswaSeeder extends Seeder
             return;
         }
 
+        $count = 0;
         foreach ($mahasiswas as $mhs) {
-            IpsMahasiswa::firstOrCreate(
-                ['mahasiswa_id' => $mhs->id]
-                // Semua kolom ips_1..ips_14 default NULL
+            $akademik = AkademikMahasiswa::where('mahasiswa_id', $mhs->id)->first();
+            
+            // Generate realistic IPS values per student based on semester count
+            $maxSemester = $akademik ? min((int)$akademik->semester_aktif, 14) : 1;
+            
+            $ipsData = [];
+            for ($s = 1; $s <= 14; $s++) {
+                if ($s <= $maxSemester) {
+                    // IPS in realistic range: 1.50 to 4.00
+                    $ipsData["ips_$s"] = round(rand(150, 400) / 100, 2);
+                } else {
+                    $ipsData["ips_$s"] = null;
+                }
+            }
+
+            IpsMahasiswa::updateOrCreate(
+                ['mahasiswa_id' => $mhs->id],
+                $ipsData
             );
+            $count++;
         }
 
-        $this->command->info('✔ IpsMahasiswaSeeder: ' . $mahasiswas->count() . ' record IPS dibuat.');
+        $this->command->info('✔ IpsMahasiswaSeeder: ' . $count . ' record IPS dibuat.');
     }
 }

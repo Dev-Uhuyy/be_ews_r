@@ -12,9 +12,9 @@ class EarlyWarningSystem extends Model
         'akademik_mahasiswa_id',
         'status',          // enum('tepat_waktu','normal','perhatian','kritis')
         'status_kelulusan',
-        'SPS1',            // enum('yes','no')
-        'SPS2',            // enum('yes','no')
-        'SPS3',            // enum('yes','no')
+        'SPS1',            // enum('yes','no') - IPS semester 1 < 2.0
+        'SPS2',            // enum('yes','no') - IPS semester 2 < 2.0
+        'SPS3',            // enum('yes','no') - IPS semester 3 < 2.0
     ];
 
     // ─── Relasi ───────────────────────────────────────────────────────────────

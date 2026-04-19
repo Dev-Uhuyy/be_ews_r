@@ -15,6 +15,9 @@ class MahasiswaSeeder extends Seeder
      * Data mahasiswa sudah ada di sti_api.sql (id 1–8).
      * Migration EWS menambah kolom: prodi_id, minat, cuti_2.
      * Seeder ini mengisi kolom-kolom baru tersebut agar tidak NULL.
+     *
+     * Also creates a Mahasiswa record for the test user (mahasiswa@ews.com)
+     * so that AkademikMahasiswaSeeder can link to it.
      */
     public function run(): void
     {
@@ -50,6 +53,41 @@ class MahasiswaSeeder extends Seeder
                     ]
                 );
             }
+        }
+
+        // Create Mahasiswa record for test user if it doesn't exist
+        $testUser = User::where('email', 'mahasiswa@ews.com')->first();
+        if ($testUser) {
+            $prodiA11 = Prodi::where('kode_prodi', 'A11')->first();
+            $existingMhs = Mahasiswa::where('user_id', $testUser->id)->first();
+
+            if (!$existingMhs) {
+                // Create new Mahasiswa record for test user
+                // Find highest existing NIM and increment
+                $highestNim = Mahasiswa::max('nim');
+                $newNim = $highestNim ? ((int)$highestNim + 1) : '202300001';
+
+                Mahasiswa::create([
+                    'user_id'          => $testUser->id,
+                    'prodi_id'         => $prodiA11?->id,
+                    'nim'              => (string)$newNim,
+                    'transkrip'        => null,
+                    'telepon'          => null,
+                    'minat'            => null,
+                    'cuti_2'           => 'no',
+                    'status_mahasiswa' => 'aktif',
+                ]);
+                $this->command->info("✔ Created Mahasiswa record for test user (user_id: {$testUser->id}, NIM: {$newNim})");
+            } else {
+                // Update existing to ensure proper linking
+                $existingMhs->update([
+                    'prodi_id'         => $prodiA11?->id,
+                    'status_mahasiswa' => 'aktif',
+                ]);
+                $this->command->info("✔ Updated existing Mahasiswa record for test user (id: {$existingMhs->id})");
+            }
+        } else {
+            $this->command->warn('⚠ Test user mahasiswa@ews.com not found - skipping');
         }
 
         $this->command->info('✔ MahasiswaSeeder: prodi_id & kolom EWS diisi untuk ' . count($assignments) . ' mahasiswa.');

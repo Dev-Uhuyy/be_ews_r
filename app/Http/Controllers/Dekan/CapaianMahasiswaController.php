@@ -39,25 +39,23 @@ class CapaianMahasiswaController extends Controller
                 return $this->successResponse($trenIps, 'Tren IPS mahasiswa berhasil diambil');
             }
 
-            // Jika tidak ada filter, tampilkan gabungan per prodi
+            // Jika tidak ada filter, tampilkan gabungan per prodi (NO N+1 - batch query)
             $prodis = \App\Models\Prodi::all();
-            $dataGabungan = [];
+            $prodiIds = $prodis->pluck('id')->toArray();
 
+            $batchData = $this->capaianMahasiswaService->getTrenIPSAllBatch($prodiIds, $tahunMasuk);
+
+            $dataGabungan = [];
             foreach ($prodis as $prodi) {
-                request()->merge(['prodi_id' => $prodi->id]);
-                $tren = $this->capaianMahasiswaService->getTrenIPSAll($tahunMasuk);
-                
                 $dataGabungan[] = [
                     'prodi' => [
                         'id' => $prodi->id,
                         'kode' => $prodi->kode_prodi,
                         'nama' => $prodi->nama,
                     ],
-                    'tren_ips' => $tren
+                    'tren_ips' => $batchData[$prodi->id] ?? []
                 ];
             }
-
-            request()->request->remove('prodi_id');
 
             return $this->successResponse(
                 $dataGabungan,
@@ -88,17 +86,14 @@ class CapaianMahasiswaController extends Controller
             }
 
             $fileName = 'Capaian Mahasiswa ' . ($tahunMasuk ? 'Angkatan ' . $tahunMasuk . ' ' : '') . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TrenIPSAllExport($trenIps),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export tren IPS berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TrenIPSAllExport(
+                    $trenIps,
+                    'Tren IPS per Angkatan' . ($tahunMasuk ? " Angkatan $tahunMasuk" : ''),
+                    $tahunMasuk ? ["Angkatan: $tahunMasuk"] : []
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {
@@ -127,25 +122,28 @@ class CapaianMahasiswaController extends Controller
                 return $this->successResponse($capaian, 'Capaian mahasiswa berhasil diambil');
             }
 
-            // Jika tidak ada filter, tampilkan gabungan per prodi
+            // Jika tidak ada filter, tampilkan gabungan per prodi (NO N+1 - batch query)
             $prodis = \App\Models\Prodi::all();
-            $dataGabungan = [];
+            $prodiIds = $prodis->pluck('id')->toArray();
 
+            $batchData = $this->capaianMahasiswaService->getCardCapaianMahasiswaBatch($prodiIds, $tahunMasuk);
+
+            $dataGabungan = [];
             foreach ($prodis as $prodi) {
-                request()->merge(['prodi_id' => $prodi->id]);
-                $capaian = $this->capaianMahasiswaService->getCardCapaianMahasiswa($tahunMasuk);
-                
                 $dataGabungan[] = [
                     'prodi' => [
                         'id' => $prodi->id,
                         'kode' => $prodi->kode_prodi,
                         'nama' => $prodi->nama,
                     ],
-                    'capaian' => $capaian
+                    'capaian' => $batchData[$prodi->id] ?? [
+                        'total_mahasiswa' => 0,
+                        'total_turun_ip' => 0,
+                        'total_naik_ip' => 0,
+                        'tren_per_angkatan' => []
+                    ]
                 ];
             }
-
-            request()->request->remove('prodi_id');
 
             return $this->successResponse(
                 $dataGabungan,
@@ -224,17 +222,14 @@ class CapaianMahasiswaController extends Controller
             }
 
             $fileName = 'Daftar Mahasiswa MK Gagal ' . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\MahasiswaMKGagalExport($mahasiswaMKGagal),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export mahasiswa MK gagal berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\MahasiswaMKGagalExport(
+                    $mahasiswaMKGagal,
+                    'Daftar Mahasiswa dengan Mata Kuliah Gagal',
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {

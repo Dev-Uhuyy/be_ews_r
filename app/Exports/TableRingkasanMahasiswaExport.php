@@ -6,12 +6,13 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class TableRingkasanMahasiswaExport implements FromCollection, WithHeadings, WithMapping
+class TableRingkasanMahasiswaExport extends BaseExport implements FromCollection, WithHeadings, WithMapping
 {
     protected $data;
 
-    public function __construct($data)
+    public function __construct($data, string $reportTitle = 'Ringkasan Data Mahasiswa per Angkatan', array $additionalInfo = [])
     {
+        parent::__construct($reportTitle, $additionalInfo);
         $this->data = $data;
     }
 
@@ -26,6 +27,7 @@ class TableRingkasanMahasiswaExport implements FromCollection, WithHeadings, Wit
     public function headings(): array
     {
         return [
+            'No',
             'Angkatan',
             'Jumlah Mahasiswa',
             'Aktif',
@@ -41,17 +43,20 @@ class TableRingkasanMahasiswaExport implements FromCollection, WithHeadings, Wit
 
     public function map($row): array
     {
+        static $no = 0;
+        $no++;
         return [
-            $row->tahun_masuk,
-            $row->jumlah_mahasiswa,
-            $row->aktif,
-            $row->cuti,
-            $row->mangkir,
-            $row->rata_ipk,
-            $row->tepat_waktu,
-            $row->normal,
-            $row->perhatian,
-            $row->kritis
+            $no,
+            $row->tahun_masuk ?? '-',
+            $row->jumlah_mahasiswa ?? 0,
+            $row->aktif ?? 0,
+            $row->cuti ?? 0,
+            $row->mangkir ?? 0,
+            number_format($row->rata_ipk ?? 0, 2),
+            $row->tepat_waktu ?? 0,
+            $row->normal ?? 0,
+            $row->perhatian ?? 0,
+            $row->kritis ?? 0
         ];
     }
 }

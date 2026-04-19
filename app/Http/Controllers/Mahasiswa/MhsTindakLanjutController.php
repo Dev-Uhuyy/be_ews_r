@@ -38,7 +38,7 @@ class MhsTindakLanjutController extends Controller
         try {
             $mahasiswa = Auth::user()->mahasiswa;
             if (!$mahasiswa || !$mahasiswa->akademikmahasiswa) {
-                return $this->errorResponse('Data akademik mahasiswa tidak ditemukan', 404);
+                return $this->successResponse([], 'Riwayat tindak lanjut berhasil diambil');
             }
 
             $mahasiswaId = $mahasiswa->akademikmahasiswa->id;
@@ -63,7 +63,10 @@ class MhsTindakLanjutController extends Controller
         try {
             $mahasiswa = Auth::user()->mahasiswa;
             if (!$mahasiswa || !$mahasiswa->akademikmahasiswa) {
-                return $this->errorResponse('Data akademik mahasiswa tidak ditemukan', 404);
+                return $this->successResponse([
+                    'dalam_proses' => 0,
+                    'selesai' => 0,
+                ], 'Ringkasan tindak lanjut berhasil diambil');
             }
 
             $mahasiswaId = $mahasiswa->akademikmahasiswa->id;
@@ -124,7 +127,7 @@ class MhsTindakLanjutController extends Controller
     public function getTemplate($kategori)
     {
         try {
-            if (!in_array($kategori, ['rekomitmen', 'pindah_prodi'])) {
+            if (!in_array($kategori, ['rekomitmen', 'pindah_prodi', 'akademik'])) {
                 return $this->errorResponse('Kategori tidak valid', 400);
             }
 

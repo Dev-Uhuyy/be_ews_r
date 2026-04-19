@@ -306,8 +306,8 @@ class StatusMahasiswaService
         // Get detail mahasiswa dengan relasi yang dibutuhkan
         $mahasiswa = Mahasiswa::filterByProdi()->with([
                 'user',
-                'akademikmahasiswa.dosen_wali.user',
-                'akademikmahasiswa.early_warning_systems',
+                'akademikmahasiswa.dosenWali.user',
+                'akademikmahasiswa.earlyWarningSystem',
                 'ipsmahasiswa'
             ])
             ->where('id', $mahasiswaId)
@@ -318,7 +318,7 @@ class StatusMahasiswaService
         }
 
         $akademikMhs = $mahasiswa->akademikmahasiswa;
-        $ews = $akademikMhs->early_warning_systems->first();
+        $ews = $akademikMhs->earlyWarningSystem;
 
         // Get IP per semester dari IpsMahasiswa
         $ipPerSemester = [];
@@ -476,8 +476,8 @@ class StatusMahasiswaService
             'nim' => $mahasiswa->nim ?? null,
             'status_mahasiswa' => $mahasiswa->status_mahasiswa ?? null,
             'dosen_wali' => [
-                'id' => $akademikMhs->dosen_wali->id ?? null,
-                'nama' => $akademikMhs->dosen_wali->nama_lengkap ?? null,
+                'id' => $akademikMhs->dosenWali->id ?? null,
+                'nama' => $akademikMhs->dosenWali->nama_lengkap ?? null,
             ],
             'akademik' => [
                 'id' => $akademikMhs->id ?? null,

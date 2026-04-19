@@ -308,8 +308,8 @@ class StatusMahasiswaService
         // Get detail mahasiswa dengan relasi yang dibutuhkan
         $mahasiswa = Mahasiswa::with([
                 'user',
-                'akademikmahasiswa.dosen_wali.user',
-                'akademikmahasiswa.early_warning_systems',
+                'akademikmahasiswa.dosenWali.user',
+                'akademikmahasiswa.earlyWarningSystem',
                 'ipsmahasiswa'
             ])
             ->where('id', $mahasiswaId)
@@ -320,7 +320,10 @@ class StatusMahasiswaService
         }
 
         $akademikMhs = $mahasiswa->akademikmahasiswa;
-        $ews = $akademikMhs->early_warning_systems->first();
+        if (!$akademikMhs) {
+            return null;
+        }
+        $ews = $akademikMhs->earlyWarningSystem;
 
         // Get IP per semester dari IpsMahasiswa
         $ipPerSemester = [];
@@ -478,8 +481,8 @@ class StatusMahasiswaService
             'nim' => $mahasiswa->nim ?? null,
             'status_mahasiswa' => $mahasiswa->status_mahasiswa ?? null,
             'dosen_wali' => [
-                'id' => $akademikMhs->dosen_wali->id ?? null,
-                'nama' => $akademikMhs->dosen_wali->nama_lengkap ?? null,
+                'id' => $akademikMhs->dosenWali->id ?? null,
+                'nama' => $akademikMhs->dosenWali->nama_lengkap ?? null,
             ],
             'akademik' => [
                 'id' => $akademikMhs->id ?? null,
@@ -489,7 +492,7 @@ class StatusMahasiswaService
                 'sks_tempuh' => $akademikMhs->sks_tempuh ?? 0,
                 'sks_lulus' => $akademikMhs->sks_lulus ?? 0,
                 'mk_nasional' => $akademikMhs->mk_nasional ?? 'no',
-                'mk_fakultas' => $akademikMhs->mk_fakultas ?? 'no',
+                'mk_fakultas' => $akademikMhs->mk_fabilitas ?? 'no',
                 'mk_prodi' => $akademikMhs->mk_prodi ?? 'no',
                 'mk_nasional_detail' => $mkNasionalMissing,
                 'mk_fakultas_detail' => $mkFakultasMissing,
@@ -499,8 +502,8 @@ class StatusMahasiswaService
                 'total_sks_nilai_d' => $totalSksNilaiD,
                 'max_sks_nilai_d' => 7.2, // Tetap 5% dari 144 SKS standar untuk konsistensi
             ],
-            'status_ews' => $ews->status ?? null,
-            'status_kelulusan' => $ews->status_kelulusan ?? null,
+            'status_ews' => $ews ? $ews->status : null,
+            'status_kelulusan' => $ews ? $ews->status_kelulusan : null,
             'ip_per_semester' => $ipPerSemester,
             'mata_kuliah_nilai_d' => $matkulNilaiD,
             'mata_kuliah_nilai_e' => $matkulNilaiE,
@@ -543,6 +546,42 @@ class StatusMahasiswaService
             'perhatian' => $distribusi->get('perhatian')?->jumlah ?? 0,
             'kritis' => $distribusi->get('kritis')?->jumlah ?? 0,
         ];
+    }
+
+    /**
+     * Get distribusi status EWS for batch prodis - NO N+1 QUERIES
+     * Returns data keyed by prodi_id
+     */
+    public function getDistribusiStatusEwsBatch(array $prodiIds, $tahunMasuk = null)
+    {
+        $result = [];
+
+        // Single bulk query for all prodis
+        $distribusiByProdi = EarlyWarningSystem::select(
+                'mahasiswa.prodi_id',
+                'early_warning_system.status',
+                DB::raw('COUNT(*) as jumlah')
+            )
+            ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->groupBy('mahasiswa.prodi_id', 'early_warning_system.status')
+            ->get()
+            ->groupBy('prodi_id');
+
+        foreach ($prodiIds as $prodiId) {
+            $prodiDist = $distribusiByProdi->get($prodiId, collect())->keyBy('status');
+
+            $result[$prodiId] = [
+                'tepat_waktu' => $prodiDist->get('tepat_waktu')?->jumlah ?? 0,
+                'normal' => $prodiDist->get('normal')?->jumlah ?? 0,
+                'perhatian' => $prodiDist->get('perhatian')?->jumlah ?? 0,
+                'kritis' => $prodiDist->get('kritis')?->jumlah ?? 0,
+            ];
+        }
+
+        return $result;
     }
 
     private function getTableRingkasanStatusQuery()

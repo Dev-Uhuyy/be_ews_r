@@ -21,20 +21,77 @@ class EwsService
         // Reload akademik mahasiswa untuk dapat nilai_d_melebihi_batas dan nilai_e terbaru
         $akademik->refresh();
 
-        $status = $this->hitungStatus($akademik);
+        // Get latest KHS data once to avoid N+1 queries (reused for status calculation)
+        $latestKhsData = $this->getLatestKhsData($akademik->mahasiswa_id);
+
+        $status = $this->hitungStatus($akademik, $latestKhsData);
         $statusKelulusan = $this->hitungStatusKelulusan($akademik);
+
+        // Update SPS fields (Surat Peringatan Studi) - uppercase to match DB schema
+        $sps1 = ($akademik->ips_semester_1 !== null && $akademik->ips_semester_1 < 2.0) ? 'yes' : 'no';
+        $sps2 = ($akademik->ips_semester_2 !== null && $akademik->ips_semester_2 < 2.0) ? 'yes' : 'no';
+        $sps3 = ($akademik->ips_semester_3 !== null && $akademik->ips_semester_3 < 2.0) ? 'yes' : 'no';
 
         EarlyWarningSystem::updateOrCreate(
             ['akademik_mahasiswa_id' => $akademik->id],
             [
                 'status' => $status,
                 'status_kelulusan' => $statusKelulusan,
+                'SPS1' => $sps1,
+                'SPS2' => $sps2,
+                'SPS3' => $sps3,
             ]
         );
 
         return [
             'status' => $status,
             'status_kelulusan' => $statusKelulusan,
+        ];
+    }
+
+    /**
+     * Get latest KHS data per mata kuliah (MAX id per matakuliah_id)
+     * Returns counts of E and D grades, plus ada_ED flags for ganjil/genap
+     */
+    private function getLatestKhsData($mahasiswaId)
+    {
+        $latestKhs = DB::table('khs_krs_mahasiswa as khs1')
+            ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
+            ->whereIn('khs1.id', function($query) use ($mahasiswaId) {
+                $query->select(DB::raw('MAX(id)'))
+                    ->from('khs_krs_mahasiswa as khs2')
+                    ->where('khs2.mahasiswa_id', $mahasiswaId)
+                    ->groupBy('khs2.matakuliah_id');
+            })
+            ->where('khs1.mahasiswa_id', $mahasiswaId)
+            ->select('khs1.nilai_akhir_huruf', 'mata_kuliahs.sks', 'mata_kuliahs.semester')
+            ->get();
+
+        $jumlahNilaiE = 0;
+        $jumlahNilaiD = 0;
+        $adaEDMatkulGanjil = false;
+        $adaEDMatkulGenap = false;
+
+        foreach ($latestKhs as $khs) {
+            if ($khs->nilai_akhir_huruf === 'E') {
+                $jumlahNilaiE++;
+            } elseif ($khs->nilai_akhir_huruf === 'D') {
+                $jumlahNilaiD++;
+                // Check if D is in ganjil (1,3,5,7) or genap (2,4,6,8) semester
+                $semester = $khs->semester;
+                if (in_array($semester, [1, 3, 5, 7])) {
+                    $adaEDMatkulGanjil = true;
+                } elseif (in_array($semester, [2, 4, 6, 8])) {
+                    $adaEDMatkulGenap = true;
+                }
+            }
+        }
+
+        return [
+            'jumlah_nilai_e' => $jumlahNilaiE,
+            'jumlah_nilai_d' => $jumlahNilaiD,
+            'ada_ED_matkul_ganjil' => $adaEDMatkulGanjil,
+            'ada_ED_matkul_genap' => $adaEDMatkulGenap,
         ];
     }
 
@@ -106,22 +163,27 @@ class EwsService
 
     /**
      * Hitung status EWS (tepat_waktu, normal, perhatian, kritis)
-     * Berdasarkan logic dari Python
+     * Based on logic from Python logic.py - uses status_done_nfu_ganjil/genap fields
      */
-    private function hitungStatus(AkademikMahasiswa $akademik)
+    private function hitungStatus(AkademikMahasiswa $akademik, array $latestKhsData = [])
     {
         $sksLulus = $akademik->sks_lulus ?? 0;
         $semesterAktif = $akademik->semester_aktif ?? 1;
         $sisaSks = max(0, 144 - $sksLulus); // Tidak boleh negatif
 
-        // Hitung jumlah nilai E dan D
-        $jumlahNilaiE = KhsKrsMahasiswa::where('mahasiswa_id', $akademik->mahasiswa_id)
-            ->where('nilai_akhir_huruf', 'E')
-            ->count();
+        // Use pre-fetched data or get if not provided (for backwards compatibility)
+        if (empty($latestKhsData)) {
+            $latestKhsData = $this->getLatestKhsData($akademik->mahasiswa_id);
+        }
 
-        $jumlahNilaiD = KhsKrsMahasiswa::where('mahasiswa_id', $akademik->mahasiswa_id)
-            ->where('nilai_akhir_huruf', 'D')
-            ->count();
+        $jumlahNilaiE = $latestKhsData['jumlah_nilai_e'];
+        $jumlahNilaiD = $latestKhsData['jumlah_nilai_d'];
+        $adaEDMatkulGanjil = $latestKhsData['ada_ED_matkul_ganjil'];
+        $adaEDMatkulGenap = $latestKhsData['ada_ED_matkul_genap'];
+
+        // NFU status from akademik_mahasiswa fields (per parity, not per semester)
+        $statusDoneNfuGanjil = ($akademik->status_done_nfu_ganjil === 'yes');
+        $statusDoneNfuGenap = ($akademik->status_done_nfu_genap === 'yes');
 
         // Hitung SKS maksimal yang bisa diambil
         $sksBisaDiambilSD14 = $this->hitungSksMaksBisaDiambil($semesterAktif, 14);
@@ -149,16 +211,16 @@ class EwsService
             return 'kritis';
         }
 
-        // Kondisi nilai/NFU kritis (semester 13 & 14)
+        // Kondisi NFU/Nilai kritis (semester 13 & 14)
+        // Logic from Python: check NFU parity OR ada_ED_matkul parity
         if ($isGanjil && $semesterAktif == 13) {
-            // Simplified: cek ada E/D di mata kuliah ganjil
-            $adaEDGanjil = $this->cekAdaEDMataKuliahGanjil($akademik->mahasiswa_id);
-            if ($adaEDGanjil) {
+            // SMT 13 (ganjil): Cek NFU Ganjil OR E/D di matkul ganjil
+            if (!$statusDoneNfuGanjil || $adaEDMatkulGanjil) {
                 return 'kritis';
             }
         } elseif ($isGenap && $semesterAktif == 14) {
-            $adaEDGenap = $this->cekAdaEDMataKuliahGenap($akademik->mahasiswa_id);
-            if ($adaEDGenap) {
+            // SMT 14 (genap): Cek NFU Genap OR E/D di matkul genap
+            if (!$statusDoneNfuGenap || $adaEDMatkulGenap) {
                 return 'kritis';
             }
         }
@@ -168,15 +230,13 @@ class EwsService
             return 'perhatian';
         }
 
-        // Kondisi nilai/NFU perhatian (semester 9 & 10)
+        // Kondisi NFU/Nilai perhatian (semester 9 & 10)
         if ($isGanjil && $semesterAktif == 9) {
-            $adaEDGanjil = $this->cekAdaEDMataKuliahGanjil($akademik->mahasiswa_id);
-            if ($adaEDGanjil) {
+            if (!$statusDoneNfuGanjil || $adaEDMatkulGanjil) {
                 return 'perhatian';
             }
         } elseif ($isGenap && $semesterAktif == 10) {
-            $adaEDGenap = $this->cekAdaEDMataKuliahGenap($akademik->mahasiswa_id);
-            if ($adaEDGenap) {
+            if (!$statusDoneNfuGenap || $adaEDMatkulGenap) {
                 return 'perhatian';
             }
         }
@@ -186,15 +246,13 @@ class EwsService
             return 'normal';
         }
 
-        // Kondisi nilai/NFU normal (semester 7 & 8)
+        // Kondisi NFU/Nilai normal (semester 7 & 8)
         if ($isGanjil && $semesterAktif == 7) {
-            $adaEDGanjil = $this->cekAdaEDMataKuliahGanjil($akademik->mahasiswa_id);
-            if ($adaEDGanjil) {
+            if (!$statusDoneNfuGanjil || $adaEDMatkulGanjil) {
                 return 'normal';
             }
         } elseif ($isGenap && $semesterAktif == 8) {
-            $adaEDGenap = $this->cekAdaEDMataKuliahGenap($akademik->mahasiswa_id);
-            if ($adaEDGenap) {
+            if (!$statusDoneNfuGenap || $adaEDMatkulGenap) {
                 return 'normal';
             }
         }
@@ -203,11 +261,13 @@ class EwsService
         $kondisiSksBiru = ($sisaSks <= $sksBisaDiambilSD8);
 
         if ($isGanjil && $semesterAktif == 7) {
-            if ($kondisiSksBiru && $jumlahNilaiE <= 0 && $jumlahNilaiD <= 1) {
+            // SMT 7: Check NFU Ganjil (only), E=0, D<=1
+            if ($kondisiSksBiru && $jumlahNilaiE <= 0 && $jumlahNilaiD <= 1 && $statusDoneNfuGanjil) {
                 return 'tepat_waktu';
             }
         } elseif ($isGenap && $semesterAktif == 8) {
-            if ($kondisiSksBiru && $jumlahNilaiE <= 0 && $jumlahNilaiD <= 1) {
+            // SMT 8: Check NFU Genap (FIXED from Python logic.py - not NFU Ganjil!)
+            if ($kondisiSksBiru && $jumlahNilaiE <= 0 && $jumlahNilaiD <= 1 && $statusDoneNfuGenap) {
                 return 'tepat_waktu';
             }
         }

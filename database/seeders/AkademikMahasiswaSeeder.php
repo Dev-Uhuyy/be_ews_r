@@ -40,16 +40,22 @@ class AkademikMahasiswaSeeder extends Seeder
                     'dosen_wali_id'  => $dosen->id,
                     'semester_aktif' => 5,
                     'tahun_masuk'    => 2020,
-                    'ipk'            => null,
-                    'mk_nasional'    => 'no',
+                    'ipk'            => 3.0, // Realistic initial IPK
+                    'mk_nasional'    => 'yes',
                     'mk_fakultas'    => 'no',
                     'mk_prodi'       => 'no',
-                    'sks_tempuh'     => null,
-                    'sks_now'        => null,
-                    'sks_lulus'      => null,
-                    'sks_gagal'      => null,
+                    'sks_tempuh'     => 70,  // Total SKS attempted (>= sks_lulus)
+                    'sks_now'        => 20,  // SKS this semester
+                    'sks_lulus'      => 68,  // SKS passed (<= sks_tempuh)
+                    'sks_gagal'      => 2,   // Failed SKS = tempuh - lulus
                     'nilai_d_melebihi_batas' => 'no',
                     'nilai_e'        => 'no',
+                    // NFU + IPS per-semester fields (migration 2026_04_19)
+                    'status_done_nfu_ganjil' => 'no',
+                    'status_done_nfu_genap' => 'no',
+                    'ips_semester_1' => null,
+                    'ips_semester_2' => null,
+                    'ips_semester_3' => null,
                 ]
             );
         }

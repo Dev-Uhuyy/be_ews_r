@@ -46,21 +46,22 @@ class TindakLanjutProdiController extends Controller
             $data = $this->tindakLanjutProdiService->getTindakLanjutExport($search, $tahunMasuk, $category, $status);
 
             if ($data->isEmpty()) {
-                return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
+                return $this->successResponse(
+                    null,
+                    'Tidak ada data tindak lanjut untuk diexport dengan filter tersebut',
+                    200
+                );
             }
 
             $fileName = 'Tindak Lanjut ' . date('Y-m-d') . '.xlsx';
-            $filePath = 'exports/' . $fileName;
 
-            \Maatwebsite\Excel\Facades\Excel::store(
-                new \App\Exports\TindakLanjutExport($data),
-                $filePath,
-                'public'
-            );
-
-            return $this->successResponse(
-                ['url' => asset('storage/' . $filePath)],
-                'File export tindak lanjut berhasil digenerate'
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TindakLanjutExport(
+                    $data,
+                    'Daftar Tindak Lanjut Mahasiswa',
+                    ['Fakultas Ilmu Komputer']
+                ),
+                $fileName
             );
 
         } catch (\Exception $e) {

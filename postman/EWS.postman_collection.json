@@ -1,26 +1,50 @@
 {
   "info": {
-    "_postman_id": "b4a8f2de-ews-collection",
-    "name": "EWS API (Auth + Kaprodi + Dekan + Mahasiswa)",
+    "_postman_id": "ews-api-v3",
+    "name": "EWS API (Dekan + Kaprodi + Mahasiswa)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Generated from routes/api.php. Base URL: {{api_base}}. Auth: Bearer {{access_token}}."
+    "description": "# Early Warning System (EWS) API - Postman Collection\n\nLaravel REST API for university Early Warning System monitoring student academic performance.\n\n\n## Roles\n- **dekan** (Dekan Fakultas): Faculty-wide oversight of all study programs\n- **kaprodi** (Kepala Program Studi): Per-study-program management\n- **mahasiswa** (Student): View own status, warnings, submit follow-ups\n\n## Authentication\n- **Single login endpoint**: `POST /api/login`\n- All other endpoints require: `Authorization: Bearer {{access_token}}`\n- Login auto-sets `{{access_token}}` + role-specific token variables (see Auth folder)\n\n\n## Response Format\n```json\n{\n  \"success\": true,\n  \"message\": \"Description\",\n  \"data\": { ... }\n}\n```\n\n## Base URL\n- Uses `{{base_url}}` = `http://127.0.0.1:8000` (local)\n- All endpoint URLs use `{{base_url}}/api/...`\n\n\n## Quick Start\n1. Import collection + environment into Postman\n2. Select \"EWS - Local\" environment\n3. Run login in Auth folder\n4. Browse to role folder and run requests\n"
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "default",
+      "enabled": true
+    }
+  ],
   "item": [
     {
-      "name": "00 - Auth",
+      "name": "🔐 Authentication",
+      "description": "Authentication endpoints. Use ONE login request to get your Bearer token. Token is auto-injected into all subsequent requests via pre-request script.",
       "item": [
         {
-          "name": "Login (Generic) - POST /login",
+          "name": "Login - POST /api/login",
+          "description": "Universal login endpoint. Accepts any registered user email/password. After login, the response script auto-detects the user's role and sets the appropriate token variable (`dekan_token`, `kaprodi_token`, or `mahasiswa_token`). You can then switch to any role folder — the pre-request script will inject the correct token.",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has access_token', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data).to.have.property('access_token');",
+                  "});",
                   "const json = pm.response.json();",
                   "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
+                  "  const token = json.data.access_token;",
+                  "  const roles = json.data.user && json.data.user.roles ? json.data.user.roles.toLowerCase() : '';",
+                  "  pm.environment.set('access_token', token);",
+                  "  pm.environment.set('role', roles);",
+                  "  if (roles.includes('dekan')) {",
+                  "    pm.environment.set('dekan_token', token);",
+                  "  } else if (roles.includes('kaprodi')) {",
+                  "    pm.environment.set('kaprodi_token', token);",
+                  "  } else if (roles.includes('mahasiswa')) {",
+                  "    pm.environment.set('mahasiswa_token', token);",
+                  "  }",
+                  "  console.log('Login success. Token set. Role:', roles);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -35,999 +59,403 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_kaprodi}}\",\n  \"password\": \"{{password}}\"\n}"
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
             },
             "url": {
-              "raw": "{{api_base}}/login",
-              "host": ["{{api_base}}"],
-              "path": ["login"]
-            }
-          }
-        },
-        {
-          "name": "Login Kaprodi - POST /login-kaprodi",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
-                  "  if (json.data.kaprodi && json.data.kaprodi.prodi_id) pm.environment.set('prodi_id', String(json.data.kaprodi.prodi_id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_kaprodi}}\",\n  \"password\": \"{{password}}\"\n}"
+              "raw": "{{base_url}}/api/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login"]
             },
-            "url": {
-              "raw": "{{api_base}}/login-kaprodi",
-              "host": ["{{api_base}}"],
-              "path": ["login-kaprodi"]
-            }
-          }
-        },
-        {
-          "name": "Login Kaprodi (A11) - POST /login-kaprodi",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
-                  "  if (json.data.kaprodi && json.data.kaprodi.prodi_id) pm.environment.set('prodi_id', String(json.data.kaprodi.prodi_id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_kaprodi_a11}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{api_base}}/login-kaprodi",
-              "host": ["{{api_base}}"],
-              "path": ["login-kaprodi"]
-            }
-          }
-        },
-        {
-          "name": "Login Kaprodi (A12) - POST /login-kaprodi",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
-                  "  if (json.data.kaprodi && json.data.kaprodi.prodi_id) pm.environment.set('prodi_id', String(json.data.kaprodi.prodi_id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_kaprodi_a12}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{api_base}}/login-kaprodi",
-              "host": ["{{api_base}}"],
-              "path": ["login-kaprodi"]
-            }
-          }
-        },
-        {
-          "name": "Login Kaprodi (A14) - POST /login-kaprodi",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
-                  "  if (json.data.kaprodi && json.data.kaprodi.prodi_id) pm.environment.set('prodi_id', String(json.data.kaprodi.prodi_id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_kaprodi_a14}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{api_base}}/login-kaprodi",
-              "host": ["{{api_base}}"],
-              "path": ["login-kaprodi"]
-            }
-          }
-        },
-        {
-          "name": "Login Kaprodi (A15) - POST /login-kaprodi",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
-                  "  if (json.data.kaprodi && json.data.kaprodi.prodi_id) pm.environment.set('prodi_id', String(json.data.kaprodi.prodi_id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_kaprodi_a15}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{api_base}}/login-kaprodi",
-              "host": ["{{api_base}}"],
-              "path": ["login-kaprodi"]
-            }
-          }
-        },
-        {
-          "name": "Login Dekan - POST /login-dekan",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_dekan}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{api_base}}/login-dekan",
-              "host": ["{{api_base}}"],
-              "path": ["login-dekan"]
-            }
-          }
-        },
-        {
-          "name": "Login Mahasiswa - POST /login-mahasiswa",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.access_token) {",
-                  "  pm.environment.set('access_token', json.data.access_token);",
-                  "  pm.environment.set('role', (json.data.user && json.data.user.roles) ? json.data.user.roles : '');",
-                  "  if (json.data.mahasiswa && json.data.mahasiswa.id) pm.environment.set('mahasiswa_id', String(json.data.mahasiswa.id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email_mahasiswa}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{api_base}}/login-mahasiswa",
-              "host": ["{{api_base}}"],
-              "path": ["login-mahasiswa"]
-            }
-          }
-        },
-        {
-          "name": "Profile - GET /profile",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/profile",
-              "host": ["{{api_base}}"],
-              "path": ["profile"]
-            }
-          }
-        },
-        {
-          "name": "Profile (check roles) - GET /profile?view=check-roles",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/profile?view=check-roles",
-              "host": ["{{api_base}}"],
-              "path": ["profile"],
-              "query": [{ "key": "view", "value": "check-roles" }]
-            }
+            "description": "**Request Body:**\n```json\n{\n  \"email\": \"dekan@ews.com\",\n  \"password\": \"password\"\n}\n```\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"message\": \"Login berhasil\",\n  \"data\": {\n    \"access_token\": \"1|abc...\",\n    \"token_type\": \"Bearer\",\n    \"user\": {\n      \"id\": 1,\n      \"name\": \"Nama User\",\n      \"email\": \"user@ews.com\",\n      \"roles\": \"dekan\"\n    }\n  }\n}\n```\n\n**Notes:**\n- Single endpoint for all roles\n- Auto-sets `access_token`, `role`, and role-specific token variables"
           }
         }
       ]
     },
     {
-      "name": "10 - EWS - Kaprodi (kaprodi|dekan)",
+      "name": "👔 Dekan",
+      "description": "**Role Required:** `dekan`\n\nFakultas-level endpoints. Oversight of all study programs within a faculty. Can optionally filter by `prodi_id` query parameter.",
       "item": [
         {
-          "name": "Dashboard - GET /ews/kaprodi/dashboard",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/dashboard", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "dashboard"] }
-          }
-        },
-        {
-          "name": "Table Ringkasan Mahasiswa - GET /ews/kaprodi/table-ringkasan-mahasiswa?per_page=50",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/table-ringkasan-mahasiswa?per_page=50",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "table-ringkasan-mahasiswa"],
-              "query": [{ "key": "per_page", "value": "50" }]
-            }
-          }
-        },
-        {
-          "name": "Export Table Ringkasan Mahasiswa - GET /ews/kaprodi/table-ringkasan-mahasiswa/export",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/table-ringkasan-mahasiswa/export", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "table-ringkasan-mahasiswa", "export"] }
-          }
-        },
-        {
-          "name": "Detail Mahasiswa - GET /ews/kaprodi/mahasiswa/detail/{{mahasiswa_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/mahasiswa/detail/{{mahasiswa_id}}", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "mahasiswa", "detail", "{{mahasiswa_id}}"] }
-          }
-        },
-        {
-          "name": "Detail Angkatan - GET /ews/kaprodi/mahasiswa/detail-angkatan/{{tahun_masuk}}?per_page=20&search=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/mahasiswa/detail-angkatan/{{tahun_masuk}}?per_page=20&search=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "mahasiswa", "detail-angkatan", "{{tahun_masuk}}"],
-              "query": [
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Export Detail Angkatan - GET /ews/kaprodi/mahasiswa/detail-angkatan/{{tahun_masuk}}/export?search=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/mahasiswa/detail-angkatan/{{tahun_masuk}}/export?search=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "mahasiswa", "detail-angkatan", "{{tahun_masuk}}", "export"],
-              "query": [{ "key": "search", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "Mahasiswa All (basic) - GET /ews/kaprodi/mahasiswa/all?per_page=20&search=",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.length > 0) {",
-                  "  pm.environment.set('mahasiswa_id', String(json.data[0].id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/mahasiswa/all?per_page=20&search=&mode=detailed",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "mahasiswa", "all"],
-              "query": [
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "" },
-                { "key": "mode", "value": "detailed" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Export Mahasiswa All - GET /ews/kaprodi/mahasiswa/all/export?mode=detailed",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/mahasiswa/all/export?mode=detailed",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "mahasiswa", "all", "export"],
-              "query": [{ "key": "mode", "value": "detailed" }]
-            }
-          }
-        },
-        {
-          "name": "Distribusi Status EWS - GET /ews/kaprodi/distribusi-status-ews?tahun_masuk=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/distribusi-status-ews?tahun_masuk=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "distribusi-status-ews"],
-              "query": [{ "key": "tahun_masuk", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "Table Ringkasan Status - GET /ews/kaprodi/table-ringkasan-status",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/table-ringkasan-status", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "table-ringkasan-status"] }
-          }
-        },
-        {
-          "name": "Export Table Ringkasan Status - GET /ews/kaprodi/table-ringkasan-status/export",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/table-ringkasan-status/export", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "table-ringkasan-status", "export"] }
-          }
-        },
-        {
-          "name": "Recalculate Mahasiswa Status - POST /ews/kaprodi/mahasiswa/{{mahasiswa_id}}/recalculate-status",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/mahasiswa/{{mahasiswa_id}}/recalculate-status", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "mahasiswa", "{{mahasiswa_id}}", "recalculate-status"] }
-          }
-        },
-        {
-          "name": "Recalculate All Status - POST /ews/kaprodi/recalculate-all-status (optional ?prodi_id=)",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/recalculate-all-status?prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "recalculate-all-status"],
-              "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
-            }
-          }
-        },
-        {
-          "name": "Tren IPS All - GET /ews/kaprodi/tren-ips/all?tahun_masuk=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/tren-ips/all?tahun_masuk=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "tren-ips", "all"],
-              "query": [{ "key": "tahun_masuk", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "Export Tren IPS All - GET /ews/kaprodi/tren-ips/all/export?tahun_masuk=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/tren-ips/all/export?tahun_masuk=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "tren-ips", "all", "export"],
-              "query": [{ "key": "tahun_masuk", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "Card Capaian - GET /ews/kaprodi/card-capaian?tahun_masuk=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/card-capaian?tahun_masuk=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "card-capaian"],
-              "query": [{ "key": "tahun_masuk", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "Top MK Gagal - GET /ews/kaprodi/top-mk-gagal",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/top-mk-gagal", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "top-mk-gagal"] }
-          }
-        },
-        {
-          "name": "Mahasiswa MK Gagal - GET /ews/kaprodi/mahasiswa/mk-gagal?per_page=20&search=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/mahasiswa/mk-gagal?per_page=20&search=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "mahasiswa", "mk-gagal"],
-              "query": [
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Export Mahasiswa MK Gagal - GET /ews/kaprodi/mahasiswa/mk-gagal/export?search=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/mahasiswa/mk-gagal/export?search=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "mahasiswa", "mk-gagal", "export"],
-              "query": [{ "key": "search", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "Statistik Kelulusan (card) - GET /ews/kaprodi/statistik-kelulusan?tahun_masuk=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/statistik-kelulusan?tahun_masuk=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "statistik-kelulusan"],
-              "query": [{ "key": "tahun_masuk", "value": "" }]
-            }
-          }
-        },
-        {
-          "name": "Table Statistik Kelulusan - GET /ews/kaprodi/table-statistik-kelulusan?per_page=50",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/table-statistik-kelulusan?per_page=50",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "table-statistik-kelulusan"],
-              "query": [{ "key": "per_page", "value": "50" }]
-            }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Cards - GET /ews/kaprodi/tindak-lanjut/cards",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/kaprodi/tindak-lanjut/cards", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "tindak-lanjut", "cards"] }
-          }
-        },
-        {
-          "name": "Tindak Lanjut List - GET /ews/kaprodi/tindak-lanjut?per_page=20&search=&kategori=&status=&tahun_masuk=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/tindak-lanjut?per_page=20&search=&kategori=&status=&tahun_masuk=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "tindak-lanjut"],
-              "query": [
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "" },
-                { "key": "kategori", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "tahun_masuk", "value": "" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Export - GET /ews/kaprodi/tindak-lanjut/export?search=&kategori=&status=&tahun_masuk=",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/kaprodi/tindak-lanjut/export?search=&kategori=&status=&tahun_masuk=",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "kaprodi", "tindak-lanjut", "export"],
-              "query": [
-                { "key": "search", "value": "" },
-                { "key": "kategori", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "tahun_masuk", "value": "" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Update Status - PATCH /ews/kaprodi/tindak-lanjut/{{tindak_lanjut_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "PATCH",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"telah_diverifikasi\"\n}" },
-            "url": { "raw": "{{api_base}}/ews/kaprodi/tindak-lanjut/{{tindak_lanjut_id}}", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "tindak-lanjut", "{{tindak_lanjut_id}}"] }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Bulk Update - PATCH /ews/kaprodi/tindak-lanjut/bulk-update",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "PATCH",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\n    {{tindak_lanjut_id}}\n  ],\n  \"status\": \"telah_diverifikasi\"\n}" },
-            "url": { "raw": "{{api_base}}/ews/kaprodi/tindak-lanjut/bulk-update", "host": ["{{api_base}}"], "path": ["ews", "kaprodi", "tindak-lanjut", "bulk-update"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "20 - EWS - Dekan (dekan)",
-      "item": [
-        {
-          "name": "Dashboard - GET /ews/dekan/dashboard (optional ?prodi_id={{prodi_id}})",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/dashboard?prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "dashboard"],
-              "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
-            }
-          }
-        },
-        {
-          "name": "Table Ringkasan Mahasiswa - GET /ews/dekan/table-ringkasan-mahasiswa?per_page=50&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/table-ringkasan-mahasiswa?per_page=50&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "table-ringkasan-mahasiswa"],
-              "query": [
-                { "key": "per_page", "value": "50" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Detail Mahasiswa - GET /ews/dekan/mahasiswa/detail/{{mahasiswa_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/dekan/mahasiswa/detail/{{mahasiswa_id}}", "host": ["{{api_base}}"], "path": ["ews", "dekan", "mahasiswa", "detail", "{{mahasiswa_id}}"] }
-          }
-        },
-        {
-          "name": "Detail Angkatan - GET /ews/dekan/mahasiswa/detail-angkatan/{{tahun_masuk}}?per_page=20&search=&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/mahasiswa/detail-angkatan/{{tahun_masuk}}?per_page=20&search=&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "mahasiswa", "detail-angkatan", "{{tahun_masuk}}"],
-              "query": [
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Mahasiswa All - GET /ews/dekan/mahasiswa/all?per_page=20&search=&mode=detailed&prodi_id={{prodi_id}}",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json && json.success && json.data && json.data.length > 0) {",
-                  "  pm.environment.set('mahasiswa_id', String(json.data[0].id));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/mahasiswa/all?per_page=20&search=&mode=detailed&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "mahasiswa", "all"],
-              "query": [
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "" },
-                { "key": "mode", "value": "detailed" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Distribusi Status EWS - GET /ews/dekan/distribusi-status-ews?tahun_masuk=&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/distribusi-status-ews?tahun_masuk=&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "distribusi-status-ews"],
-              "query": [
-                { "key": "tahun_masuk", "value": "" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Table Ringkasan Status - GET /ews/dekan/table-ringkasan-status?prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/table-ringkasan-status?prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "table-ringkasan-status"],
-              "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
-            }
-          }
-        },
-        {
-          "name": "Recalculate Mahasiswa Status - POST /ews/dekan/mahasiswa/{{mahasiswa_id}}/recalculate-status",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/dekan/mahasiswa/{{mahasiswa_id}}/recalculate-status", "host": ["{{api_base}}"], "path": ["ews", "dekan", "mahasiswa", "{{mahasiswa_id}}", "recalculate-status"] }
-          }
-        },
-        {
-          "name": "Recalculate All Status - POST /ews/dekan/recalculate-all-status (optional ?prodi_id={{prodi_id}})",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "POST",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/recalculate-all-status?prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "recalculate-all-status"],
-              "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
-            }
-          }
-        },
-        {
-          "name": "Statistik Kelulusan (card) - GET /ews/dekan/statistik-kelulusan?tahun_masuk=&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/statistik-kelulusan?tahun_masuk=&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "statistik-kelulusan"],
-              "query": [
-                { "key": "tahun_masuk", "value": "" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Table Statistik Kelulusan - GET /ews/dekan/table-statistik-kelulusan?per_page=50&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/table-statistik-kelulusan?per_page=50&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "table-statistik-kelulusan"],
-              "query": [
-                { "key": "per_page", "value": "50" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Tren IPS All - GET /ews/dekan/tren-ips/all?tahun_masuk=&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/tren-ips/all?tahun_masuk=&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "tren-ips", "all"],
-              "query": [
-                { "key": "tahun_masuk", "value": "" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Card Capaian - GET /ews/dekan/card-capaian?tahun_masuk=&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/card-capaian?tahun_masuk=&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "card-capaian"],
-              "query": [
-                { "key": "tahun_masuk", "value": "" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Top MK Gagal - GET /ews/dekan/top-mk-gagal?prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/top-mk-gagal?prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "top-mk-gagal"],
-              "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
-            }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Cards - GET /ews/dekan/tindak-lanjut/cards?prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/tindak-lanjut/cards?prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "tindak-lanjut", "cards"],
-              "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
-            }
-          }
-        },
-        {
-          "name": "Tindak Lanjut List - GET /ews/dekan/tindak-lanjut?per_page=20&search=&kategori=&status=&tahun_masuk=&prodi_id={{prodi_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/dekan/tindak-lanjut?per_page=20&search=&kategori=&status=&tahun_masuk=&prodi_id={{prodi_id}}",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "dekan", "tindak-lanjut"],
-              "query": [
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "" },
-                { "key": "kategori", "value": "" },
-                { "key": "status", "value": "" },
-                { "key": "tahun_masuk", "value": "" },
-                { "key": "prodi_id", "value": "{{prodi_id}}" }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Update Status - PATCH /ews/dekan/tindak-lanjut/{{tindak_lanjut_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "PATCH",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"telah_diverifikasi\"\n}" },
-            "url": { "raw": "{{api_base}}/ews/dekan/tindak-lanjut/{{tindak_lanjut_id}}", "host": ["{{api_base}}"], "path": ["ews", "dekan", "tindak-lanjut", "{{tindak_lanjut_id}}"] }
-          }
-        },
-        {
-          "name": "Exports",
+          "name": "📊 Dashboard",
           "item": [
             {
-              "name": "Export Table Ringkasan Mahasiswa",
+              "name": "Dashboard - GET /api/ews/dekan/dashboard",
               "request": {
-                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/dashboard",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "dashboard"]
+                },
+                "description": "Get main dashboard showing key metrics across all prodi in the faculty.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"total_mahasiswa\": 450,\n    \"distribusi_status\": { \"MERAH\": 12, \"KUNING\": 35, \"HIJAU\": 300, \"BIRU\": 103 },\n    \"mahasiswa_bahaya\": 12,\n    \"mahasiswa_issues\": 47\n  }\n}\n```"
+              }
+            }
+          ]
+        },
+        {
+          "name": "🚦 Status EWS",
+          "item": [
+            {
+              "name": "Distribusi Status EWS - GET /api/ews/dekan/distribusi-status-ews",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
-                "url": { "raw": "{{api_base}}/ews/dekan/table-ringkasan-mahasiswa/export", "host": ["{{api_base}}"], "path": ["ews", "dekan", "table-ringkasan-mahasiswa", "export"] }
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/distribusi-status-ews",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "distribusi-status-ews"]
+                },
+                "description": "Get EWS status distribution across all prodi.\n\n**Status Codes:**\n- **MERAH**: Drop out risk\n- **KUNING**: At risk\n- **HIJAU**: On track\n- **BIRU**: Graduated\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"labels\": [\"MERAH\", \"KUNING\", \"HIJAU\", \"BIRU\"],\n    \"data\": [12, 35, 300, 103],\n    \"total\": 450\n  }\n}\n```"
               }
             },
             {
-              "name": "Export Detail Angkatan",
+              "name": "Status Mahasiswa - GET /api/ews/dekan/status-mahasiswa",
               "request": {
-                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
-                "url": { "raw": "{{api_base}}/ews/dekan/mahasiswa/detail-angkatan/{{tahun_masuk}}/export", "host": ["{{api_base}}"], "path": ["ews", "dekan", "mahasiswa", "detail-angkatan", "{{tahun_masuk}}", "export"] }
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/status-mahasiswa",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "status-mahasiswa"]
+                },
+                "description": "Get EWS status summary of all students in the faculty.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"total\": 450,\n    \"merah\": 12,\n    \"kuning\": 35,\n    \"hijau\": 300,\n    \"biru\": 103\n  }\n}\n```"
               }
             },
             {
-              "name": "Export Mahasiswa All",
+              "name": "Recalculate All Status - POST /api/ews/dekan/recalculate-all-status",
               "request": {
-                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/recalculate-all-status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "recalculate-all-status"]
+                },
+                "description": "Trigger EWS status recalculation for all students across all prodi.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"message\": \"Recalculation started\",\n  \"data\": { \"total_diproses\": 450, \"status_berubah\": 8 }\n}\n```"
+              }
+            }
+          ]
+        },
+        {
+          "name": "👥 Mahasiswa",
+          "item": [
+            {
+              "name": "Mahasiswa All - GET /api/ews/dekan/mahasiswa/all",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
-                "url": { "raw": "{{api_base}}/ews/dekan/mahasiswa/all/export", "host": ["{{api_base}}"], "path": ["ews", "dekan", "mahasiswa", "all", "export"] }
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/mahasiswa/all?per_page=20&search=",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "mahasiswa", "all"],
+                  "query": [
+                    { "key": "per_page", "value": "20" },
+                    { "key": "search", "value": "" }
+                  ]
+                },
+                "description": "Get list of all students across all prodi. Auto-sets `mahasiswa_id` from first result.\n\n**Query Parameters:**\n- `per_page` (int)\n- `search` (string): Filter by name/NIM\n- `prodi_id` (int, optional): Filter by prodi\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": [\n    { \"id\": 1, \"nim\": \"A11.2021.12345\", \"nama\": \"Nama\", \"status_ews\": \"HIJAU\" }\n  ]\n}\n```"
               }
             },
             {
-              "name": "Export Table Ringkasan Status",
+              "name": "Export Mahasiswa All - GET /api/ews/dekan/mahasiswa/all/export",
               "request": {
-                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
-                "url": { "raw": "{{api_base}}/ews/dekan/table-ringkasan-status/export", "host": ["{{api_base}}"], "path": ["ews", "dekan", "table-ringkasan-status", "export"] }
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/mahasiswa/all/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "mahasiswa", "all", "export"]
+                },
+                "description": "Export all students as CSV download."
               }
             },
             {
-              "name": "Export Tren IPS All",
+              "name": "Mahasiswa MK Gagal - GET /api/ews/dekan/mahasiswa/mk-gagal",
               "request": {
-                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
-                "url": { "raw": "{{api_base}}/ews/dekan/tren-ips/all/export", "host": ["{{api_base}}"], "path": ["ews", "dekan", "tren-ips", "all", "export"] }
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/mahasiswa/mk-gagal?per_page=20&search=",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "mahasiswa", "mk-gagal"],
+                  "query": [
+                    { "key": "per_page", "value": "20" },
+                    { "key": "search", "value": "" }
+                  ]
+                },
+                "description": "Get list of students who failed courses.\n\n**Query Parameters:** `per_page`, `search`"
               }
             },
             {
-              "name": "Export Mahasiswa MK Gagal",
+              "name": "Export Mahasiswa MK Gagal - GET /api/ews/dekan/mahasiswa/mk-gagal/export",
               "request": {
-                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
-                "url": { "raw": "{{api_base}}/ews/dekan/mahasiswa/mk-gagal/export", "host": ["{{api_base}}"], "path": ["ews", "dekan", "mahasiswa", "mk-gagal", "export"] }
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/mahasiswa/mk-gagal/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "mahasiswa", "mk-gagal", "export"]
+                },
+                "description": "Export students with failed courses as CSV."
               }
             },
             {
-              "name": "Export Tindak Lanjut",
+              "name": "Detail Angkatan - GET /api/ews/dekan/mahasiswa/detail-angkatan/{tahun}",
               "request": {
-                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
                 "method": "GET",
                 "header": [{ "key": "Accept", "value": "application/json" }],
-                "url": { "raw": "{{api_base}}/ews/dekan/tindak-lanjut/export", "host": ["{{api_base}}"], "path": ["ews", "dekan", "tindak-lanjut", "export"] }
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/mahasiswa/detail-angkatan/{{tahun_masuk}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "mahasiswa", "detail-angkatan", "{{tahun_masuk}}"]
+                },
+                "description": "Get all students in a specific admission year (angkatan).\n\n**Path Parameter:** `tahun` (int) - e.g. 2021"
+              }
+            },
+            {
+              "name": "Export Detail Angkatan - GET /api/ews/dekan/mahasiswa/detail-angkatan/{tahun}/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/mahasiswa/detail-angkatan/{{tahun_masuk}}/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "mahasiswa", "detail-angkatan", "{{tahun_masuk}}", "export"]
+                },
+                "description": "Export students in a specific angkatan as CSV."
+              }
+            },
+            {
+              "name": "Detail Mahasiswa - GET /api/ews/dekan/mahasiswa/detail/{id}",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/mahasiswa/detail/{{mahasiswa_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "mahasiswa", "detail", "{{mahasiswa_id}}"]
+                },
+                "description": "Get detailed information about a specific student.\n\n**Path Parameter:** `id` (int) - student ID"
+              }
+            }
+          ]
+        },
+        {
+          "name": "📋 Ringkasan",
+          "item": [
+            {
+              "name": "Table Ringkasan Mahasiswa - GET /api/ews/dekan/table-ringkasan-mahasiswa",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/table-ringkasan-mahasiswa?per_page=50",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "table-ringkasan-mahasiswa"],
+                  "query": [{ "key": "per_page", "value": "50" }]
+                },
+                "description": "Get paginated student summary table.\n\n**Query Parameters:** `per_page`, `search`, `prodi_id` (optional)"
+              }
+            },
+            {
+              "name": "Export Table Ringkasan Mahasiswa - GET /api/ews/dekan/table-ringkasan-mahasiswa/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/table-ringkasan-mahasiswa/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "table-ringkasan-mahasiswa", "export"]
+                },
+                "description": "Export student summary table as CSV."
+              }
+            },
+            {
+              "name": "Table Ringkasan Status - GET /api/ews/dekan/table-ringkasan-status",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/table-ringkasan-status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "table-ringkasan-status"]
+                },
+                "description": "Get EWS status summary table broken down by angkatan."
+              }
+            },
+            {
+              "name": "Export Table Ringkasan Status - GET /api/ews/dekan/table-ringkasan-status/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/table-ringkasan-status/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "table-ringkasan-status", "export"]
+                },
+                "description": "Export EWS status summary as CSV."
+              }
+            }
+          ]
+        },
+        {
+          "name": "📈 Akademik",
+          "item": [
+            {
+              "name": "Top MK Gagal - GET /api/ews/dekan/top-mk-gagal",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/top-mk-gagal",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "top-mk-gagal"]
+                },
+                "description": "Get top 10 most failed courses across all prodi.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": [\n    { \"mk_id\": 1, \"kode_mk\": \"A11.54321\", \"nama_mk\": \"Struktur Data\", \"jumlah_gagal\": 25 }\n  ]\n}\n```"
+              }
+            },
+            {
+              "name": "Tren IPS - GET /api/ews/dekan/tren-ips/all",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/tren-ips/all",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "tren-ips", "all"]
+                },
+                "description": "Get IPS trend (semester-by-semester GPA) for chart visualization.\n\n**Query Parameters:** `tahun_masuk` (optional)"
+              }
+            },
+            {
+              "name": "Export Tren IPS - GET /api/ews/dekan/tren-ips/all/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/tren-ips/all/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "tren-ips", "all", "export"]
+                },
+                "description": "Export IPS trend data as CSV."
+              }
+            },
+            {
+              "name": "Card Capaian - GET /api/ews/dekan/card-capaian",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/card-capaian",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "card-capaian"]
+                },
+                "description": "Get academic achievement summary cards.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"rata_ips\": 3.55,\n    \"jumlah_mahasiswa_at_risk\": 47,\n    \"persentase_lulus_tepat_waktu\": 78.5,\n    \"total_matkul_gagal\": 120\n  }\n}\n```"
+              }
+            }
+          ]
+        },
+        {
+          "name": "🎓 Kelulusan",
+          "item": [
+            {
+              "name": "Statistik Kelulusan - GET /api/ews/dekan/statistik-kelulusan",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/statistik-kelulusan",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "statistik-kelulusan"]
+                },
+                "description": "Get graduation statistics summary.\n\n**Query Parameters:** `tahun_masuk` (optional)"
+              }
+            },
+            {
+              "name": "Table Statistik Kelulusan - GET /api/ews/dekan/table-statistik-kelulusan",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/table-statistik-kelulusan",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "table-statistik-kelulusan"]
+                },
+                "description": "Get detailed graduation statistics table by angkatan."
+              }
+            }
+          ]
+        },
+        {
+          "name": "📋 Tindak Lanjut",
+          "item": [
+            {
+              "name": "Tindak Lanjut - GET /api/ews/dekan/tindak-lanjut",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/tindak-lanjut?per_page=20",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "tindak-lanjut"],
+                  "query": [{ "key": "per_page", "value": "20" }]
+                },
+                "description": "Get paginated list of all tindak lanjut across all prodi.\n\n\n**Query Parameters:** `per_page`, `search`, `kategori`, `status`, `tahun_masuk`, `prodi_id`"
+              }
+            },
+            {
+              "name": "Tindak Lanjut Cards - GET /api/ews/dekan/tindak-lanjut/cards",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/tindak-lanjut/cards",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "tindak-lanjut", "cards"]
+                },
+                "description": "Get summary cards showing counts of tindak lanjut by status."
+              }
+            },
+            {
+              "name": "Export Tindak Lanjut - GET /api/ews/dekan/tindak-lanjut/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{dekan_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/dekan/tindak-lanjut/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "dekan", "tindak-lanjut", "export"]
+                },
+                "description": "Export all tindak lanjut records as CSV."
               }
             }
           ]
@@ -1035,103 +463,499 @@
       ]
     },
     {
-      "name": "30 - EWS - Mahasiswa (mahasiswa)",
+      "name": "📋 Kaprodi",
+      "description": "**Role Required:** `kaprodi`\n\nEndpoints for study program management. All student data is scoped to Kaprodi's own prodi.",
       "item": [
         {
-          "name": "Dashboard - GET /ews/mahasiswa/dashboard",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/dashboard", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "dashboard"] }
-          }
-        },
-        {
-          "name": "Card Status Akademik - GET /ews/mahasiswa/card-status-akademik",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/card-status-akademik", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "card-status-akademik"] }
-          }
-        },
-        {
-          "name": "KHS/KRS List - GET /ews/mahasiswa/khs-krs?per_page=10&page=1",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": {
-              "raw": "{{api_base}}/ews/mahasiswa/khs-krs?per_page=10&page=1",
-              "host": ["{{api_base}}"],
-              "path": ["ews", "mahasiswa", "khs-krs"],
-              "query": [
-                { "key": "per_page", "value": "10" },
-                { "key": "page", "value": "1" }
-              ]
+          "name": "📊 Dashboard",
+          "item": [
+            {
+              "name": "Dashboard - GET /api/ews/kaprodi/dashboard",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/dashboard",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "dashboard"]
+                },
+                "description": "Get main dashboard for Kaprodi showing key metrics for their prodi.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"total_mahasiswa\": 150,\n    \"distribusi_status\": { \"MERAH\": 5, \"KUNING\": 12, \"HIJAU\": 100, \"BIRU\": 33 },\n    \"mahasiswa_bahaya\": 5,\n    \"mahasiswa_issues\": 17\n  }\n}\n```"
+              }
             }
-          }
+          ]
         },
         {
-          "name": "KHS/KRS Detail - GET /ews/mahasiswa/khs-krs/{{khs_krs_id}}",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/khs-krs/{{khs_krs_id}}", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "khs-krs", "{{khs_krs_id}}"] }
-          }
-        },
-        {
-          "name": "Peringatan - GET /ews/mahasiswa/peringatan",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/peringatan", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "peringatan"] }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Cards - GET /ews/mahasiswa/tindak-lanjut/cards",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/tindak-lanjut/cards", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "tindak-lanjut", "cards"] }
-          }
-        },
-        {
-          "name": "Tindak Lanjut History - GET /ews/mahasiswa/tindak-lanjut",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/tindak-lanjut", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "tindak-lanjut"] }
-          }
-        },
-        {
-          "name": "Tindak Lanjut Submit - POST /ews/mahasiswa/tindak-lanjut",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"kategori\": \"rekomitmen\",\n  \"link\": \"https://example.com/bukti.pdf\"\n}"
+          "name": "🚦 Status EWS",
+          "item": [
+            {
+              "name": "Distribusi Status EWS - GET /api/ews/kaprodi/distribusi-status-ews",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/distribusi-status-ews",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "distribusi-status-ews"]
+                },
+                "description": "Get EWS status distribution for students in this prodi."
+              }
             },
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/tindak-lanjut", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "tindak-lanjut"] }
-          }
+            {
+              "name": "Status Mahasiswa - GET /api/ews/kaprodi/status-mahasiswa",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/status-mahasiswa",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "status-mahasiswa"]
+                },
+                "description": "Get EWS status summary of all students in this prodi."
+              }
+            },
+            {
+              "name": "Recalculate All Status - POST /api/ews/kaprodi/recalculate-all-status",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/recalculate-all-status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "recalculate-all-status"]
+                },
+                "description": "Trigger EWS status recalculation for all students in this prodi."
+              }
+            }
+          ]
         },
         {
-          "name": "Tindak Lanjut Template - GET /ews/mahasiswa/tindak-lanjut/template/rekomitmen",
-          "request": {
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
-            "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{api_base}}/ews/mahasiswa/tindak-lanjut/template/rekomitmen", "host": ["{{api_base}}"], "path": ["ews", "mahasiswa", "tindak-lanjut", "template", "rekomitmen"] }
-          }
+          "name": "👥 Mahasiswa",
+          "item": [
+            {
+              "name": "Mahasiswa All - GET /api/ews/kaprodi/mahasiswa/all",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/mahasiswa/all?per_page=20&search=",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "mahasiswa", "all"],
+                  "query": [
+                    { "key": "per_page", "value": "20" },
+                    { "key": "search", "value": "" }
+                  ]
+                },
+                "description": "Get list of all students in the prodi. Auto-sets `mahasiswa_id` from first result.\n\n**Query Parameters:** `per_page`, `search`"
+              }
+            },
+            {
+              "name": "Export Mahasiswa All - GET /api/ews/kaprodi/mahasiswa/all/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/mahasiswa/all/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "mahasiswa", "all", "export"]
+                },
+                "description": "Export all students as CSV."
+              }
+            },
+            {
+              "name": "Mahasiswa MK Gagal - GET /api/ews/kaprodi/mahasiswa/mk-gagal",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/mahasiswa/mk-gagal?per_page=20&search=",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "mahasiswa", "mk-gagal"],
+                  "query": [
+                    { "key": "per_page", "value": "20" },
+                    { "key": "search", "value": "" }
+                  ]
+                },
+                "description": "Get list of students who failed courses."
+              }
+            },
+            {
+              "name": "Detail Angkatan - GET /api/ews/kaprodi/mahasiswa/detail-angkatan/{tahun}",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/mahasiswa/detail-angkatan/{{tahun_masuk}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "mahasiswa", "detail-angkatan", "{{tahun_masuk}}"]
+                },
+                "description": "Get all students in a specific admission year.\n\n**Path Parameter:** `tahun` (int)"
+              }
+            },
+            {
+              "name": "Detail Mahasiswa - GET /api/ews/kaprodi/mahasiswa/detail/{id}",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/mahasiswa/detail/{{mahasiswa_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "mahasiswa", "detail", "{{mahasiswa_id}}"]
+                },
+                "description": "Get detailed information about a specific student.\n\n**Path Parameter:** `id` (int)"
+              }
+            }
+          ]
+        },
+        {
+          "name": "📋 Ringkasan",
+          "item": [
+            {
+              "name": "Table Ringkasan Mahasiswa - GET /api/ews/kaprodi/table-ringkasan-mahasiswa",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/table-ringkasan-mahasiswa?per_page=50",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "table-ringkasan-mahasiswa"],
+                  "query": [{ "key": "per_page", "value": "50" }]
+                },
+                "description": "Get paginated student summary table."
+              }
+            },
+            {
+              "name": "Export Table Ringkasan Mahasiswa - GET /api/ews/kaprodi/table-ringkasan-mahasiswa/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/table-ringkasan-mahasiswa/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "table-ringkasan-mahasiswa", "export"]
+                },
+                "description": "Export student summary table as CSV."
+              }
+            },
+            {
+              "name": "Table Ringkasan Status - GET /api/ews/kaprodi/table-ringkasan-status",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/table-ringkasan-status",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "table-ringkasan-status"]
+                },
+                "description": "Get EWS status summary table."
+              }
+            },
+            {
+              "name": "Export Table Ringkasan Status - GET /api/ews/kaprodi/table-ringkasan-status/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/table-ringkasan-status/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "table-ringkasan-status", "export"]
+                },
+                "description": "Export EWS status summary as CSV."
+              }
+            }
+          ]
+        },
+        {
+          "name": "📈 Akademik",
+          "item": [
+            {
+              "name": "Top MK Gagal - GET /api/ews/kaprodi/top-mk-gagal",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/top-mk-gagal",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "top-mk-gagal"]
+                },
+                "description": "Get top 10 most failed courses in this prodi."
+              }
+            },
+            {
+              "name": "Tren IPS - GET /api/ews/kaprodi/tren-ips/all",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/tren-ips/all",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "tren-ips", "all"]
+                },
+                "description": "Get IPS trend data for chart."
+              }
+            },
+            {
+              "name": "Export Tren IPS - GET /api/ews/kaprodi/tren-ips/all/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/tren-ips/all/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "tren-ips", "all", "export"]
+                },
+                "description": "Export IPS trend data as CSV."
+              }
+            },
+            {
+              "name": "Card Capaian - GET /api/ews/kaprodi/card-capaian",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/card-capaian",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "card-capaian"]
+                },
+                "description": "Get academic achievement summary cards."
+              }
+            }
+          ]
+        },
+        {
+          "name": "🎓 Kelulusan",
+          "item": [
+            {
+              "name": "Statistik Kelulusan - GET /api/ews/kaprodi/statistik-kelulusan",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/statistik-kelulusan",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "statistik-kelulusan"]
+                },
+                "description": "Get graduation statistics summary."
+              }
+            },
+            {
+              "name": "Table Statistik Kelulusan - GET /api/ews/kaprodi/table-statistik-kelulusan",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/table-statistik-kelulusan",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "table-statistik-kelulusan"]
+                },
+                "description": "Get detailed graduation statistics table."
+              }
+            }
+          ]
+        },
+        {
+          "name": "📋 Tindak Lanjut",
+          "item": [
+            {
+              "name": "Tindak Lanjut - GET /api/ews/kaprodi/tindak-lanjut",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/tindak-lanjut?per_page=20",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "tindak-lanjut"],
+                  "query": [{ "key": "per_page", "value": "20" }]
+                },
+                "description": "Get paginated list of all tindak lanjut in this prodi."
+              }
+            },
+            {
+              "name": "Tindak Lanjut Cards - GET /api/ews/kaprodi/tindak-lanjut/cards",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/tindak-lanjut/cards",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "tindak-lanjut", "cards"]
+                },
+                "description": "Get summary cards for tindak lanjut by status."
+              }
+            },
+            {
+              "name": "Export Tindak Lanjut - GET /api/ews/kaprodi/tindak-lanjut/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{kaprodi_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/kaprodi/tindak-lanjut/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "kaprodi", "tindak-lanjut", "export"]
+                },
+                "description": "Export all tindak lanjut records as CSV."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🎓 Mahasiswa",
+      "description": "**Role Required:** `mahasiswa`\n\nEndpoints for students to view their own academic status, EWS warnings, and submit follow-up actions.",
+      "item": [
+        {
+          "name": "📊 Dashboard",
+          "item": [
+            {
+              "name": "Dashboard - GET /api/ews/mahasiswa/dashboard",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/dashboard",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "dashboard"]
+                },
+                "description": "Get student's personal dashboard showing academic status and EWS warning level.\n\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"nama\": \"Nama Mahasiswa\",\n    \"nim\": \"A11.2021.12345\",\n    \"semester\": 6,\n    \"status_ews\": \"HIJAU\",\n    \"ips_terakhir\": 3.65,\n    \"total_sks\": 110,\n    \"peringatan\": []\n  }\n}\n```"
+              }
+            },
+            {
+              "name": "Card Status Akademik - GET /api/ews/mahasiswa/card-status-akademik",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/card-status-akademik",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "card-status-akademik"]
+                },
+                "description": "Get summary cards showing the student's current academic standing.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"status_ews\": \"HIJAU\",\n    \"semester\": 6,\n    \"ips_kumulatif\": 3.58,\n    \"total_sks\": 110,\n    \"sisa_sks\": 34,\n    \"proyeksi_lulus\": \"On Track\"\n  }\n}\n```"
+              }
+            }
+          ]
+        },
+        {
+          "name": "📚 KHS / KRS",
+          "item": [
+            {
+              "name": "KHS/KRS - GET /api/ews/mahasiswa/khs-krs",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/khs-krs",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "khs-krs"]
+                },
+                "description": "Get list of all KHS/KRS records (semester-by-semester academic records).\n\n\n**Query Parameters:** `per_page`, `page`"
+              }
+            },
+            {
+              "name": "Export KHS/KRS - GET /api/ews/mahasiswa/khs-krs/export",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/khs-krs/export",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "khs-krs", "export"]
+                },
+                "description": "Export KHS/KRS records as CSV."
+              }
+            }
+          ]
+        },
+        {
+          "name": "⚠️ Peringatan",
+          "item": [
+            {
+              "name": "Peringatan - GET /api/ews/mahasiswa/peringatan",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/peringatan",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "peringatan"]
+                },
+                "description": "Get all EWS warnings/alerts for the current student.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": 1,\n      \"tipe\": \"danger\",\n      \"judul\": \"Risiko Drop Out\",\n      \"pesan\": \"Sisa SKS tidak memungkinkan lulus dalam 7 tahun\",\n      \"created_at\": \"2024-01-15T10:00:00Z\"\n    }\n  ]\n}\n```\n\n**Tipe Values:** `danger`, `warning`, `info`"
+              }
+            }
+          ]
+        },
+        {
+          "name": "📋 Tindak Lanjut",
+          "item": [
+            {
+              "name": "Tindak Lanjut - GET /api/ews/mahasiswa/tindak-lanjut",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/tindak-lanjut",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "tindak-lanjut"]
+                },
+                "description": "Get paginated list of all tindak lanjut submitted by the student."
+              }
+            },
+            {
+              "name": "Tindak Lanjut Cards - GET /api/ews/mahasiswa/tindak-lanjut/cards",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/tindak-lanjut/cards",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "tindak-lanjut", "cards"]
+                },
+                "description": "Get summary cards showing counts of student's tindak lanjut by status."
+              }
+            },
+            {
+              "name": "Tindak Lanjut Template - GET /api/ews/mahasiswa/tindak-lanjut/template/akademik",
+              "request": {
+                "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{mahasiswa_token}}", "type": "string" }] },
+                "method": "GET",
+                "header": [{ "key": "Accept", "value": "application/json" }],
+                "url": {
+                  "raw": "{{base_url}}/api/ews/mahasiswa/tindak-lanjut/template/akademik",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "ews", "mahasiswa", "tindak-lanjut", "template", "akademik"]
+                },
+                "description": "Get template/guidelines for a specific tindak lanjut category.\n\n**Success Response (200):**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"kategori\": \"akademik\",\n    \"template\": \"Dengan ini saya berkomitmen untuk ...\",\n    \"petunjuk\": \"1. Tuliskan komitmen Anda...\"\n  }\n}\n```"
+              }
+            }
+          ]
         }
       ]
     }
@@ -1142,16 +966,23 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "// Auto-add Authorization header for requests that don't explicitly set auth",
-          "const token = pm.environment.get('access_token');",
+          "// Auto-inject Authorization header based on role token",
+          "var token = pm.environment.get('access_token');",
+          "// Try role-specific tokens first",
+          "if (!token || token.length === 0) {",
+          "  var role = pm.environment.get('role') || '';",
+          "  if (role.includes('dekan')) token = pm.environment.get('dekan_token');",
+          "  else if (role.includes('kaprodi')) token = pm.environment.get('kaprodi_token');",
+          "  else if (role.includes('mahasiswa')) token = pm.environment.get('mahasiswa_token');",
+          "}",
           "if (token && token.length > 0) {",
-          "  pm.request.headers.upsert({ key: 'Authorization', value: `Bearer ${token}` });",
+          "  var hasAuth = pm.request.headers.find(function(h) { return h.key === 'Authorization'; });",
+          "  if (!hasAuth) {",
+          "    pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + token });",
+          "  }",
           "}"
         ]
       }
     }
-  ],
-  "variable": [
-    { "key": "api_base", "value": "{{api_base}}" }
   ]
 }
