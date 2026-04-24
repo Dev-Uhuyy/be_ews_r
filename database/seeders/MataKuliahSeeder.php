@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Dosen;
 use App\Models\MataKuliah;
 use App\Models\MataKuliahPeminatan;
 use App\Models\Prodi;
@@ -28,7 +27,7 @@ class MataKuliahSeeder extends Seeder
                 $p1 = $peminatans['SC']->id ?? null;
                 $p2 = $peminatans['RPLD']->id ?? null;
                 $p3 = $peminatans['SK3D']->id ?? null;
-                
+
                 $mataKuliahs = [
                     // Smt 1-4
                     ['kode' => "{$kode}.54101", 'name' => 'Dasar Pemrograman', 'sks' => 4, 'semester' => 1, 'tipe_mk' => 'prodi'],

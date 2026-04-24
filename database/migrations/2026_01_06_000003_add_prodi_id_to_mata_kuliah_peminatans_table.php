@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('mata_kuliah_peminatans', function (Blueprint $table) {
-            $table->foreignId('prodi_id')
-                ->nullable()
-                ->after('id')
-                ->constrained('prodis')
-                ->cascadeOnDelete();
-        });
+        if (!Schema::hasColumn('mata_kuliah_peminatans', 'prodi_id')) {
+            Schema::table('mata_kuliah_peminatans', function (Blueprint $table) {
+                $table->foreignId('prodi_id')
+                    ->nullable()
+                    ->after('id')
+                    ->constrained('prodis')
+                    ->cascadeOnDelete();
+            });
+        }
     }
 
     /**
