@@ -3,7 +3,7 @@
 namespace App\Services\Dekan;
 
 use App\Models\AkademikMahasiswa;
-use Illuminate\Support\Facades\DB;
+
 
 class MahasiswaListService
 {

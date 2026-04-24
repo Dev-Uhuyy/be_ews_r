@@ -3,9 +3,8 @@
 namespace App\Services\Dekan;
 
 use App\Models\AkademikMahasiswa;
-use App\Models\Mahasiswa;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
+
 
 class NilaiMahasiswaService
 {
