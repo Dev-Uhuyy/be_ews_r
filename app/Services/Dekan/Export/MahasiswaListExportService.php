@@ -3,7 +3,6 @@
 namespace App\Services\Dekan\Export;
 
 use App\Models\AkademikMahasiswa;
-use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
