@@ -496,7 +496,7 @@
               "path": ["ews", "dekan", "mahasiswa", "nilai-detail"],
               "query": [{ "key": "mahasiswa_id", "value": "{{mahasiswa_id}}" }]
             },
-            "description": "Get detail nilai satu mahasiswa spesifik (Nilai D, Nilai E, SKS tidak lulus, MK Nasional/Fakultason kurang). Tanpa pagination."
+            "description": "Get detail nilai satu mahasiswa spesifik (Nilai D, Nilai E, SKS tidak lulus, MK Nasional/fakultas kurang). Tanpa pagination."
           }
         },
         {
@@ -511,7 +511,7 @@
               "path": ["ews", "dekan", "mahasiswa", "nilai-detail"],
               "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
             },
-            "description": "List mahasiswa dengan detail: Mata Kuliah Nilai D, Mata Kuliah Nilai E, SKS tidak lulus (D+E), MK Nasional kurang, MK Fakultason kurang. Supports filter: prodi_id, tahun_masuk, has_nilai_d, has_nilai_e, mk_nasional_kurang, mk_fakultason_kurang, status_kelulusan, search, mahasiswa_id, per_page"
+            "description": "List mahasiswa dengan detail: Mata Kuliah Nilai D, Mata Kuliah Nilai E, SKS tidak lulus (D+E), MK Nasional kurang, MK fakultas kurang. Supports filter: prodi_id, tahun_masuk, has_nilai_d, has_nilai_e, mk_nasional_kurang, mk_fakultas_kurang, status_kelulusan, search, mahasiswa_id, per_page"
           }
         },
         {
@@ -580,7 +580,7 @@
               "path": ["ews", "dekan", "mahasiswa", "nilai-summary"],
               "query": [{ "key": "prodi_id", "value": "{{prodi_id}}" }]
             },
-            "description": "Summary statistik: total mahasiswa, mahasiswa dengan nilai D, mahasiswa dengan nilai E, MK nasional belum lulus, MK fakultason belum lulus"
+            "description": "Summary statistik: total mahasiswa, mahasiswa dengan nilai D, mahasiswa dengan nilai E, MK nasional belum lulus, MK fakultas belum lulus"
           }
         }
       ]

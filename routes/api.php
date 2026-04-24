@@ -58,6 +58,7 @@ Route::prefix('ews')->group(function () {
         Route::get('tahun-angkatan', [DetailAngkatanController::class, 'getTahunAngkatan']);
         Route::get('mahasiswa/list', [MahasiswaListController::class, 'getMahasiswaList']);
         Route::get('mahasiswa/kriteria', [MahasiswaListController::class, 'getAvailableKriteria']);
+        Route::get('mahasiswa/by-status', [MahasiswaListController::class, 'getMahasiswaByStatus']);
         Route::get('mahasiswa/nilai-detail', [NilaiMahasiswaController::class, 'getNilaiMahasiswaList']);
         Route::get('mahasiswa/nilai-summary', [NilaiMahasiswaController::class, 'getNilaiMahasiswaSummary']);
         Route::post('mahasiswa/{mahasiswaId}/recalculate-status', [DekanEwsController::class, 'recalculateMahasiswaStatus']);
@@ -69,6 +70,7 @@ Route::prefix('ews')->group(function () {
         Route::get('export/statistik-kelulusan', [DekanExportController::class, 'exportStatistikKelulusan']);
         Route::get('export/detail-angkatan/{tahunMasuk}', [DekanExportController::class, 'exportDetailAngkatan']);
         Route::get('export/mahasiswa-list', [DekanExportController::class, 'exportMahasiswaList']);
+        Route::get('export/mahasiswa-by-status', [DekanExportController::class, 'exportMahasiswaByStatus']);
         Route::get('export/nilai-detail', [DekanExportController::class, 'exportNilaiDetail']);
         Route::get('export/nilai-summary', [DekanExportController::class, 'exportNilaiSummary']);
     });

@@ -553,7 +553,7 @@ List mahasiswa dengan detail nilai D, E, SKS tidak lulus, dan MK kurang. Dapat j
 | has_nilai_d | boolean | No | Filter mahasiswa dengan nilai D (true/false) |
 | has_nilai_e | boolean | No | Filter mahasiswa dengan nilai E (true/false) |
 | mk_nasional_kurang | boolean | No | MK nasional belum lulus (true/false) |
-| mk_fakultason_kurang | boolean | No | MK fakultason belum lulus (true/false) |
+| mk_fakultas_kurang | boolean | No | MK fakultas belum lulus (true/false) |
 | status_kelulusan | string | No | `eligible` atau `noneligible` |
 | search | string | No | Pencarian berdasarkan nama atau NIM |
 | mahasiswa_id | integer | No | Ambil satu mahasiswa spesifik (mengabaikan per_page) |
@@ -592,8 +592,8 @@ List mahasiswa dengan detail nilai D, E, SKS tidak lulus, dan MK kurang. Dapat j
           "total_sks_nilai_e": 0,
           "mk_nasional_kurang": [],
           "jumlah_mk_nasional_kurang": 0,
-          "mk_fakultason_kurang": [],
-          "jumlah_mk_fakultason_kurang": 0,
+          "mk_fakultas_kurang": [],
+          "jumlah_mk_fakultas_kurang": 0,
           "total_sks_tidak_lulus": 3
         }
       ],
@@ -628,7 +628,7 @@ List mahasiswa dengan detail nilai D, E, SKS tidak lulus, dan MK kurang. Dapat j
         "mata_kuliah_nilai_d": [...],
         "mata_kuliah_nilai_e": [...],
         "mk_nasional_kurang": [...],
-        "mk_fakultason_kurang": [...],
+        "mk_fakultas_kurang": [...],
         "total_sks_tidak_lulus": 6
       }
     ],
@@ -660,7 +660,7 @@ Summary statistik total nilai D, E, dan MK kurang.
     "mahasiswa_dengan_nilai_d": 25,
     "mahasiswa_dengan_nilai_e": 10,
     "mk_nasional_belum_lulus": 15,
-    "mk_fakultason_belum_lulus": 12
+    "mk_fakultas_belum_lulus": 12
   }
 }
 ```
@@ -1106,7 +1106,7 @@ Export detail nilai mahasiswa ke file XLSX.
 | tahun_masuk | integer | No | Filter berdasarkan tahun angkatan |
 | mahasiswa_id | integer | No | Export satu mahasiswa spesifik |
 
-**Response:** File XLSX dengan detail nilai D, E, MK nasional, dan MK fakultason.
+**Response:** File XLSX dengan detail nilai D, E, MK nasional, dan MK fakultas.
 
 ---
 

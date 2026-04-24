@@ -172,4 +172,128 @@ class MahasiswaListExportService
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ])->send();
     }
+
+    /**
+     * Export Mahasiswa By Status to XLSX
+     *
+     * Filter options:
+     * - prodi_id
+     * - tahun_masuk
+     * - status_mahasiswa: aktif, cuti, mangkir
+     * - ews_status: tepat_waktu, normal, perhatian, kritis
+     */
+    public function exportMahasiswaByStatus($filters = [])
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $filterDesc = $this->buildFilterDescriptionForStatus($filters);
+        $sheet->setCellValue('A1', 'LAPORAN MAHASISWA BERDASARKAN STATUS');
+        $sheet->setCellValue('A2', $filterDesc);
+        $sheet->setCellValue('A3', 'Dicetak: ' . date('d-m-Y H:i'));
+
+        $startRow = 5;
+
+        $headers = ['No', 'NIM', 'Nama Mahasiswa', 'Prodi', 'Kode Prodi', 'Tahun Masuk', 'SKS Total', 'IPK', 'Status Mahasiswa', 'Status EWS', 'Status Kelulusan'];
+        foreach ($headers as $col => $header) {
+            $sheet->setCellValueByColumnAndRow($col + 1, $startRow, $header);
+        }
+        $this->styleHeader($sheet, $startRow, count($headers));
+
+        $startRow++;
+        $no = 1;
+
+        $query = AkademikMahasiswa::select(
+                    'mahasiswa.id as mahasiswa_id',
+                    'mahasiswa.nim',
+                    'users.name as nama_mahasiswa',
+                    'prodis.nama as nama_prodi',
+                    'prodis.kode_prodi',
+                    'akademik_mahasiswa.tahun_masuk',
+                    'akademik_mahasiswa.sks_lulus',
+                    'akademik_mahasiswa.ipk',
+                    'mahasiswa.status_mahasiswa',
+                    'early_warning_system.status as ews_status',
+                    'early_warning_system.status_kelulusan'
+                )
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+                ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
+                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+
+        // Filter by prodi_id
+        if (!empty($filters['prodi_id'])) {
+            $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
+        }
+
+        // Filter by tahun_masuk
+        if (!empty($filters['tahun_masuk'])) {
+            $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
+        }
+
+        // Filter status_mahasiswa (aktif/cuti/mangkir)
+        if (!empty($filters['status_mahasiswa'])) {
+            $statusMhs = strtolower($filters['status_mahasiswa']);
+            if (in_array($statusMhs, ['aktif', 'cuti', 'mangkir'])) {
+                $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [$statusMhs]);
+            }
+        }
+
+        // Filter EWS status
+        if (!empty($filters['ews_status'])) {
+            $ewsStatus = $filters['ews_status'];
+            if (in_array($ewsStatus, ['tepat_waktu', 'normal', 'perhatian', 'kritis'])) {
+                $query->where('early_warning_system.status', $ewsStatus);
+            }
+        }
+
+        $mahasiswas = $query->orderBy('prodis.nama', 'asc')
+            ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+            ->orderBy('users.name', 'asc')
+            ->get();
+
+        foreach ($mahasiswas as $mhs) {
+            $sheet->setCellValue('A' . $startRow, $no++);
+            $sheet->setCellValue('B' . $startRow, $mhs->nim);
+            $sheet->setCellValue('C' . $startRow, $mhs->nama_mahasiswa);
+            $sheet->setCellValue('D' . $startRow, $mhs->nama_prodi);
+            $sheet->setCellValue('E' . $startRow, $mhs->kode_prodi);
+            $sheet->setCellValue('F' . $startRow, $mhs->tahun_masuk);
+            $sheet->setCellValue('G' . $startRow, $mhs->sks_lulus ?? 0);
+            $sheet->setCellValue('H' . $startRow, $mhs->ipk ?? 0);
+            $sheet->setCellValue('I' . $startRow, $mhs->status_mahasiswa ?? '-');
+            $sheet->setCellValue('J' . $startRow, $mhs->ews_status ?? '-');
+            $sheet->setCellValue('K' . $startRow, $mhs->status_kelulusan ?? '-');
+
+            $startRow++;
+        }
+
+        // Auto size columns
+        foreach (range('A', 'K') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $this->saveFile($spreadsheet, 'Dekan_Mahasiswa_By_Status_' . date('Y-m-d'));
+    }
+
+    private function buildFilterDescriptionForStatus($filters)
+    {
+        $desc = [];
+        if (!empty($filters['prodi_id'])) {
+            $prodi = \App\Models\Prodi::find($filters['prodi_id']);
+            $desc[] = 'Prodi: ' . ($prodi ? $prodi->nama : $filters['prodi_id']);
+        }
+        if (!empty($filters['tahun_masuk'])) {
+            $desc[] = 'Tahun Masuk: ' . $filters['tahun_masuk'];
+        }
+        if (!empty($filters['status_mahasiswa'])) {
+            $desc[] = 'Status Mahasiswa: ' . ucfirst($filters['status_mahasiswa']);
+        }
+        if (!empty($filters['ews_status'])) {
+            $desc[] = 'Status EWS: ' . str_replace('_', ' ', ucfirst($filters['ews_status']));
+        }
+
+        return empty($desc) ? 'Semua Filter' : implode(' | ', $desc);
+    }
 }

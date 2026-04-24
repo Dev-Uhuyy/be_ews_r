@@ -26,7 +26,7 @@ class NilaiMahasiswaController extends Controller
      * - has_nilai_d: true/false - mahasiswa yang memiliki nilai D
      * - has_nilai_e: true/false - mahasiswa yang memiliki nilai E
      * - mk_nasional_kurang: true/false - MK nasional yang belum lulus
-     * - mk_fakultasan_kurang: true/false - MK fakultason yang belum lulus
+     * - mk_fakultasan_kurang: true/false - MK fakultas yang belum lulus
      * - status_kelulusan: 'eligible' atau 'noneligible'
      * - search: Pencarian berdasarkan nama atau NIM
      * - mahasiswa_id: Filter untuk satu mahasiswa spesifik (mengabaikan per_page & pagination)
@@ -40,7 +40,7 @@ class NilaiMahasiswaController extends Controller
      *   - total_sks_nilai_e: Total SKS nilai E
      *   - total_sks_tidak_lulus: Total SKS tidak lulus (D + E)
      *   - mk_nasional_kurang: Array MK nasional yang belum lulus
-     *   - mk_fakultason_kurang: Array MK fakultason yang belum lulus
+     *   - mk_fakultas_kurang: Array MK fakultas yang belum lulus
      *
      * Contoh:
      * - GET /api/ews/dekan/nilai-mahasiswa?prodi_id=1
@@ -80,7 +80,7 @@ class NilaiMahasiswaController extends Controller
      * - mahasiswa_dengan_nilai_d: Jumlah mahasiswa yang memiliki nilai D
      * - mahasiswa_dengan_nilai_e: Jumlah mahasiswa yang memiliki nilai E
      * - mk_nasional_belum_lulus: Jumlah mahasiswa yang belum lulus MK nasional
-     * - mk_fakultason_belum_lulus: Jumlah mahasiswa yang belum lulus MK fakultason
+     * - mk_fakultas_belum_lulus: Jumlah mahasiswa yang belum lulus MK fakultas
      *
      * @tags Dekan - Nilai Mahasiswa
      */

@@ -206,7 +206,7 @@ class ProfileExportService
         }
         return [
             'mk_nasional' => $akademik->mk_nasional ?? 'no',
-            'mk_fakultas' => $akademik->mk_fakultason ?? 'no',
+            'mk_fakultas' => $akademik->mk_fakultas ?? 'no',
             'mk_prodi' => $akademik->mk_prodi ?? 'no',
         ];
     }
@@ -218,7 +218,7 @@ class ProfileExportService
         if ($akademik->ipk <= 2.0) $alasan[] = 'IPK kurang dari atau sama dengan 2.0';
         if ($akademik->sks_lulus < 144) $alasan[] = 'SKS Lulus kurang dari 144';
         if ($akademik->mk_nasional !== 'yes') $alasan[] = 'MK Nasional belum diselesaikan';
-        if ($akademik->mk_fakultason !== 'yes') $alasan[] = 'MK Fakultas belum diselesaikan';
+        if ($akademik->mk_fakultas !== 'yes') $alasan[] = 'MK Fakultas belum diselesaikan';
         if ($akademik->mk_prodi !== 'yes') $alasan[] = 'MK Prodi belum diselesaikan';
         if ($akademik->nilai_e === 'yes') $alasan[] = 'Memiliki nilai E';
         if ($akademik->nilai_d_melebihi_batas === 'yes') $alasan[] = 'Nilai D melebihi batas 5%';

@@ -77,8 +77,11 @@ class NilaiMahasiswaService
         if (!empty($filters['mk_nasional_kurang']) && $filters['mk_nasional_kurang'] === 'true') {
             $query->where('akademik_mahasiswa.mk_nasional', 'no');
         }
-        if (!empty($filters['mk_fakultason_kurang']) && $filters['mk_fakultason_kurang'] === 'true') {
-            $query->where('akademik_mahasiswa.mk_fakultason', 'no');
+        if (!empty($filters['mk_fakultas_kurang']) && $filters['mk_fakultas_kurang'] === 'true') {
+            $query->where('akademik_mahasiswa.mk_fakultas', 'no');
+        }
+        if (!empty($filters['mk_prodi_kurang']) && $filters['mk_prodi_kurang'] === 'true') {
+            $query->where('akademik_mahasiswa.mk_prodi', 'no');
         }
         if (!empty($filters['mahasiswa_id'])) {
             $query->where('mahasiswa.id', $filters['mahasiswa_id']);
@@ -100,7 +103,7 @@ class NilaiMahasiswaService
 
         // Get mandatory MKs for enrichment
         $mandatoryQuery = DB::table('mata_kuliahs')
-            ->whereIn('tipe_mk', ['nasional', 'fakultason']);
+            ->whereIn('tipe_mk', ['nasional', 'fakultas', 'prodi']);
 
         if (!empty($filters['prodi_id'])) {
             $mandatoryQuery->where('prodi_id', $filters['prodi_id']);
@@ -211,25 +214,46 @@ class NilaiMahasiswaService
             $mahasiswa->jumlah_mk_nasional_kurang = 0;
         }
 
-        // 4. MK Fakultason Kurang (belum lulus)
-        if ($mahasiswa->mk_fakultason === 'no') {
-            $fakultasonMandatory = $mandatoryMKsByCategory->get('fakultason') ?? collect();
-            $missingFakultason = [];
-            foreach ($fakultasonMandatory as $mk) {
+        // 4. MK fakultas Kurang (belum lulus)
+        if ($mahasiswa->mk_fakultas === 'no') {
+            $fakultasMandatory = $mandatoryMKsByCategory->get('fakultas') ?? collect();
+            $missingfakultas = [];
+            foreach ($fakultasMandatory as $mk) {
                 $studentGrade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
                 if (!$studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
-                    $missingFakultason[] = [
+                    $missingfakultas[] = [
                         'kode' => $mk->kode,
                         'nama' => $mk->name,
                         'sks' => $mk->sks,
                     ];
                 }
             }
-            $mahasiswa->mk_fakultason_kurang = $missingFakultason;
-            $mahasiswa->jumlah_mk_fakultason_kurang = count($missingFakultason);
+            $mahasiswa->mk_fakultas_kurang = $missingfakultas;
+            $mahasiswa->jumlah_mk_fakultas_kurang = count($missingfakultas);
         } else {
-            $mahasiswa->mk_fakultason_kurang = [];
-            $mahasiswa->jumlah_mk_fakultason_kurang = 0;
+            $mahasiswa->mk_fakultas_kurang = [];
+            $mahasiswa->jumlah_mk_fakultas_kurang = 0;
+        }
+
+        // 5. MK Prodi Kurang (belum lulus)
+        if ($mahasiswa->mk_prodi === 'no') {
+            $prodiMandatory = $mandatoryMKsByCategory->get('prodi') ?? collect();
+            $missingProdi = [];
+            foreach ($prodiMandatory as $mk) {
+                $studentGrade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
+                if (!$studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
+                    $missingProdi[] = [
+                        'kode' => $mk->kode,
+                        'nama' => $mk->name,
+                        'sks' => $mk->sks,
+                    ];
+                }
+            }
+            $mahasiswa->mk_prodi_kurang = $missingProdi;
+            $mahasiswa->jumlah_mk_prodi_kurang = count($missingProdi);
+        } else {
+            $mahasiswa->mk_prodi_kurang = [];
+            $mahasiswa->jumlah_mk_prodi_kurang = 0;
         }
 
         // Additional summary fields
@@ -255,7 +279,8 @@ class NilaiMahasiswaService
                 DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as mahasiswa_dengan_nilai_d'),
                 DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_e = "yes" THEN 1 ELSE 0 END) as mahasiswa_dengan_nilai_e'),
                 DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_nasional = "no" THEN 1 ELSE 0 END) as mk_nasional_belum_lulus'),
-                DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_fakultason = "no" THEN 1 ELSE 0 END) as mk_fakultason_belum_lulus')
+                DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_fakultas = "no" THEN 1 ELSE 0 END) as mk_fakultas_belum_lulus'),
+                DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_prodi = "no" THEN 1 ELSE 0 END) as mk_prodi_belum_lulus')
             );
 
         // Apply filters

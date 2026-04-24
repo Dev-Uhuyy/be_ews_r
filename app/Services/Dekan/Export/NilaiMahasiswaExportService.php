@@ -86,7 +86,7 @@ class NilaiMahasiswaExportService
         $sheet->setCellValue('B' . $startRow, $stats['mahasiswa_dengan_nilai_d']);
         $sheet->setCellValue('C' . $startRow, $stats['mahasiswa_dengan_nilai_e']);
         $sheet->setCellValue('D' . $startRow, $stats['mk_nasional_belum_lulus']);
-        $sheet->setCellValue('E' . $startRow, $stats['mk_fakultason_belum_lulus']);
+        $sheet->setCellValue('E' . $startRow, $stats['mk_fakultas_belum_lulus']);
 
         // Auto size columns
         foreach (range('A', 'E') as $col) {
@@ -173,12 +173,12 @@ class NilaiMahasiswaExportService
         }
 
         // MK Fakultas Kurang
-        if (!empty($mhs->mk_fakultason_kurang)) {
+        if (!empty($mhs->mk_fakultas_kurang)) {
             $sheet->setCellValue('A' . $startRow, 'MK FAKULTAS KURANG');
             $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true]]);
             $startRow++;
 
-            foreach ($mhs->mk_fakultason_kurang as $mk) {
+            foreach ($mhs->mk_fakultas_kurang as $mk) {
                 $sheet->setCellValue('A' . $startRow, $mk['kode'] . ' - ' . $mk['nama'] . ' (' . $mk['sks'] . ' SKS)');
                 $startRow++;
             }
@@ -198,7 +198,7 @@ class NilaiMahasiswaExportService
         $sheet->setCellValue('I' . $startRow, $mhs->jumlah_nilai_e);
         $sheet->setCellValue('J' . $startRow, $mhs->total_sks_nilai_e);
         $sheet->setCellValue('K' . $startRow, $mhs->jumlah_mk_nasional_kurang);
-        $sheet->setCellValue('L' . $startRow, $mhs->jumlah_mk_fakultason_kurang);
+        $sheet->setCellValue('L' . $startRow, $mhs->jumlah_mk_fakultas_kurang);
         $sheet->setCellValue('M' . $startRow, $mhs->total_sks_tidak_lulus);
     }
 
@@ -246,20 +246,20 @@ class NilaiMahasiswaExportService
             $mahasiswa->jumlah_mk_nasional_kurang = 0;
         }
 
-        if ($mahasiswa->mk_fakultason === 'no') {
-            $fakultasonMandatory = $mandatoryMKsByCategory->get('fakultason') ?? collect();
-            $missingFakultason = [];
-            foreach ($fakultasonMandatory as $mk) {
+        if ($mahasiswa->mk_fakultas === 'no') {
+            $fakultasMandatory = $mandatoryMKsByCategory->get('fakultas') ?? collect();
+            $missingfakultas = [];
+            foreach ($fakultasMandatory as $mk) {
                 $studentGrade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
                 if (!$studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
-                    $missingFakultason[] = ['kode' => $mk->kode, 'nama' => $mk->name, 'sks' => $mk->sks];
+                    $missingfakultas[] = ['kode' => $mk->kode, 'nama' => $mk->name, 'sks' => $mk->sks];
                 }
             }
-            $mahasiswa->mk_fakultason_kurang = $missingFakultason;
-            $mahasiswa->jumlah_mk_fakultason_kurang = count($missingFakultason);
+            $mahasiswa->mk_fakultas_kurang = $missingfakultas;
+            $mahasiswa->jumlah_mk_fakultas_kurang = count($missingfakultas);
         } else {
-            $mahasiswa->mk_fakultason_kurang = [];
-            $mahasiswa->jumlah_mk_fakultason_kurang = 0;
+            $mahasiswa->mk_fakultas_kurang = [];
+            $mahasiswa->jumlah_mk_fakultas_kurang = 0;
         }
 
         $mahasiswa->total_sks_tidak_lulus = $mahasiswa->total_sks_nilai_d + $mahasiswa->total_sks_nilai_e;
@@ -270,7 +270,7 @@ class NilaiMahasiswaExportService
     private function getMandatoryMKs($filters)
     {
         $mandatoryQuery = DB::table('mata_kuliahs')
-            ->whereIn('tipe_mk', ['nasional', 'fakultason']);
+            ->whereIn('tipe_mk', ['nasional', 'fakultas']);
 
         if (!empty($filters['prodi_id'])) {
             $mandatoryQuery->where('prodi_id', $filters['prodi_id']);
@@ -295,7 +295,7 @@ class NilaiMahasiswaExportService
                 'akademik_mahasiswa.ipk',
                 'akademik_mahasiswa.sks_lulus',
                 'akademik_mahasiswa.mk_nasional',
-                'akademik_mahasiswa.mk_fakultason'
+                'akademik_mahasiswa.mk_fakultas'
             );
 
         if (!empty($filters['prodi_id'])) {
@@ -326,7 +326,7 @@ class NilaiMahasiswaExportService
                 DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as mahasiswa_dengan_nilai_d'),
                 DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_e = "yes" THEN 1 ELSE 0 END) as mahasiswa_dengan_nilai_e'),
                 DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_nasional = "no" THEN 1 ELSE 0 END) as mk_nasional_belum_lulus'),
-                DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_fakultason = "no" THEN 1 ELSE 0 END) as mk_fakultason_belum_lulus')
+                DB::raw('SUM(CASE WHEN akademik_mahasiswa.mk_fakultas = "no" THEN 1 ELSE 0 END) as mk_fakultas_belum_lulus')
             );
 
         if (!empty($filters['prodi_id'])) {

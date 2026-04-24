@@ -139,7 +139,7 @@ class DetailAngkatanExportService
 
         return [
             'mk_nasional' => $akademik->mk_nasional ?? 'no',
-            'mk_fakultas' => $akademik->mk_fakultason ?? 'no',
+            'mk_fakultas' => $akademik->mk_fakultas ?? 'no',
             'mk_prodi' => $akademik->mk_prodi ?? 'no',
         ];
     }
