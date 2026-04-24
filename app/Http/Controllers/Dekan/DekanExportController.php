@@ -106,6 +106,23 @@ class DekanExportController extends Controller
     }
 
     /**
+     * Export Mahasiswa By Status to XLSX
+     *
+     * Query params: prodi_id, tahun_masuk, status_mahasiswa, ews_status
+     *
+     * @tags Dekan - Export
+     */
+    public function exportMahasiswaByStatus(Request $request)
+    {
+        try {
+            $filters = $request->query();
+            return $this->mahasiswaListExport->exportMahasiswaByStatus($filters);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportMahasiswaByStatus');
+        }
+    }
+
+    /**
      * Export Nilai Detail to XLSX
      *
      * Query params: prodi_id, tahun_masuk, mahasiswa_id (optional - for single mahasiswa)

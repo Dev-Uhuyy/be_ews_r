@@ -71,4 +71,36 @@ class MahasiswaListController extends Controller
             return $this->exceptionError($e, 'getAvailableKriteria');
         }
     }
+
+    /**
+     * Get list mahasiswa berdasarkan status_mahasiswa dan/atau ews_status
+     *
+     * Query params:
+     * - prodi_id: Filter berdasarkan ID Prodi (optional)
+     * - tahun_masuk: Filter berdasarkan tahun angkatan (optional)
+     * - status_mahasiswa: 'aktif', 'cuti', 'mangkir' (optional)
+     * - ews_status: 'tepat_waktu', 'normal', 'perhatian', 'kritis' (optional)
+     *
+     * Contoh:
+     * - GET /mahasiswa/by-status?status_mahasiswa=aktif
+     * - GET /mahasiswa/by-status?ews_status=kritis
+     * - GET /mahasiswa/by-status?status_mahasiswa=aktif&ews_status=kritis
+     * - GET /mahasiswa/by-status?prodi_id=1&tahun_masuk=2023&ews_status=perhatian
+     *
+     * @tags Dekan - Mahasiswa List
+     */
+    public function getMahasiswaByStatus()
+    {
+        try {
+            $filters = request()->query();
+            $data = $this->mahasiswaListService->getMahasiswaByStatus($filters);
+
+            return $this->successResponse(
+                $data,
+                'List mahasiswa berdasarkan status berhasil diambil'
+            );
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'getMahasiswaByStatus');
+        }
+    }
 }
