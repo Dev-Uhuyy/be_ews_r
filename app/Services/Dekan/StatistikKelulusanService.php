@@ -3,6 +3,7 @@
 namespace App\Services\Dekan;
 
 use App\Models\AkademikMahasiswa;
+use App\Models\Prodi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,10 +24,9 @@ class StatistikKelulusanService
         }
         return $query;
     }
+
     public function getCardStatistikKelulusan($tahunMasuk = null)
     {
-        // berisi mahasiswa eligible/noneligible, aktif, mangkir, cuti, sebaran IPK (< 2.5 , 2.5-3, > 3.0), Pemenuhan MK Nasional/Fakultas/Prodi
-        // dengan filter angkatan (tahun_masuk) dan exclude mahasiswa yang sudah lulus dan DO
         $query = AkademikMahasiswa::select(
                     DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
                     DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as noneligible'),
@@ -55,8 +55,6 @@ class StatistikKelulusanService
 
     public function getTableStatistikKelulusan($perPage = 10)
     {
-        //berisi angkatan, jmlh mhs, ipk < 2 , sks<144, nilai D, nilai E, eligible, noneligible, ipk rata2.
-        //exclude mahasiswa yang sudah lulus dan DO
         $tableData = AkademikMahasiswa::select(
                     'prodis.nama as nama_prodi',
                     'prodis.kode_prodi',
@@ -81,5 +79,117 @@ class StatistikKelulusanService
                 ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc');
 
         return $tableData->paginate($perPage);
+    }
+
+    /**
+     * Table Statistik Kelulusan per Prodi (tanpa filter tahun)
+     * Untuk Dekan - menampilkan aggregated data per prodi
+     */
+    public function getTableStatistikKelulusanPerProdi()
+    {
+        $prodis = Prodi::all();
+        $result = [];
+
+        foreach ($prodis as $prodi) {
+            $stats = $this->getStatistikPerProdi($prodi);
+            $result[] = $stats;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Table Statistik Kelulusan per Prodi dengan detail per tahun angkatan
+     * Untuk Dekan - menampilkan data per prodi dan breakdown per tahun angkatan
+     */
+    public function getTableStatistikKelulusanPerProdiWithTahun($prodiId = null)
+    {
+        $query = Prodi::query();
+
+        if ($prodiId) {
+            $query->where('id', $prodiId);
+        }
+
+        $prodis = $query->get();
+        $result = [];
+
+        foreach ($prodis as $prodi) {
+            $statsPerProdi = $this->getStatistikPerProdi($prodi);
+            $detailPerTahun = $this->getStatistikPerTahun($prodi->id);
+
+            $result[] = [
+                'prodi' => $statsPerProdi['prodi'],
+                'jumlah_mahasiswa' => $statsPerProdi['jumlah_mahasiswa'],
+                'ipk_dibawah_2' => $statsPerProdi['ipk_dibawah_2'],
+                'sks_kurang_dari_144' => $statsPerProdi['sks_kurang_dari_144'],
+                'nilai_d_lebih_dari_5_persen' => $statsPerProdi['nilai_d_lebih_dari_5_persen'],
+                'ada_nilai_e' => $statsPerProdi['ada_nilai_e'],
+                'eligible' => $statsPerProdi['eligible'],
+                'tidak_eligible' => $statsPerProdi['tidak_eligible'],
+                'ipk_rata_rata' => $statsPerProdi['ipk_rata_rata'],
+                'detail_per_tahun' => $detailPerTahun,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function getStatistikPerProdi($prodi)
+    {
+        $query = AkademikMahasiswa::select(
+                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
+                    DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata')
+                )
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+                ->where('mahasiswa.prodi_id', $prodi->id)
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+
+        $stats = $query->first();
+
+        return [
+            'prodi' => [
+                'id' => $prodi->id,
+                'kode_prodi' => $prodi->kode_prodi,
+                'nama_prodi' => $prodi->nama,
+            ],
+            'jumlah_mahasiswa' => $stats->jumlah_mahasiswa ?? 0,
+            'ipk_dibawah_2' => $stats->ipk_dibawah_2 ?? 0,
+            'sks_kurang_dari_144' => $stats->sks_kurang_dari_144 ?? 0,
+            'nilai_d_lebih_dari_5_persen' => $stats->nilai_d_lebih_dari_5_persen ?? 0,
+            'ada_nilai_e' => $stats->ada_nilai_e ?? 0,
+            'eligible' => $stats->eligible ?? 0,
+            'tidak_eligible' => $stats->tidak_eligible ?? 0,
+            'ipk_rata_rata' => $stats->ipk_rata_rata ?? 0,
+        ];
+    }
+
+    private function getStatistikPerTahun($prodiId)
+    {
+        return AkademikMahasiswa::select(
+                    'akademik_mahasiswa.tahun_masuk',
+                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
+                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
+                    DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata')
+                )
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+                ->where('mahasiswa.prodi_id', $prodiId)
+                ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+                ->groupBy('akademik_mahasiswa.tahun_masuk')
+                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+                ->get();
     }
 }
