@@ -24,7 +24,7 @@ class KaprodiDashboardService
         $statistikGlobal = $this->getStatistikGlobal($prodiId);
         $rataIpkPerTahun = $this->getRataIpkPerTahun($prodiId);
         $statistikKelulusan = $this->getStatistikKelulusan($prodiId);
-        $tabelRingkasanProdi = $this->getTabelRingkasanProdi($prodiId);
+        $tabelRingkasanProdi = $this->getTabelRingkasanProdiPerTahun($prodiId, $prodi);
 
         return [
             'statistik_global' => $statistikGlobal,
@@ -49,6 +49,7 @@ class KaprodiDashboardService
             ->keyBy('status_mahasiswa');
 
         $totalAktif = ($statusBreakdown->get('aktif')->jumlah ?? 0) + ($statusBreakdown->get('Aktif')->jumlah ?? 0);
+        $totalNormal = ($statusBreakdown->get('normal')->jumlah ?? 0) + ($statusBreakdown->get('Normal')->jumlah ?? 0);
         $totalMangkir = ($statusBreakdown->get('mangkir')->jumlah ?? 0) + ($statusBreakdown->get('Mangkir')->jumlah ?? 0);
         $totalCuti = ($statusBreakdown->get('cuti')->jumlah ?? 0) + ($statusBreakdown->get('Cuti')->jumlah ?? 0);
         $totalDO = Mahasiswa::where('prodi_id', $prodiId)
@@ -58,6 +59,7 @@ class KaprodiDashboardService
         return [
             'total_mahasiswa' => $totalMahasiswa,
             'total_mahasiswa_aktif' => $totalAktif,
+            'total_mahasiswa_normal' => $totalNormal,
             'total_mahasiswa_mangkir' => $totalMangkir,
             'total_mahasiswa_cuti' => $totalCuti,
             'total_mahasiswa_do' => $totalDO,
@@ -104,6 +106,39 @@ class KaprodiDashboardService
         ];
     }
 
+    private function getTabelRingkasanProdiPerTahun($prodiId, $prodi)
+    {
+        $tahunData = AkademikMahasiswa::select(
+                    'akademik_mahasiswa.tahun_masuk',
+                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
+                    DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as jumlah_perhatian'),
+                    DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as jumlah_kritis')
+                )
+                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+                ->where('mahasiswa.prodi_id', $prodiId)
+                ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+                ->groupBy('akademik_mahasiswa.tahun_masuk')
+                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+                ->get();
+
+        return [
+            'prodi' => [
+                'id' => $prodi->id,
+                'kode_prodi' => $prodi->kode_prodi,
+                'nama_prodi' => $prodi->nama,
+            ],
+            'tahun' => $tahunData,
+        ];
+    }
+
     private function getTabelRingkasanProdi($prodiId)
     {
         $prodi = Prodi::find($prodiId);
@@ -111,6 +146,7 @@ class KaprodiDashboardService
         $stats = AkademikMahasiswa::select(
                     DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
                     DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "normal" THEN 1 ELSE 0 END) as jumlah_mahasiswa_normal'),
                     DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
                     DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
                     DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),

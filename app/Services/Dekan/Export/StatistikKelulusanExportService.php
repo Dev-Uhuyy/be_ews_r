@@ -4,67 +4,83 @@ namespace App\Services\Dekan\Export;
 
 use App\Models\AkademikMahasiswa;
 use App\Models\Prodi;
+use App\Services\Traits\ExportFormatterTrait;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class StatistikKelulusanExportService
 {
-    /**
-     * Export Statistik Kelulusan to XLSX
-     *
-     * @param array $filters Optional: prodi_id (filter ke satu prodi)
-     */
+    use ExportFormatterTrait;
+
     public function exportStatistikKelulusan($filters = [])
     {
         $prodiId = $filters['prodi_id'] ?? null;
-
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Statistik Kelulusan');
 
-        $prodiNama = $prodiId ? Prodi::find($prodiId)->nama : 'Semua Prodi';
-        $sheet->setCellValue('A1', 'LAPORAN STATISTIK KELULUSAN');
-        $sheet->setCellValue('A2', 'Program Studi: ' . $prodiNama);
-        $sheet->setCellValue('A3', 'Per Program Studi dan Tahun Angkatan');
-        $sheet->setCellValue('A4', 'Dicetak: ' . date('d-m-Y H:i'));
+        $prodis = $prodiId ? Prodi::where('id', $prodiId)->get() : Prodi::orderBy('kode_prodi')->get();
+        $prodiNama = $prodiId ? ($prodis->first()->nama ?? 'Prodi') : 'Semua Prodi';
+
+        $headers = ['Unit / Tahun Masuk', 'Jumlah Mhs', 'IPK < 2', 'SKS < 144', 'Nilai D > 5%', 'Ada Nilai E', 'Eligible', 'Tidak Eligible', 'IPK Rata'];
+
+        $this->writeTitleBlock($sheet, 'LAPORAN STATISTIK KELULUSAN', 'Analisis Kriteria Kelulusan', 'Prodi: ' . $prodiNama, count($headers));
 
         $startRow = 6;
 
-        // Get all prodi or specific prodi
-        $prodis = $prodiId ? Prodi::where('id', $prodiId)->get() : Prodi::all();
+        /* ── SECTION 1: RINGKASAN PER PROGRAM STUDI ── */
+        if (!$prodiId || $prodis->count() > 1) {
+            $this->writeSectionHeader($sheet, $startRow, 'RINGKASAN PER PROGRAM STUDI', count($headers));
+            $startRow++;
+
+            $this->writeHeaderRow($sheet, $startRow, $headers);
+            // NB: writeHeaderRow will freeze pane at this row. This is what we want.
+            $startRow++;
+
+            foreach ($prodis as $i => $prodi) {
+                $stats = $this->getStatistikPerProdi($prodi->id);
+                $sheet->setCellValue('A' . $startRow, $prodi->kode_prodi . ' - ' . $prodi->nama);
+                $sheet->setCellValue('B' . $startRow, $stats['jumlah_mahasiswa']);
+                $sheet->setCellValue('C' . $startRow, $stats['ipk_dibawah_2']);
+                $sheet->setCellValue('D' . $startRow, $stats['sks_kurang_dari_144']);
+                $sheet->setCellValue('E' . $startRow, $stats['nilai_d_lebih_dari_5_persen']);
+                $sheet->setCellValue('F' . $startRow, $stats['ada_nilai_e']);
+                $sheet->setCellValue('G' . $startRow, $stats['eligible']);
+                $sheet->setCellValue('H' . $startRow, $stats['tidak_eligible']);
+                $sheet->setCellValue('I' . $startRow, number_format((float)$stats['ipk_rata_rata'], 2));
+
+                $this->styleDataRow($sheet, $startRow, count($headers), $i % 2 === 1);
+                $sheet->getStyle('A' . $startRow)->getFont()->setBold(true);
+                $startRow++;
+            }
+            $startRow += 2;
+        }
+
+        /* ── SECTION 2: DETAIL PER ANGKATAN ── */
+        $this->writeSectionHeader($sheet, $startRow, 'DETAIL ANALISIS PER ANGKATAN', count($headers));
+        $startRow++;
 
         foreach ($prodis as $prodi) {
-            // Prodi Header
-            $sheet->setCellValue('A' . $startRow, $prodi->kode_prodi . ' - ' . $prodi->nama);
-            $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true, 'size' => 12]]);
+            // Sub-header for prodi detail
+            $sheet->setCellValue('A' . $startRow, 'PRODI: ' . $prodi->kode_prodi . ' - ' . $prodi->nama);
+            $sheet->getStyle('A' . $startRow)->getFont()->setBold(true)->setSize(11);
+            $sheet->getStyle('A' . $startRow)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F0F4F8');
+            $sheet->mergeCells('A' . $startRow . ':' . $this->colLetter(count($headers)) . $startRow);
             $startRow++;
 
-            // Summary Stats for this Prodi
-            $stats = $this->getStatistikPerProdi($prodi->id);
-            $sheet->setCellValue('A' . $startRow, 'Total Mahasiswa: ' . $stats['jumlah_mahasiswa']);
-            $startRow++;
-            $sheet->setCellValue('A' . $startRow, 'IPK < 2: ' . $stats['ipk_dibawah_2'] . ' | SKS < 144: ' . $stats['sks_kurang_dari_144']);
-            $startRow++;
-            $sheet->setCellValue('A' . $startRow, 'Nilai D > 5%: ' . $stats['nilai_d_lebih_dari_5_persen'] . ' | Ada Nilai E: ' . $stats['ada_nilai_e']);
-            $startRow++;
-            $sheet->setCellValue('A' . $startRow, 'Eligible: ' . $stats['eligible'] . ' | Tidak Eligible: ' . $stats['tidak_eligible'] . ' | IPK Rata: ' . $stats['ipk_rata_rata']);
-            $startRow += 2;
-
-            // Detail Per Tahun
-            $detailPerTahun = $this->getStatistikPerTahun($prodi->id);
-
-            $headers = ['Tahun Masuk', 'Jumlah Mhs', 'IPK < 2', 'SKS < 144', 'Nilai D > 5%', 'Ada Nilai E', 'Eligible', 'Tidak Eligible', 'IPK Rata'];
-            foreach ($headers as $col => $header) {
-                $sheet->setCellValueByColumnAndRow($col + 1, $startRow, $header);
+            // Data headers for Detail (we don't use writeHeaderRow here to avoid overriding freezePane)
+            foreach ($headers as $col => $label) {
+                $sheet->setCellValueByColumnAndRow($col + 1, $startRow, ($col === 0 ? 'Tahun Masuk' : $label));
             }
-            $this->styleHeader($sheet, $startRow, count($headers));
-
+            $endColLetter = $this->colLetter(count($headers));
+            $sheet->getStyle("A{$startRow}:{$endColLetter}{$startRow}")->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '3D8BCD']],
+            ]);
             $startRow++;
-            foreach ($detailPerTahun as $row) {
+
+            $detailPerTahun = $this->getStatistikPerTahun($prodi->id);
+            foreach ($detailPerTahun as $i => $row) {
                 $sheet->setCellValue('A' . $startRow, $row->tahun_masuk);
                 $sheet->setCellValue('B' . $startRow, $row->jumlah_mahasiswa);
                 $sheet->setCellValue('C' . $startRow, $row->ipk_dibawah_2);
@@ -73,31 +89,25 @@ class StatistikKelulusanExportService
                 $sheet->setCellValue('F' . $startRow, $row->ada_nilai_e);
                 $sheet->setCellValue('G' . $startRow, $row->eligible);
                 $sheet->setCellValue('H' . $startRow, $row->tidak_eligible);
-                $sheet->setCellValue('I' . $startRow, $row->ipk_rata_rata);
+                $sheet->setCellValue('I' . $startRow, number_format((float)$row->ipk_rata_rata, 2));
+                $this->styleDataRow($sheet, $startRow, count($headers), $i % 2 === 1);
                 $startRow++;
             }
-
-            $startRow += 3;
+            $startRow += 2;
         }
 
-        // Auto size columns
-        foreach (range('A', 'I') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
+        $this->autoSizeColumns($sheet, count($headers));
         $this->saveFile($spreadsheet, 'Dekan_Statistik_Kelulusan_' . date('Y-m-d'));
     }
 
     private function getStatistikPerProdi($prodiId)
     {
-        $prodi = Prodi::find($prodiId);
-
-        $stats = AkademikMahasiswa::select(
-                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
+        return AkademikMahasiswa::select(
+                    DB::raw('COUNT(*) as jumlah_mahasiswa'),
+                    DB::raw('SUM(CASE WHEN ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
+                    DB::raw('SUM(CASE WHEN sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
+                    DB::raw('SUM(CASE WHEN nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
+                    DB::raw('SUM(CASE WHEN nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
                     DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
                     DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
                     DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata')
@@ -106,33 +116,18 @@ class StatistikKelulusanExportService
                 ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
                 ->where('mahasiswa.prodi_id', $prodiId)
                 ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-                ->first();
-
-        return [
-            'prodi' => [
-                'kode_prodi' => $prodi->kode_prodi,
-                'nama_prodi' => $prodi->nama,
-            ],
-            'jumlah_mahasiswa' => $stats->jumlah_mahasiswa ?? 0,
-            'ipk_dibawah_2' => $stats->ipk_dibawah_2 ?? 0,
-            'sks_kurang_dari_144' => $stats->sks_kurang_dari_144 ?? 0,
-            'nilai_d_lebih_dari_5_persen' => $stats->nilai_d_lebih_dari_5_persen ?? 0,
-            'ada_nilai_e' => $stats->ada_nilai_e ?? 0,
-            'eligible' => $stats->eligible ?? 0,
-            'tidak_eligible' => $stats->tidak_eligible ?? 0,
-            'ipk_rata_rata' => $stats->ipk_rata_rata ?? 0,
-        ];
+                ->first()->toArray();
     }
 
     private function getStatistikPerTahun($prodiId)
     {
         return AkademikMahasiswa::select(
                     'akademik_mahasiswa.tahun_masuk',
-                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
-                    DB::raw('SUM(CASE WHEN akademik_mahasiswa.nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
+                    DB::raw('COUNT(*) as jumlah_mahasiswa'),
+                    DB::raw('SUM(CASE WHEN ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
+                    DB::raw('SUM(CASE WHEN sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
+                    DB::raw('SUM(CASE WHEN nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
+                    DB::raw('SUM(CASE WHEN nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
                     DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
                     DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
                     DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata')
@@ -145,34 +140,5 @@ class StatistikKelulusanExportService
                 ->groupBy('akademik_mahasiswa.tahun_masuk')
                 ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
                 ->get();
-    }
-
-    private function styleHeader($sheet, $row, $colCount)
-    {
-        $styleArray = [
-            'font' => ['bold' => true],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'CCCCCC']],
-        ];
-        $endCol = chr(64 + $colCount);
-        $sheet->getStyle('A' . $row . ':' . $endCol . $row)->applyFromArray($styleArray);
-    }
-
-    private function saveFile($spreadsheet, $filename)
-    {
-        $writer = new Xlsx($spreadsheet);
-        $filename = $filename . '.xlsx';
-        $tempPath = storage_path('app/exports/' . $filename);
-
-        if (!file_exists(storage_path('app/exports'))) {
-            mkdir(storage_path('app/exports'), 0755, true);
-        }
-
-        $writer->save($tempPath);
-
-        response()->download($tempPath, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ])->send();
     }
 }
