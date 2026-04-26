@@ -13,7 +13,7 @@ use App\Http\Controllers\Dekan\MahasiswaListController;
 use App\Http\Controllers\Dekan\NilaiMahasiswaController;
 use App\Http\Controllers\Dekan\DekanExportController;
 use App\Http\Controllers\Kaprodi\KaprodiExportController;
-use App\Http\Controllers\Mahasiswa\ProfileController;
+use App\Http\Controllers\Kaprodi\KaprodiMahasiswaController;
 use App\Http\Controllers\Mahasiswa\ProfileExportController;
 
 // ─── Public: Login ─────────────────────────────────────────────────────────────
@@ -41,10 +41,17 @@ Route::prefix('ews')->group(function () {
         Route::post('mahasiswa/{mahasiswaId}/recalculate-status', [KaprodiEwsController::class, 'recalculateMahasiswaStatus']);
         Route::post('recalculate-all-status',                     [KaprodiEwsController::class, 'recalculateAllStatus']);
 
+        // Kaprodi Mahasiswa routes
+        Route::get('mahasiswa/list', [KaprodiMahasiswaController::class, 'getMahasiswaList']);
+        Route::get('mahasiswa/by-status', [KaprodiMahasiswaController::class, 'getMahasiswaByStatus']);
+        Route::get('mahasiswa/nilai-detail', [KaprodiMahasiswaController::class, 'getNilaiMahasiswaList']);
+
         // Export routes
         Route::get('export/dashboard', [KaprodiExportController::class, 'exportDashboard']);
         Route::get('export/dashboard-detail', [KaprodiExportController::class, 'exportDashboardDetail']);
         Route::get('export/statistik-kelulusan', [KaprodiExportController::class, 'exportStatistikKelulusan']);
+        Route::get('export/mahasiswa-list', [KaprodiExportController::class, 'exportMahasiswaList']);
+        Route::get('export/mahasiswa-by-status', [KaprodiExportController::class, 'exportMahasiswaByStatus']);
     });
 
     // ── DEKAN (Dekan Fakultas) ────────────────────────────────────────────────

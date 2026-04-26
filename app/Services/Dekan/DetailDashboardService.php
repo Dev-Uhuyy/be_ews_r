@@ -34,6 +34,7 @@ class DetailDashboardService
                     DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
                     DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
                     DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_cuti'),
+                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
                     DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
                     DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
                     DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
@@ -55,7 +56,20 @@ class DetailDashboardService
                 'kode_prodi' => $prodi->kode_prodi,
                 'nama_prodi' => $prodi->nama,
             ],
-            'tahun_angkatan' => $tahunData,
+            'tahun_angkatan' => $tahunData->map(function($item) {
+                return [
+                    'tahun_masuk' => $item->tahun_masuk,
+                    'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
+                    'mahasiswa_aktif' => $item->mahasiswa_aktif,
+                    'jumlah_cuti' => $item->jumlah_cuti,
+                    'jumlah_mangkir' => $item->jumlah_mangkir,
+                    'ipk_rata_rata' => $item->ipk_rata_rata,
+                    'tepat_waktu' => $item->tepat_waktu,
+                    'normal' => $item->normal,
+                    'perhatian' => $item->perhatian,
+                    'kritis' => $item->kritis
+                ];
+            }),
         ];
     }
 
@@ -94,6 +108,12 @@ class DetailDashboardService
             switch ($criteria) {
                 case 'aktif':
                     $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "aktif"');
+                    break;
+                case 'cuti':
+                    $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "cuti"');
+                    break;
+                case 'mangkir':
+                    $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "mangkir"');
                     break;
                 case 'cuti_2x':
                     $query->where('mahasiswa.cuti_2', 'yes');

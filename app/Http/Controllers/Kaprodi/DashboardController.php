@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Kaprodi;
 
-use App\Services\Kaprodi\DashboardService;
 use App\Services\Kaprodi\KaprodiDashboardService;
 use App\Services\Kaprodi\StatistikKelulusanService;
 use App\Http\Controllers\Controller;
@@ -18,16 +17,13 @@ use Illuminate\Http\Request;
  */
 class DashboardController extends Controller
 {
-    protected $dashboardService;
     protected $kaprodiDashboardService;
     protected $statistikKelulusanService;
 
     public function __construct(
-        DashboardService $dashboardService,
         KaprodiDashboardService $kaprodiDashboardService,
         StatistikKelulusanService $statistikKelulusanService
     ) {
-        $this->dashboardService = $dashboardService;
         $this->kaprodiDashboardService = $kaprodiDashboardService;
         $this->statistikKelulusanService = $statistikKelulusanService;
     }
