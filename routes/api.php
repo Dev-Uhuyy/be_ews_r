@@ -15,6 +15,7 @@ use App\Http\Controllers\Dekan\DekanExportController;
 use App\Http\Controllers\Kaprodi\KaprodiExportController;
 use App\Http\Controllers\Kaprodi\KaprodiMahasiswaController;
 use App\Http\Controllers\Mahasiswa\ProfileExportController;
+use App\Http\Controllers\Mahasiswa\ProfileController;
 
 // ─── Public: Login ─────────────────────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login']);
