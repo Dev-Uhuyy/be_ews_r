@@ -111,7 +111,7 @@ class EwsDummyDataSeeder extends Seeder
                         // Randomize slightly the semester aktif
                         $semesterAktif = max(1, $baseSemesterAktif + rand(-1, 1));
 
-                        $ipk = rand(150, 400) / 100; // 1.50 to 4.00
+                        // Hitung IPK sementara (di-update ulang setelah IPS dibuat)
                         $sksLulus = rand(20, 150);
                         if ($statusMahasiswa == 'lulus') $sksLulus = max(144, $sksLulus);
 
@@ -121,7 +121,7 @@ class EwsDummyDataSeeder extends Seeder
                                 'dosen_wali_id' => $dosenId,
                                 'tahun_masuk' => $tahun,
                                 'semester_aktif' => $semesterAktif,
-                                'ipk' => $ipk,
+                                'ipk' => null, // di-set ulang setelah IPS dibuat
                                 'sks_lulus' => $sksLulus,
                                 'sks_tempuh' => $sksLulus + rand(0, 15),
                                 'mk_nasional' => $semesterAktif >= 4 ? 'yes' : 'no',
@@ -173,19 +173,38 @@ class EwsDummyDataSeeder extends Seeder
                         }
 
                         // 5. Create IPS history
+                        // IPS di-set hanya sampai semester yang действительно sudah ditempuh
+                        // Semester 1 = ips_1, dst.
+                        $ipsData = [
+                            'ips_1'  => rand(200, 400) / 100,
+                            'ips_2'  => $semesterAktif >= 2  ? rand(200, 400) / 100 : null,
+                            'ips_3'  => $semesterAktif >= 3  ? rand(200, 400) / 100 : null,
+                            'ips_4'  => $semesterAktif >= 4  ? rand(200, 400) / 100 : null,
+                            'ips_5'  => $semesterAktif >= 5  ? rand(150, 400) / 100 : null,
+                            'ips_6'  => $semesterAktif >= 6  ? rand(150, 400) / 100 : null,
+                            'ips_7'  => $semesterAktif >= 7  ? rand(150, 400) / 100 : null,
+                            'ips_8'  => $semesterAktif >= 8  ? rand(150, 400) / 100 : null,
+                            'ips_9'  => $semesterAktif >= 9  ? rand(150, 400) / 100 : null,
+                            'ips_10' => $semesterAktif >= 10 ? rand(150, 400) / 100 : null,
+                            'ips_11' => $semesterAktif >= 11 ? rand(150, 400) / 100 : null,
+                            'ips_12' => $semesterAktif >= 12 ? rand(150, 400) / 100 : null,
+                            'ips_13' => $semesterAktif >= 13 ? rand(150, 400) / 100 : null,
+                            'ips_14' => $semesterAktif >= 14 ? rand(150, 400) / 100 : null,
+                        ];
+
+                        // Hitung IPK sebagai rata-rata semua IPS yang ada
+                        $activeIps = array_filter($ipsData, fn($v) => $v !== null);
+                        $calculatedIpk = count($activeIps) > 0 ? round(array_sum($activeIps) / count($activeIps), 2) : null;
+
                         IpsMahasiswa::updateOrCreate(
                             ['mahasiswa_id' => $mahasiswa->id],
-                            [
-                                'ips_1' => rand(200, 400)/100,
-                                'ips_2' => $semesterAktif >= 2 ? rand(200, 400)/100 : null,
-                                'ips_3' => $semesterAktif >= 3 ? rand(150, 400)/100 : null,
-                                'ips_4' => $semesterAktif >= 4 ? rand(150, 400)/100 : null,
-                                'ips_5' => $semesterAktif >= 5 ? rand(150, 300)/100 : null,
-                                'ips_6' => $semesterAktif >= 6 ? rand(150, 400)/100 : null,
-                            ]
+                            $ipsData
                         );
 
-                        // 6. Recalculate Status EWS for this student via EwsService
+                        // 6. Update Akademik dengan IPK hasil kalkulasi
+                        $akademik->update(['ipk' => $calculatedIpk]);
+
+                        // 7. Recalculate Status EWS for this student via EwsService
                         $ewsService->updateStatus($akademik);
                     }
                     \Illuminate\Support\Facades\DB::commit();
