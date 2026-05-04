@@ -12,8 +12,10 @@ use App\Http\Controllers\Dekan\DetailDashboardController;
 use App\Http\Controllers\Dekan\MahasiswaListController;
 use App\Http\Controllers\Dekan\NilaiMahasiswaController;
 use App\Http\Controllers\Dekan\DekanExportController;
+use App\Http\Controllers\Dekan\DekanCapaianMahasiswaController;
 use App\Http\Controllers\Kaprodi\KaprodiExportController;
 use App\Http\Controllers\Kaprodi\KaprodiMahasiswaController;
+use App\Http\Controllers\Kaprodi\KaprodiCapaianMahasiswaController;
 use App\Http\Controllers\Mahasiswa\ProfileExportController;
 use App\Http\Controllers\Mahasiswa\ProfileController;
 
@@ -47,6 +49,15 @@ Route::prefix('ews')->group(function () {
         Route::get('mahasiswa/by-status', [KaprodiMahasiswaController::class, 'getMahasiswaByStatus']);
         Route::get('mahasiswa/nilai-detail', [KaprodiMahasiswaController::class, 'getNilaiMahasiswaList']);
 
+        // Kaprodi Capaian Mahasiswa routes
+        Route::get('capaian-mahasiswa/top-matakuliah-gagal', [KaprodiCapaianMahasiswaController::class, 'getTop10MatakuliahGagal']);
+        Route::get('capaian-mahasiswa/rata-rata-ips', [KaprodiCapaianMahasiswaController::class, 'getRataRataIpsPerTahunProdi']);
+        Route::get('capaian-mahasiswa/tabel-capaian', [KaprodiCapaianMahasiswaController::class, 'getTabelCapaianMahasiswa']);
+        Route::get('capaian-mahasiswa/tabel-capaian/detail', [KaprodiCapaianMahasiswaController::class, 'getDetailTabelCapaianMahasiswa']);
+        Route::get('capaian-mahasiswa/list-matakuliah', [KaprodiCapaianMahasiswaController::class, 'getListMataKuliahPerProdi']);
+        Route::get('capaian-mahasiswa/mahasiswa-gagal', [KaprodiCapaianMahasiswaController::class, 'getListMahasiswaGagalPerMataKuliah']);
+        Route::get('capaian-mahasiswa/mahasiswa-gagal-by-angkatan', [KaprodiCapaianMahasiswaController::class, 'getListMahasiswaGagalByAngkatan']);
+
         // Export routes
         Route::get('export/dashboard', [KaprodiExportController::class, 'exportDashboard']);
         Route::get('export/dashboard-detail', [KaprodiExportController::class, 'exportDashboardDetail']);
@@ -72,6 +83,12 @@ Route::prefix('ews')->group(function () {
         Route::post('mahasiswa/{mahasiswaId}/recalculate-status', [DekanEwsController::class, 'recalculateMahasiswaStatus']);
         Route::post('recalculate-all-status',                     [DekanEwsController::class, 'recalculateAllStatus']);
 
+        // Capaian Mahasiswa routes
+        Route::get('capaian-mahasiswa/top-matakuliah-gagal', [DekanCapaianMahasiswaController::class, 'getTop10MatakuliahGagal']);
+        Route::get('capaian-mahasiswa/rata-rata-ips', [DekanCapaianMahasiswaController::class, 'getRataRataIpsPerTahunProdi']);
+        Route::get('capaian-mahasiswa/tabel-capaian', [DekanCapaianMahasiswaController::class, 'getTabelCapaianMahasiswa']);
+        Route::get('capaian-mahasiswa/tabel-capaian/detail', [DekanCapaianMahasiswaController::class, 'getDetailTabelCapaianMahasiswa']);
+
         // Export routes
         Route::get('export/dashboard', [DekanExportController::class, 'exportDashboard']);
         Route::get('export/dashboard-detail', [DekanExportController::class, 'exportDashboardDetail']);
@@ -81,6 +98,12 @@ Route::prefix('ews')->group(function () {
         Route::get('export/mahasiswa-by-status', [DekanExportController::class, 'exportMahasiswaByStatus']);
         Route::get('export/nilai-detail', [DekanExportController::class, 'exportNilaiDetail']);
         Route::get('export/nilai-summary', [DekanExportController::class, 'exportNilaiSummary']);
+
+        // List Mata Kuliah Gagal per Prodi
+        Route::get('capaian-mahasiswa/list-matakuliah', [DekanCapaianMahasiswaController::class, 'getListMataKuliahPerProdi']);
+
+        // List Mahasiswa Gagal per Mata Kuliah
+        Route::get('capaian-mahasiswa/mahasiswa-gagal', [DekanCapaianMahasiswaController::class, 'getListMahasiswaGagalPerMataKuliah']);
     });
 
     // ── MAHASISWA ─────────────────────────────────────────────────────────────
