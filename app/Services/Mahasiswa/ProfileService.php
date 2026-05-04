@@ -31,9 +31,14 @@ class ProfileService
             'mahasiswa' => [
                 'nama' => $user->name,
                 'nim' => $mahasiswa->nim,
+                'email' => $user->email,
                 'semester_aktif' => $akademik->semester_aktif ?? 1,
                 'tahun_masuk' => $akademik->tahun_masuk ?? null,
             ],
+            'dosen_wali' => $akademik && $akademik->dosenWali ? [
+                'nama' => $akademik->dosenWali->nama_lengkap,
+                'npp' => $akademik->dosenWali->npp,
+            ] : null,
             'akademik' => [
                 'ipk' => $akademik->ipk ?? 0,
                 'sks_lulus' => $akademik->sks_lulus ?? 0,
