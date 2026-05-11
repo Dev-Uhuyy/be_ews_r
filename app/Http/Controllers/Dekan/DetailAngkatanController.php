@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Dekan;
 
-use App\Services\Dekan\DetailAngkatanService;
 use App\Http\Controllers\Controller;
+use App\Services\Dekan\DetailAngkatanService;
 
 /**
  * @tags Dekan - Detail Angkatan

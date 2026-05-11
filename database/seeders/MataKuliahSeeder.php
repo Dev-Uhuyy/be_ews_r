@@ -15,6 +15,7 @@ class MataKuliahSeeder extends Seeder
 
         if ($prodis->isEmpty()) {
             $this->command->error('✖ Tidak ada Prodi ditemukan. Jalankan ProdiSeeder terlebih dahulu.');
+
             return;
         }
 
@@ -167,17 +168,17 @@ class MataKuliahSeeder extends Seeder
                 MataKuliah::updateOrCreate(
                     ['kode' => $mk['kode']],
                     [
-                        'prodi_id'    => $prodi->id,
-                        'name'        => $mk['name'],
-                        'sks'         => $mk['sks'],
-                        'semester'    => $mk['semester'],
-                        'tipe_mk'     => $mk['tipe_mk'],
-                        'peminatan_id'=> $mk['peminatan_id'] ?? null,
+                        'prodi_id' => $prodi->id,
+                        'name' => $mk['name'],
+                        'sks' => $mk['sks'],
+                        'semester' => $mk['semester'],
+                        'tipe_mk' => $mk['tipe_mk'],
+                        'peminatan_id' => $mk['peminatan_id'] ?? null,
                     ]
                 );
             }
 
-            $this->command->info("✔ MataKuliahSeeder: " . count($mataKuliahs) . " mata kuliah di-seed untuk prodi {$prodi->nama}.");
+            $this->command->info('✔ MataKuliahSeeder: '.count($mataKuliahs)." mata kuliah di-seed untuk prodi {$prodi->nama}.");
         }
     }
 }

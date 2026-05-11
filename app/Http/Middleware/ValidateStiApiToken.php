@@ -6,7 +6,6 @@ use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -29,16 +28,12 @@ class ValidateStiApiToken
 {
     /**
      * Handle an incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function handle(Request $request, Closure $next): Response
     {
         $token = $this->getTokenFromRequest($request);
 
-        if (!$token) {
+        if (! $token) {
             return response()->json([
                 'success' => false,
                 'message' => 'Token not provided',
@@ -72,7 +67,7 @@ class ValidateStiApiToken
                 ->first();
         }
 
-        if (!$tokenData) {
+        if (! $tokenData) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid token',
@@ -83,7 +78,7 @@ class ValidateStiApiToken
         // Get the user associated with the token
         $user = User::find($tokenData->tokenable_id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'User not found',
@@ -105,9 +100,6 @@ class ValidateStiApiToken
     /**
      * Extract the bearer token from the request.
      * Supports both Authorization header and query parameter 'token'
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return string|null
      */
     protected function getTokenFromRequest(Request $request): ?string
     {
@@ -119,7 +111,7 @@ class ValidateStiApiToken
 
         // Fallback: check query parameter 'token'
         $tokenParam = $request->query('token', '');
-        if (!empty($tokenParam)) {
+        if (! empty($tokenParam)) {
             return $tokenParam;
         }
 

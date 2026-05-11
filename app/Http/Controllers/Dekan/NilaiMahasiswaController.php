@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Dekan;
 
-use App\Services\Dekan\NilaiMahasiswaService;
 use App\Http\Controllers\Controller;
+use App\Services\Dekan\NilaiMahasiswaService;
 
 /**
  * @tags Dekan - Nilai Mahasiswa

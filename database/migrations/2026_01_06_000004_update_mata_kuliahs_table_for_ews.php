@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('mata_kuliahs', function (Blueprint $table) {
             // Add prodi_id FK
-            if (!Schema::hasColumn('mata_kuliahs', 'prodi_id')) {
+            if (! Schema::hasColumn('mata_kuliahs', 'prodi_id')) {
                 $table->foreignId('prodi_id')
                     ->after('id')
                     ->constrained('prodis')
@@ -21,7 +21,7 @@ return new class extends Migration
             }
 
             // Add koordinator_mk FK to dosen
-            if (!Schema::hasColumn('mata_kuliahs', 'koordinator_mk')) {
+            if (! Schema::hasColumn('mata_kuliahs', 'koordinator_mk')) {
                 $table->foreignId('koordinator_mk')
                     ->nullable()
                     ->after('name')
@@ -30,7 +30,7 @@ return new class extends Migration
             }
 
             // Add tipe_mk enum
-            if (!Schema::hasColumn('mata_kuliahs', 'tipe_mk')) {
+            if (! Schema::hasColumn('mata_kuliahs', 'tipe_mk')) {
                 $table->enum('tipe_mk', ['nasional', 'fakultas', 'prodi', 'peminatan'])
                     ->default('prodi')
                     ->after('semester');
@@ -38,7 +38,7 @@ return new class extends Migration
 
             // Add peminatan_id FK — kolom mungkin sudah ada di DB dari sti-api
             // sti_api.sql sudah punya peminatan_id, hanya perlu tambah FK constraint
-            if (!Schema::hasColumn('mata_kuliahs', 'peminatan_id')) {
+            if (! Schema::hasColumn('mata_kuliahs', 'peminatan_id')) {
                 $table->foreignId('peminatan_id')
                     ->nullable()
                     ->after('tipe_mk')

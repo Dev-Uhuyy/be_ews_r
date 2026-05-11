@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\ProdiBelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\ProdiBelongsTo;
 
 class Dosen extends Model
 {
-    use HasFactory, SoftDeletes, ProdiBelongsTo;
+    use HasFactory, ProdiBelongsTo, SoftDeletes;
 
     protected $table = 'dosen';
 
@@ -39,11 +39,11 @@ class Dosen extends Model
      */
     public function getNamaLengkapAttribute(): string
     {
-        $nama        = $this->user ? $this->user->name : '';
-        $gelarDepan  = $this->gelar_depan  ? trim($this->gelar_depan) . ' '  : '';
-        $gelarBelkng = $this->gelar_belakang ? ' ' . trim($this->gelar_belakang) : '';
+        $nama = $this->user ? $this->user->name : '';
+        $gelarDepan = $this->gelar_depan ? trim($this->gelar_depan).' ' : '';
+        $gelarBelkng = $this->gelar_belakang ? ' '.trim($this->gelar_belakang) : '';
 
-        return trim($gelarDepan . $nama . $gelarBelkng);
+        return trim($gelarDepan.$nama.$gelarBelkng);
     }
 
     // ─── Relasi dari parent (sti-api) ────────────────────────────────────────

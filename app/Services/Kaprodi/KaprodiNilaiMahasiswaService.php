@@ -31,16 +31,11 @@ class KaprodiNilaiMahasiswaService
      * - mahasiswa_id      : ID mahasiswa spesifik — menonaktifkan pagination (optional)
      * - search            : Cari berdasarkan nama atau NIM (optional)
      * - per_page          : Items per halaman (default 10)
-     *
-     * @param array $filters
-     * @param int   $perPage
-     * @param string|null $search
-     * @return array
      */
     public function getNilaiMahasiswaList(array $filters = [], int $perPage = 10, ?string $search = null): array
     {
-        $prodiId           = $this->getProdiId();
-        $isSingleMahasiswa = !empty($filters['mahasiswa_id']);
+        $prodiId = $this->getProdiId();
+        $isSingleMahasiswa = ! empty($filters['mahasiswa_id']);
 
         $query = AkademikMahasiswa::query()
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
@@ -74,34 +69,34 @@ class KaprodiNilaiMahasiswaService
         // Search
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('users.name', 'LIKE', '%' . $search . '%')
-                  ->orWhere('mahasiswa.nim', 'LIKE', '%' . $search . '%');
+                $q->where('users.name', 'LIKE', '%'.$search.'%')
+                    ->orWhere('mahasiswa.nim', 'LIKE', '%'.$search.'%');
             });
         }
 
         // Filters
-        if (!empty($filters['tahun_masuk'])) {
+        if (! empty($filters['tahun_masuk'])) {
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
         }
-        if (!empty($filters['has_nilai_d']) && $filters['has_nilai_d'] === 'true') {
+        if (! empty($filters['has_nilai_d']) && $filters['has_nilai_d'] === 'true') {
             $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', 'yes');
         }
-        if (!empty($filters['has_nilai_e']) && $filters['has_nilai_e'] === 'true') {
+        if (! empty($filters['has_nilai_e']) && $filters['has_nilai_e'] === 'true') {
             $query->where('akademik_mahasiswa.nilai_e', 'yes');
         }
-        if (!empty($filters['status_kelulusan'])) {
+        if (! empty($filters['status_kelulusan'])) {
             $query->where('early_warning_system.status_kelulusan', $filters['status_kelulusan']);
         }
-        if (!empty($filters['mk_nasional_kurang']) && $filters['mk_nasional_kurang'] === 'true') {
+        if (! empty($filters['mk_nasional_kurang']) && $filters['mk_nasional_kurang'] === 'true') {
             $query->where('akademik_mahasiswa.mk_nasional', 'no');
         }
-        if (!empty($filters['mk_fakultas_kurang']) && $filters['mk_fakultas_kurang'] === 'true') {
+        if (! empty($filters['mk_fakultas_kurang']) && $filters['mk_fakultas_kurang'] === 'true') {
             $query->where('akademik_mahasiswa.mk_fakultas', 'no');
         }
-        if (!empty($filters['mk_prodi_kurang']) && $filters['mk_prodi_kurang'] === 'true') {
+        if (! empty($filters['mk_prodi_kurang']) && $filters['mk_prodi_kurang'] === 'true') {
             $query->where('akademik_mahasiswa.mk_prodi', 'no');
         }
-        if (!empty($filters['mahasiswa_id'])) {
+        if (! empty($filters['mahasiswa_id'])) {
             $query->where('mahasiswa.id', $filters['mahasiswa_id']);
         }
 
@@ -117,22 +112,23 @@ class KaprodiNilaiMahasiswaService
             if ($mahasiswa) {
                 $mahasiswa = $this->enrichMahasiswaNilai($mahasiswa, $mandatoryMKsByCategory);
             }
+
             return [
-                'data'             => $mahasiswa ? [$mahasiswa] : [],
-                'total_mahasiswa'  => $mahasiswa ? 1 : 0,
-                'filters_applied'  => $filters,
+                'data' => $mahasiswa ? [$mahasiswa] : [],
+                'total_mahasiswa' => $mahasiswa ? 1 : 0,
+                'filters_applied' => $filters,
             ];
         }
 
         $totalMahasiswa = $query->count();
-        $mahasiswaList  = $query->orderBy('mahasiswa.nim', 'asc')->paginate($perPage);
+        $mahasiswaList = $query->orderBy('mahasiswa.nim', 'asc')->paginate($perPage);
 
         $mahasiswaList->getCollection()->transform(function ($mahasiswa) use ($mandatoryMKsByCategory) {
             return $this->enrichMahasiswaNilai($mahasiswa, $mandatoryMKsByCategory);
         });
 
         return [
-            'paginated_data'  => $mahasiswaList,
+            'paginated_data' => $mahasiswaList,
             'total_mahasiswa' => $totalMahasiswa,
             'filters_applied' => $filters,
         ];
@@ -166,76 +162,76 @@ class KaprodiNilaiMahasiswaService
 
         // 1. Nilai D
         $matkulNilaiD = $latestKhs->where('nilai_akhir_huruf', 'D');
-        $mahasiswa->mata_kuliah_nilai_d = $matkulNilaiD->map(fn($mk) => [
-            'kode'              => $mk->kode,
-            'nama'              => $mk->nama,
-            'sks'               => $mk->sks,
+        $mahasiswa->mata_kuliah_nilai_d = $matkulNilaiD->map(fn ($mk) => [
+            'kode' => $mk->kode,
+            'nama' => $mk->nama,
+            'sks' => $mk->sks,
             'nilai_akhir_huruf' => $mk->nilai_akhir_huruf,
             'nilai_akhir_angka' => $mk->nilai_akhir_angka,
         ])->values()->toArray();
-        $mahasiswa->jumlah_nilai_d    = $matkulNilaiD->count();
+        $mahasiswa->jumlah_nilai_d = $matkulNilaiD->count();
         $mahasiswa->total_sks_nilai_d = $matkulNilaiD->sum('sks');
 
         // 2. Nilai E
         $matkulNilaiE = $latestKhs->where('nilai_akhir_huruf', 'E');
-        $mahasiswa->mata_kuliah_nilai_e = $matkulNilaiE->map(fn($mk) => [
-            'kode'              => $mk->kode,
-            'nama'              => $mk->nama,
-            'sks'               => $mk->sks,
+        $mahasiswa->mata_kuliah_nilai_e = $matkulNilaiE->map(fn ($mk) => [
+            'kode' => $mk->kode,
+            'nama' => $mk->nama,
+            'sks' => $mk->sks,
             'nilai_akhir_huruf' => $mk->nilai_akhir_huruf,
             'nilai_akhir_angka' => $mk->nilai_akhir_angka,
         ])->values()->toArray();
-        $mahasiswa->jumlah_nilai_e    = $matkulNilaiE->count();
+        $mahasiswa->jumlah_nilai_e = $matkulNilaiE->count();
         $mahasiswa->total_sks_nilai_e = $matkulNilaiE->sum('sks');
 
         // 3. MK Nasional kurang
         if ($mahasiswa->mk_nasional === 'no') {
             $nasionalMandatory = $mandatoryMKsByCategory->get('nasional') ?? collect();
-            $missingNasional   = [];
+            $missingNasional = [];
             foreach ($nasionalMandatory as $mk) {
                 $grade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
-                if (!$grade || $grade->nilai_akhir_huruf === 'E') {
+                if (! $grade || $grade->nilai_akhir_huruf === 'E') {
                     $missingNasional[] = ['kode' => $mk->kode, 'nama' => $mk->name, 'sks' => $mk->sks];
                 }
             }
-            $mahasiswa->mk_nasional_kurang        = $missingNasional;
+            $mahasiswa->mk_nasional_kurang = $missingNasional;
             $mahasiswa->jumlah_mk_nasional_kurang = count($missingNasional);
         } else {
-            $mahasiswa->mk_nasional_kurang        = [];
+            $mahasiswa->mk_nasional_kurang = [];
             $mahasiswa->jumlah_mk_nasional_kurang = 0;
         }
 
         // 4. MK Fakultas kurang
         if ($mahasiswa->mk_fakultas === 'no') {
             $fakultasMandatory = $mandatoryMKsByCategory->get('fakultas') ?? collect();
-            $missingFakultas   = [];
+            $missingFakultas = [];
             foreach ($fakultasMandatory as $mk) {
                 $grade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
-                if (!$grade || $grade->nilai_akhir_huruf === 'E') {
+                if (! $grade || $grade->nilai_akhir_huruf === 'E') {
                     $missingFakultas[] = ['kode' => $mk->kode, 'nama' => $mk->name, 'sks' => $mk->sks];
                 }
             }
-            $mahasiswa->mk_fakultas_kurang        = $missingFakultas;
+            $mahasiswa->mk_fakultas_kurang = $missingFakultas;
             $mahasiswa->jumlah_mk_fakultas_kurang = count($missingFakultas);
         } else {
-            $mahasiswa->mk_fakultas_kurang        = [];
+            $mahasiswa->mk_fakultas_kurang = [];
             $mahasiswa->jumlah_mk_fakultas_kurang = 0;
         }
 
         // 5. MK Prodi kurang
         if ($mahasiswa->mk_prodi === 'no') {
             $prodiMandatory = $mandatoryMKsByCategory->get('prodi') ?? collect();
-            $missingProdi   = [];
+            $missingProdi = [];
             foreach ($prodiMandatory as $mk) {
                 $grade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
-                if (!$grade || $grade->nilai_akhir_huruf === 'E') {
+                if (! $grade || $grade->nilai_akhir_huruf === 'E') {
                     $missingProdi[] = ['kode' => $mk->kode, 'nama' => $mk->name, 'sks' => $mk->sks];
                 }
             }
-            $mahasiswa->mk_prodi_kurang        = $missingProdi;
+            $mahasiswa->mk_prodi_kurang = $missingProdi;
             $mahasiswa->jumlah_mk_prodi_kurang = count($missingProdi);
         } else {
-            $mahasiswa->mk_prodi_kurang        = [];
+            $mahasiswa->mk_prodi_kurang = [];
             $mahasiswa->jumlah_mk_prodi_kurang = 0;
         }
 

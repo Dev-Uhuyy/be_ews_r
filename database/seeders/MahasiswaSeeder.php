@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Mahasiswa;
 use App\Models\Prodi;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class MahasiswaSeeder extends Seeder
@@ -21,8 +20,8 @@ class MahasiswaSeeder extends Seeder
         // Mapping user_id → kode_prodi berdasarkan data di sti_api.sql
         $assignments = [
             // A11 mahasiswa: user_id 8, 9
-            8  => 'A11',
-            9  => 'A11',
+            8 => 'A11',
+            9 => 'A11',
             // A12 mahasiswa: user_id 19, 20
             19 => 'A12',
             20 => 'A12',
@@ -43,15 +42,15 @@ class MahasiswaSeeder extends Seeder
                 $mahasiswa->updateOrCreate(
                     ['user_id' => $userId],
                     [
-                        'prodi_id'        => $prodi?->id,
-                        'minat'           => null,
-                        'cuti_2'          => 'no',
+                        'prodi_id' => $prodi?->id,
+                        'minat' => null,
+                        'cuti_2' => 'no',
                         'status_mahasiswa' => 'aktif',
                     ]
                 );
             }
         }
 
-        $this->command->info('✔ MahasiswaSeeder: prodi_id & kolom EWS diisi untuk ' . count($assignments) . ' mahasiswa.');
+        $this->command->info('✔ MahasiswaSeeder: prodi_id & kolom EWS diisi untuk '.count($assignments).' mahasiswa.');
     }
 }

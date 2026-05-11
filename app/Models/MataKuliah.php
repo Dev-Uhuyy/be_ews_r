@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Traits\ProdiBelongsTo;
+use Illuminate\Database\Eloquent\Model;
 
 class MataKuliah extends Model
 {
     use ProdiBelongsTo;
+
     protected $table = 'mata_kuliahs';
 
     // Semua field dari parent (sti-api) + tambahan EWS (prodi_id, koordinator_mk, tipe_mk)

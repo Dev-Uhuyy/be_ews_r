@@ -18,6 +18,7 @@ class IpsMahasiswaSeeder extends Seeder
 
         if ($mahasiswas->isEmpty()) {
             $this->command->warn('⚠ Tidak ada mahasiswa ditemukan.');
+
             return;
         }
 
@@ -28,6 +29,6 @@ class IpsMahasiswaSeeder extends Seeder
             );
         }
 
-        $this->command->info('✔ IpsMahasiswaSeeder: ' . $mahasiswas->count() . ' record IPS dibuat.');
+        $this->command->info('✔ IpsMahasiswaSeeder: '.$mahasiswas->count().' record IPS dibuat.');
     }
 }

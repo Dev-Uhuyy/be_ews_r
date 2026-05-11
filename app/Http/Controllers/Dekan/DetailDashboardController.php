@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Dekan;
 
-use App\Services\Dekan\DetailDashboardService;
 use App\Http\Controllers\Controller;
+use App\Services\Dekan\DetailDashboardService;
 
 /**
  * @tags Dekan - Detail Dashboard
@@ -56,7 +56,7 @@ class DetailDashboardController extends Controller
             $tahunMasuk = request()->query('tahun_masuk');
             $criteria = request()->query('criteria');
 
-            if (!$prodiId) {
+            if (! $prodiId) {
                 return $this->errorResponse('prodi_id wajib diisi', 400);
             }
 

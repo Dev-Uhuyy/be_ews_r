@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Dekan;
 
-use App\Services\Dekan\MahasiswaListService;
 use App\Http\Controllers\Controller;
+use App\Services\Dekan\MahasiswaListService;
 
 /**
  * @tags Dekan - Mahasiswa List
@@ -78,14 +78,16 @@ class MahasiswaListController extends Controller
      * Query params:
      * - prodi_id: Filter berdasarkan ID Prodi (optional)
      * - tahun_masuk: Filter berdasarkan tahun angkatan (optional)
-     * - status_mahasiswa: 'aktif', 'cuti', 'mangkir' (optional)
+     * - status_mahasiswa: 'aktif', 'mangkir', 'do', 'tidak_aktif' (optional)
      * - ews_status: 'tepat_waktu', 'normal', 'perhatian', 'kritis' (optional)
      *
      * Contoh:
      * - GET /mahasiswa/by-status?status_mahasiswa=aktif
+     * - GET /mahasiswa/by-status?status_mahasiswa=do
+     * - GET /mahasiswa/by-status?status_mahasiswa=tidak_aktif
      * - GET /mahasiswa/by-status?ews_status=kritis
      * - GET /mahasiswa/by-status?status_mahasiswa=aktif&ews_status=kritis
-     * - GET /mahasiswa/by-status?prodi_id=1&tahun_masuk=2023&ews_status=perhatian
+     * - GET /mahasiswa/by-status?prodi_id=1&tahun_masuk=2023&status_mahasiswa=aktif
      *
      * @tags Dekan - Mahasiswa List
      */

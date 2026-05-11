@@ -19,6 +19,7 @@ class KelompokMataKuliahSeeder extends Seeder
 
         if ($mataKuliahs->isEmpty()) {
             $this->command->error('✖ Mata kuliah kosong. Jalankan MataKuliahSeeder terlebih dahulu.');
+
             return;
         }
 
@@ -26,17 +27,17 @@ class KelompokMataKuliahSeeder extends Seeder
 
         foreach ($mataKuliahs as $mk) {
             // Ambil dosen SETEPAT prodi MK
-            if (!array_key_exists($mk->prodi_id, $dosenCache)) {
+            if (! array_key_exists($mk->prodi_id, $dosenCache)) {
                 $dosenProdi = Dosen::where('prodi_id', $mk->prodi_id)->first();
                 $dosenCache[$mk->prodi_id] = $dosenProdi;
             }
-            
+
             $dosen = $dosenCache[$mk->prodi_id];
 
-            if (!$dosen) {
+            if (! $dosen) {
                 // Jangan gunakan dosen cabang lain, mending diskip.
                 // Atau, create fallback dummy dosen for this specific prodi?
-                continue; 
+                continue;
             }
 
             KelompokMataKuliah::updateOrCreate(

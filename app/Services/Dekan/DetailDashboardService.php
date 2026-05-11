@@ -30,25 +30,25 @@ class DetailDashboardService
     private function getDataPerProdi($prodi)
     {
         $tahunData = AkademikMahasiswa::select(
-                    'akademik_mahasiswa.tahun_masuk',
-                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_cuti'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
-                    DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as perhatian'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as kritis')
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('mahasiswa.prodi_id', $prodi->id)
-                ->whereNotNull('akademik_mahasiswa.tahun_masuk')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-                ->groupBy('akademik_mahasiswa.tahun_masuk')
-                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
-                ->get();
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_cuti'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
+            DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as perhatian'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as kritis')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('mahasiswa.prodi_id', $prodi->id)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+            ->get();
 
         return [
             'prodi' => [
@@ -56,7 +56,7 @@ class DetailDashboardService
                 'kode_prodi' => $prodi->kode_prodi,
                 'nama_prodi' => $prodi->nama,
             ],
-            'tahun_angkatan' => $tahunData->map(function($item) {
+            'tahun_angkatan' => $tahunData->map(function ($item) {
                 return [
                     'tahun_masuk' => $item->tahun_masuk,
                     'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
@@ -67,7 +67,7 @@ class DetailDashboardService
                     'tepat_waktu' => $item->tepat_waktu,
                     'normal' => $item->normal,
                     'perhatian' => $item->perhatian,
-                    'kritis' => $item->kritis
+                    'kritis' => $item->kritis,
                 ];
             }),
         ];
@@ -84,20 +84,20 @@ class DetailDashboardService
     public function getMahasiswaListByCriteria($prodiId, $tahunMasuk = null, $criteria = null)
     {
         $query = AkademikMahasiswa::select(
-                    'mahasiswa.id as mahasiswa_id',
-                    'mahasiswa.nim',
-                    'users.name as nama_mahasiswa',
-                    'akademik_mahasiswa.tahun_masuk',
-                    'akademik_mahasiswa.sks_lulus',
-                    'akademik_mahasiswa.ipk',
-                    'mahasiswa.status_mahasiswa',
-                    'early_warning_system.status as ews_status'
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->join('users', 'mahasiswa.user_id', '=', 'users.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('mahasiswa.prodi_id', $prodiId)
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            'mahasiswa.id as mahasiswa_id',
+            'mahasiswa.nim',
+            'users.name as nama_mahasiswa',
+            'akademik_mahasiswa.tahun_masuk',
+            'akademik_mahasiswa.sks_lulus',
+            'akademik_mahasiswa.ipk',
+            'mahasiswa.status_mahasiswa',
+            'early_warning_system.status as ews_status'
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
         if ($tahunMasuk) {
             $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
@@ -149,7 +149,7 @@ class DetailDashboardService
                         'status_mahasiswa' => $mhs->status_mahasiswa,
                         'ews_status' => $mhs->ews_status,
                     ];
-                })->values()
+                })->values(),
             ];
         })->values();
 

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Dekan;
 
-use App\Services\Dekan\StatistikKelulusanService;
 use App\Http\Controllers\Controller;
+use App\Services\Dekan\StatistikKelulusanService;
 
 /**
  * @tags Dekan - Statistik Kelulusan
@@ -27,6 +27,7 @@ class DekanStatistikKelulusanController extends Controller
      * - IPK < 2, SKS < 144, Nilai D > 5%, Ada Nilai E
      * - Eligible / Tidak Eligible
      * - IPK rata-rata per prodi
+     * - Jumlah Aktif, Mangkir, DO, Tidak Aktif
      * - Detail per tahun angkatan
      *
      * @tags Dekan - Statistik Kelulusan

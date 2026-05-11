@@ -1,8 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ErrorLog;
-use OpenApi\Annotations as OA;
+use App\Models\Prodi;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 abstract class Controller
 {
@@ -19,19 +22,19 @@ abstract class Controller
             'payload' => json_encode($request->all()),
         ]);
 
-
         return response()->json([
             'success' => false,
             'message' => $e->getMessage(),
-            'errors' => 'Exception Error : ' . $exception,
+            'errors' => 'Exception Error : '.$exception,
         ], $status);
     }
 
-
     protected function getProdiInfo()
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user) return null;
+        $user = Auth::user();
+        if (! $user) {
+            return null;
+        }
 
         // Eager load if needed, but normally $user->prodi relies on prodi_id
         if ($user->hasRole('kaprodi')) {
@@ -45,13 +48,15 @@ abstract class Controller
 
         if ($user->hasRole('dekan')) {
             if (request()->has('prodi_id') && request('prodi_id') != '') {
-                $prodi = \App\Models\Prodi::find(request('prodi_id'));
+                $prodi = Prodi::find(request('prodi_id'));
+
                 return [
                     'role' => 'dekan',
                     'scope_data' => 'Filter Prodi Spesifik',
                     'nama_prodi' => $prodi?->nama ?? 'Unknown Prodi',
                 ];
             }
+
             return [
                 'role' => 'dekan',
                 'scope_data' => 'Seluruh Fakultas (Semua Prodi)',
@@ -59,7 +64,7 @@ abstract class Controller
         }
 
         if ($user->hasRole('mahasiswa')) {
-             return [
+            return [
                 'role' => 'mahasiswa',
                 'scope_data' => 'Data Pribadi',
                 'nama_prodi' => $user->prodi?->nama ?? 'Unknown Prodi',
@@ -92,7 +97,7 @@ abstract class Controller
             'success' => false,
             'message' => $message,
             'errors' => $errors,
-            'data' => null
+            'data' => null,
         ], $status);
     }
 
@@ -100,12 +105,12 @@ abstract class Controller
      * Universal pagination response handler
      * Supports both Laravel Paginator objects and manual array pagination
      *
-     * @param mixed $data Laravel Paginator object OR array of items
-     * @param string $message Response message
-     * @param int $status HTTP status code
-     * @param array|null $additionalData Extra data to merge (e.g., summary, statistics)
-     * @param array|null $manualPagination Manual pagination params when $data is array: ['total' => int, 'per_page' => int, 'current_page' => int, 'next_url' => string|null, 'prev_url' => string|null]
-     * @return \Illuminate\Http\JsonResponse
+     * @param  mixed  $data  Laravel Paginator object OR array of items
+     * @param  string  $message  Response message
+     * @param  int  $status  HTTP status code
+     * @param  array|null  $additionalData  Extra data to merge (e.g., summary, statistics)
+     * @param  array|null  $manualPagination  Manual pagination params when $data is array: ['total' => int, 'per_page' => int, 'current_page' => int, 'next_url' => string|null, 'prev_url' => string|null]
+     * @return JsonResponse
      */
     public function paginationResponse($data, $message = 'Success', $status = 200, $additionalData = null, $manualPagination = null)
     {
@@ -158,8 +163,8 @@ abstract class Controller
                     'last_page' => $lastPage,
                     'from' => $from,
                     'to' => $to,
-                    'next_page_url' => $manualPagination['next_url'] ?? ($currentPage < $lastPage ? url()->current() . '?page=' . ($currentPage + 1) : null),
-                    'prev_page_url' => $manualPagination['prev_url'] ?? ($currentPage > 1 ? url()->current() . '?page=' . ($currentPage - 1) : null),
+                    'next_page_url' => $manualPagination['next_url'] ?? ($currentPage < $lastPage ? url()->current().'?page='.($currentPage + 1) : null),
+                    'prev_page_url' => $manualPagination['prev_url'] ?? ($currentPage > 1 ? url()->current().'?page='.($currentPage - 1) : null),
                 ];
             }
         }

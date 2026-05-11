@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
-use App\Services\Mahasiswa\ProfileService;
 use App\Http\Controllers\Controller;
+use App\Services\Mahasiswa\ProfileService;
 
 /**
  * @tags Mahasiswa - Profile

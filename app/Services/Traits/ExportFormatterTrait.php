@@ -3,11 +3,11 @@
 namespace App\Services\Traits;
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Font;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * Shared formatting utilities for all XLSX export services.
@@ -27,11 +27,11 @@ trait ExportFormatterTrait
     /**
      * Write a standardised 4-row title block and apply styles.
      *
-     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
-     * @param string $title      Main title (row 1)
-     * @param string $subtitle   Subtitle / scope (row 2)
-     * @param string $filter     Filter description (row 3)  — pass '' to skip
-     * @param int    $colSpan    Number of columns to merge for the title row
+     * @param  Worksheet  $sheet
+     * @param  string  $title  Main title (row 1)
+     * @param  string  $subtitle  Subtitle / scope (row 2)
+     * @param  string  $filter  Filter description (row 3)  — pass '' to skip
+     * @param  int  $colSpan  Number of columns to merge for the title row
      */
     protected function writeTitleBlock($sheet, string $title, string $subtitle, string $filter = '', int $colSpan = 10): void
     {
@@ -41,8 +41,8 @@ trait ExportFormatterTrait
         $sheet->mergeCells("A1:{$endCol}1");
         $sheet->setCellValue('A1', $title);
         $sheet->getStyle('A1')->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2D3E50']],
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2D3E50']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
         ]);
         $sheet->getRowDimension(1)->setRowHeight(28);
@@ -51,8 +51,8 @@ trait ExportFormatterTrait
         $sheet->mergeCells("A2:{$endCol}2");
         $sheet->setCellValue('A2', $subtitle);
         $sheet->getStyle('A2')->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3D5A73']],
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3D5A73']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
         ]);
         $sheet->getRowDimension(2)->setRowHeight(22);
@@ -62,17 +62,17 @@ trait ExportFormatterTrait
             $sheet->mergeCells("A3:{$endCol}3");
             $sheet->setCellValue('A3', $filter);
             $sheet->getStyle('A3')->applyFromArray([
-                'font'      => ['italic' => true, 'size' => 10, 'color' => ['rgb' => '444444'], 'name' => 'Calibri'],
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0F4F8']],
+                'font' => ['italic' => true, 'size' => 10, 'color' => ['rgb' => '444444'], 'name' => 'Calibri'],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0F4F8']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
         }
 
         /* ── Row 4 — print date ── */
         $sheet->mergeCells("A4:{$endCol}4");
-        $sheet->setCellValue('A4', 'Dicetak: ' . date('d-m-Y H:i'));
+        $sheet->setCellValue('A4', 'Dicetak: '.date('d-m-Y H:i'));
         $sheet->getStyle('A4')->applyFromArray([
-            'font'      => ['size' => 9, 'color' => ['rgb' => '888888'], 'name' => 'Calibri'],
+            'font' => ['size' => 9, 'color' => ['rgb' => '888888'], 'name' => 'Calibri'],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
         ]);
     }
@@ -92,17 +92,17 @@ trait ExportFormatterTrait
 
         $endCol = $this->colLetter(count($headers));
         $sheet->getStyle("A{$row}:{$endCol}{$row}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3D8BCD']],
+            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3D8BCD']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            'borders'   => [
+            'borders' => [
                 'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'B0C4D8']],
             ],
         ]);
         $sheet->getRowDimension($row)->setRowHeight(22);
 
         // Freeze panes below header row
-        $sheet->freezePane('A' . ($row + 1));
+        $sheet->freezePane('A'.($row + 1));
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ trait ExportFormatterTrait
     protected function styleDataRow($sheet, int $row, int $colCount, bool $isAlt = false): void
     {
         $endCol = $this->colLetter($colCount);
-        $style  = [
+        $style = [
             'borders' => [
                 'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DCE6F1']],
             ],
@@ -137,8 +137,8 @@ trait ExportFormatterTrait
         $sheet->mergeCells("A{$row}:{$endCol}{$row}");
         $sheet->setCellValue("A{$row}", $label);
         $sheet->getStyle("A{$row}:{$endCol}{$row}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2D3E50']],
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2D3E50']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
         ]);
         $sheet->getRowDimension($row)->setRowHeight(20);
@@ -169,11 +169,11 @@ trait ExportFormatterTrait
 
     protected function saveFile(Spreadsheet $spreadsheet, string $filename): void
     {
-        $writer   = new Xlsx($spreadsheet);
-        $filename = $filename . '.xlsx';
-        $tempPath = storage_path('app/exports/' . $filename);
+        $writer = new Xlsx($spreadsheet);
+        $filename = $filename.'.xlsx';
+        $tempPath = storage_path('app/exports/'.$filename);
 
-        if (!file_exists(storage_path('app/exports'))) {
+        if (! file_exists(storage_path('app/exports'))) {
             mkdir(storage_path('app/exports'), 0755, true);
         }
 
@@ -194,9 +194,10 @@ trait ExportFormatterTrait
         $letter = '';
         while ($colIndex > 0) {
             $colIndex--;
-            $letter    = chr(65 + ($colIndex % 26)) . $letter;
-            $colIndex  = (int) ($colIndex / 26);
+            $letter = chr(65 + ($colIndex % 26)).$letter;
+            $colIndex = (int) ($colIndex / 26);
         }
+
         return $letter;
     }
 }

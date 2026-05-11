@@ -3,11 +3,11 @@
 namespace App\Services\Kaprodi;
 
 use App\Models\AkademikMahasiswa;
-use App\Models\Mahasiswa;
 use App\Models\EarlyWarningSystem;
+use App\Models\Mahasiswa;
 use App\Models\Prodi;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class KaprodiDashboardService
 {
@@ -69,10 +69,10 @@ class KaprodiDashboardService
     private function getRataIpkPerTahun($prodiId)
     {
         return AkademikMahasiswa::select(
-                'tahun_masuk',
-                DB::raw('ROUND(AVG(ipk), 2) as rata_ipk'),
-                DB::raw('COUNT(*) as jumlah_mahasiswa')
-            )
+            'tahun_masuk',
+            DB::raw('ROUND(AVG(ipk), 2) as rata_ipk'),
+            DB::raw('COUNT(*) as jumlah_mahasiswa')
+        )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->where('mahasiswa.prodi_id', $prodiId)
             ->whereNotNull('tahun_masuk')
@@ -109,25 +109,25 @@ class KaprodiDashboardService
     private function getTabelRingkasanProdiPerTahun($prodiId, $prodi)
     {
         $tahunData = AkademikMahasiswa::select(
-                    'akademik_mahasiswa.tahun_masuk',
-                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
-                    DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as jumlah_perhatian'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as jumlah_kritis')
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('mahasiswa.prodi_id', $prodiId)
-                ->whereNotNull('akademik_mahasiswa.tahun_masuk')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-                ->groupBy('akademik_mahasiswa.tahun_masuk')
-                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
-                ->get();
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
+            DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as jumlah_perhatian'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as jumlah_kritis')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+            ->get();
 
         return [
             'prodi' => [
@@ -144,21 +144,21 @@ class KaprodiDashboardService
         $prodi = Prodi::find($prodiId);
 
         $stats = AkademikMahasiswa::select(
-                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "normal" THEN 1 ELSE 0 END) as jumlah_mahasiswa_normal'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
-                    DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as jumlah_perhatian'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as jumlah_kritis')
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('mahasiswa.prodi_id', $prodiId)
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-                ->first();
+            DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "normal" THEN 1 ELSE 0 END) as jumlah_mahasiswa_normal'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
+            DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as jumlah_perhatian'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as jumlah_kritis')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->first();
 
         return [
             'prodi' => [
@@ -183,24 +183,24 @@ class KaprodiDashboardService
         $prodi = Prodi::find($prodiId);
 
         $tahunData = AkademikMahasiswa::select(
-                    'akademik_mahasiswa.tahun_masuk',
-                    DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
-                    DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
-                    DB::raw('SUM(CASE WHEN mahasiswa.cuti_2 = "yes" THEN 1 ELSE 0 END) as jumlah_cuti_2x'),
-                    DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as perhatian'),
-                    DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as kritis')
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('mahasiswa.prodi_id', $prodiId)
-                ->whereNotNull('akademik_mahasiswa.tahun_masuk')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-                ->groupBy('akademik_mahasiswa.tahun_masuk')
-                ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
-                ->get();
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
+            DB::raw('SUM(CASE WHEN mahasiswa.cuti_2 = "yes" THEN 1 ELSE 0 END) as jumlah_cuti_2x'),
+            DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as perhatian'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as kritis')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
+            ->get();
 
         return [
             'prodi' => [
@@ -217,20 +217,20 @@ class KaprodiDashboardService
         $prodiId = $this->getProdiId();
 
         $query = AkademikMahasiswa::select(
-                    'mahasiswa.id as mahasiswa_id',
-                    'mahasiswa.nim',
-                    'users.name as nama_mahasiswa',
-                    'akademik_mahasiswa.tahun_masuk',
-                    'akademik_mahasiswa.sks_lulus',
-                    'akademik_mahasiswa.ipk',
-                    'mahasiswa.status_mahasiswa',
-                    'early_warning_system.status as ews_status'
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->join('users', 'mahasiswa.user_id', '=', 'users.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('mahasiswa.prodi_id', $prodiId)
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            'mahasiswa.id as mahasiswa_id',
+            'mahasiswa.nim',
+            'users.name as nama_mahasiswa',
+            'akademik_mahasiswa.tahun_masuk',
+            'akademik_mahasiswa.sks_lulus',
+            'akademik_mahasiswa.ipk',
+            'mahasiswa.status_mahasiswa',
+            'early_warning_system.status as ews_status'
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
         if ($tahunMasuk) {
             $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
@@ -274,7 +274,7 @@ class KaprodiDashboardService
                         'status_mahasiswa' => $mhs->status_mahasiswa,
                         'ews_status' => $mhs->ews_status,
                     ];
-                })->values()
+                })->values(),
             ];
         })->values();
 

@@ -3,16 +3,16 @@
 namespace App\Services\Mahasiswa\Export;
 
 use App\Models\AkademikMahasiswa;
+use App\Models\EarlyWarningSystem;
 use App\Models\IpsMahasiswa;
 use App\Models\KhsKrsMahasiswa;
-use App\Models\EarlyWarningSystem;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ProfileExportService
 {
@@ -24,7 +24,7 @@ class ProfileExportService
         $user = Auth::user();
         $mahasiswa = $user->mahasiswa;
 
-        if (!$mahasiswa) {
+        if (! $mahasiswa) {
             throw new \Exception('Data mahasiswa tidak ditemukan');
         }
 
@@ -35,72 +35,72 @@ class ProfileExportService
         $progressMk = $this->getProgressMk($akademik);
         $alasanTidakEligible = $this->getAlasanTidakEligible($akademik);
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         $sheet->setCellValue('A1', 'LAPORAN PROFIL MAHASISWA');
-        $sheet->setCellValue('A2', $user->name . ' (' . $mahasiswa->nim . ')');
-        $sheet->setCellValue('A3', 'Dicetak: ' . date('d-m-Y H:i'));
+        $sheet->setCellValue('A2', $user->name.' ('.$mahasiswa->nim.')');
+        $sheet->setCellValue('A3', 'Dicetak: '.date('d-m-Y H:i'));
 
         $startRow = 5;
 
         // === DATA MAHASISWA ===
-        $sheet->setCellValue('A' . $startRow, 'DATA MAHASISWA');
-        $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('A'.$startRow, 'DATA MAHASISWA');
+        $sheet->getStyle('A'.$startRow)->applyFromArray(['font' => ['bold' => true]]);
         $startRow++;
 
-        $sheet->setCellValue('A' . $startRow, 'Nama');
-        $sheet->setCellValue('B' . $startRow, $user->name);
+        $sheet->setCellValue('A'.$startRow, 'Nama');
+        $sheet->setCellValue('B'.$startRow, $user->name);
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'NIM');
-        $sheet->setCellValue('B' . $startRow, $mahasiswa->nim);
+        $sheet->setCellValue('A'.$startRow, 'NIM');
+        $sheet->setCellValue('B'.$startRow, $mahasiswa->nim);
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'Semester Aktif');
-        $sheet->setCellValue('B' . $startRow, $akademik->semester_aktif ?? 1);
+        $sheet->setCellValue('A'.$startRow, 'Semester Aktif');
+        $sheet->setCellValue('B'.$startRow, $akademik->semester_aktif ?? 1);
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'Tahun Masuk');
-        $sheet->setCellValue('B' . $startRow, $akademik->tahun_masuk ?? '-');
+        $sheet->setCellValue('A'.$startRow, 'Tahun Masuk');
+        $sheet->setCellValue('B'.$startRow, $akademik->tahun_masuk ?? '-');
         $startRow += 2;
 
         // === DATA AKADEMIK ===
-        $sheet->setCellValue('A' . $startRow, 'DATA AKADEMIK');
-        $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('A'.$startRow, 'DATA AKADEMIK');
+        $sheet->getStyle('A'.$startRow)->applyFromArray(['font' => ['bold' => true]]);
         $startRow++;
 
-        $sheet->setCellValue('A' . $startRow, 'IPK');
-        $sheet->setCellValue('B' . $startRow, $akademik->ipk ?? 0);
+        $sheet->setCellValue('A'.$startRow, 'IPK');
+        $sheet->setCellValue('B'.$startRow, $akademik->ipk ?? 0);
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'SKS Lulus');
-        $sheet->setCellValue('B' . $startRow, $akademik->sks_lulus ?? 0);
+        $sheet->setCellValue('A'.$startRow, 'SKS Lulus');
+        $sheet->setCellValue('B'.$startRow, $akademik->sks_lulus ?? 0);
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'SKS Tempuh');
-        $sheet->setCellValue('B' . $startRow, $akademik->sks_tempuh ?? 0);
+        $sheet->setCellValue('A'.$startRow, 'SKS Tempuh');
+        $sheet->setCellValue('B'.$startRow, $akademik->sks_tempuh ?? 0);
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'SKS Sekarang');
-        $sheet->setCellValue('B' . $startRow, $akademik->sks_now ?? 0);
+        $sheet->setCellValue('A'.$startRow, 'SKS Sekarang');
+        $sheet->setCellValue('B'.$startRow, $akademik->sks_now ?? 0);
         $startRow += 2;
 
         // === STATUS EWS ===
-        $sheet->setCellValue('A' . $startRow, 'STATUS EWS');
-        $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('A'.$startRow, 'STATUS EWS');
+        $sheet->getStyle('A'.$startRow)->applyFromArray(['font' => ['bold' => true]]);
         $startRow++;
 
-        $sheet->setCellValue('A' . $startRow, 'Status');
-        $sheet->setCellValue('B' . $startRow, $ews->status ?? '-');
+        $sheet->setCellValue('A'.$startRow, 'Status');
+        $sheet->setCellValue('B'.$startRow, $ews->status ?? '-');
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'Status Kelulusan');
-        $sheet->setCellValue('B' . $startRow, $ews->status_kelulusan ?? '-');
+        $sheet->setCellValue('A'.$startRow, 'Status Kelulusan');
+        $sheet->setCellValue('B'.$startRow, $ews->status_kelulusan ?? '-');
         $startRow++;
-        if (!empty($alasanTidakEligible)) {
-            $sheet->setCellValue('A' . $startRow, 'Alasan Tidak Eligible');
-            $sheet->setCellValue('B' . $startRow, implode(', ', $alasanTidakEligible));
+        if (! empty($alasanTidakEligible)) {
+            $sheet->setCellValue('A'.$startRow, 'Alasan Tidak Eligible');
+            $sheet->setCellValue('B'.$startRow, implode(', ', $alasanTidakEligible));
             $startRow++;
         }
         $startRow += 2;
 
         // === IPS PER SEMESTER ===
-        $sheet->setCellValue('A' . $startRow, 'IPS PER SEMESTER');
-        $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('A'.$startRow, 'IPS PER SEMESTER');
+        $sheet->getStyle('A'.$startRow)->applyFromArray(['font' => ['bold' => true]]);
         $startRow++;
 
         $headers = ['Semester', 'IPS'];
@@ -112,21 +112,21 @@ class ProfileExportService
         $startRow++;
         $ipsData = [];
         for ($i = 1; $i <= 14; $i++) {
-            $ipsField = 'ips_' . $i;
+            $ipsField = 'ips_'.$i;
             if ($ips && $ips->$ipsField !== null) {
                 $ipsData[] = ['semester' => $i, 'ips' => (float) $ips->$ipsField];
             }
         }
         foreach ($ipsData as $data) {
-            $sheet->setCellValue('A' . $startRow, $data['semester']);
-            $sheet->setCellValue('B' . $startRow, $data['ips']);
+            $sheet->setCellValue('A'.$startRow, $data['semester']);
+            $sheet->setCellValue('B'.$startRow, $data['ips']);
             $startRow++;
         }
         $startRow += 2;
 
         // === MATA KULIAH DENGAN NILAI D/E ===
-        $sheet->setCellValue('A' . $startRow, 'MATA KULIAH DENGAN NILAI D/E');
-        $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('A'.$startRow, 'MATA KULIAH DENGAN NILAI D/E');
+        $sheet->getStyle('A'.$startRow)->applyFromArray(['font' => ['bold' => true]]);
         $startRow++;
 
         $headers = ['Kode MK', 'Nama MK', 'SKS', 'Semester', 'Kelompok', 'Nilai', 'Nilai Angka'];
@@ -137,30 +137,30 @@ class ProfileExportService
 
         $startRow++;
         foreach ($khsKrsWithNilaiDE as $mk) {
-            $sheet->setCellValue('A' . $startRow, $mk['kode_mk']);
-            $sheet->setCellValue('B' . $startRow, $mk['nama_mk']);
-            $sheet->setCellValue('C' . $startRow, $mk['sks']);
-            $sheet->setCellValue('D' . $startRow, $mk['semester']);
-            $sheet->setCellValue('E' . $startRow, $mk['kelompok']);
-            $sheet->setCellValue('F' . $startRow, $mk['nilai']);
-            $sheet->setCellValue('G' . $startRow, $mk['nilai_angka']);
+            $sheet->setCellValue('A'.$startRow, $mk['kode_mk']);
+            $sheet->setCellValue('B'.$startRow, $mk['nama_mk']);
+            $sheet->setCellValue('C'.$startRow, $mk['sks']);
+            $sheet->setCellValue('D'.$startRow, $mk['semester']);
+            $sheet->setCellValue('E'.$startRow, $mk['kelompok']);
+            $sheet->setCellValue('F'.$startRow, $mk['nilai']);
+            $sheet->setCellValue('G'.$startRow, $mk['nilai_angka']);
             $startRow++;
         }
         $startRow += 2;
 
         // === PROGRESS MK ===
-        $sheet->setCellValue('A' . $startRow, 'PROGRESS MK');
-        $sheet->getStyle('A' . $startRow)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('A'.$startRow, 'PROGRESS MK');
+        $sheet->getStyle('A'.$startRow)->applyFromArray(['font' => ['bold' => true]]);
         $startRow++;
 
-        $sheet->setCellValue('A' . $startRow, 'MK Nasional');
-        $sheet->setCellValue('B' . $startRow, $progressMk['mk_nasional'] === 'yes' ? 'Selesai' : 'Belum Selesai');
+        $sheet->setCellValue('A'.$startRow, 'MK Nasional');
+        $sheet->setCellValue('B'.$startRow, $progressMk['mk_nasional'] === 'yes' ? 'Selesai' : 'Belum Selesai');
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'MK Fakultas');
-        $sheet->setCellValue('B' . $startRow, $progressMk['mk_fakultas'] === 'yes' ? 'Selesai' : 'Belum Selesai');
+        $sheet->setCellValue('A'.$startRow, 'MK Fakultas');
+        $sheet->setCellValue('B'.$startRow, $progressMk['mk_fakultas'] === 'yes' ? 'Selesai' : 'Belum Selesai');
         $startRow++;
-        $sheet->setCellValue('A' . $startRow, 'MK Prodi');
-        $sheet->setCellValue('B' . $startRow, $progressMk['mk_prodi'] === 'yes' ? 'Selesai' : 'Belum Selesai');
+        $sheet->setCellValue('A'.$startRow, 'MK Prodi');
+        $sheet->setCellValue('B'.$startRow, $progressMk['mk_prodi'] === 'yes' ? 'Selesai' : 'Belum Selesai');
         $startRow++;
 
         // Auto size columns
@@ -168,7 +168,7 @@ class ProfileExportService
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $this->saveFile($spreadsheet, 'Mahasiswa_Profile_' . $mahasiswa->nim . '_' . date('Y-m-d'));
+        $this->saveFile($spreadsheet, 'Mahasiswa_Profile_'.$mahasiswa->nim.'_'.date('Y-m-d'));
     }
 
     private function getMatakuliahWithNilaiDE($mahasiswaId)
@@ -201,9 +201,10 @@ class ProfileExportService
 
     private function getProgressMk($akademik)
     {
-        if (!$akademik) {
+        if (! $akademik) {
             return ['mk_nasional' => 'no', 'mk_fakultas' => 'no', 'mk_prodi' => 'no'];
         }
+
         return [
             'mk_nasional' => $akademik->mk_nasional ?? 'no',
             'mk_fakultas' => $akademik->mk_fakultas ?? 'no',
@@ -213,15 +214,32 @@ class ProfileExportService
 
     private function getAlasanTidakEligible($akademik)
     {
-        if (!$akademik) return [];
+        if (! $akademik) {
+            return [];
+        }
         $alasan = [];
-        if ($akademik->ipk <= 2.0) $alasan[] = 'IPK kurang dari atau sama dengan 2.0';
-        if ($akademik->sks_lulus < 144) $alasan[] = 'SKS Lulus kurang dari 144';
-        if ($akademik->mk_nasional !== 'yes') $alasan[] = 'MK Nasional belum diselesaikan';
-        if ($akademik->mk_fakultas !== 'yes') $alasan[] = 'MK Fakultas belum diselesaikan';
-        if ($akademik->mk_prodi !== 'yes') $alasan[] = 'MK Prodi belum diselesaikan';
-        if ($akademik->nilai_e === 'yes') $alasan[] = 'Memiliki nilai E';
-        if ($akademik->nilai_d_melebihi_batas === 'yes') $alasan[] = 'Nilai D melebihi batas 5%';
+        if ($akademik->ipk <= 2.0) {
+            $alasan[] = 'IPK kurang dari atau sama dengan 2.0';
+        }
+        if ($akademik->sks_lulus < 144) {
+            $alasan[] = 'SKS Lulus kurang dari 144';
+        }
+        if ($akademik->mk_nasional !== 'yes') {
+            $alasan[] = 'MK Nasional belum diselesaikan';
+        }
+        if ($akademik->mk_fakultas !== 'yes') {
+            $alasan[] = 'MK Fakultas belum diselesaikan';
+        }
+        if ($akademik->mk_prodi !== 'yes') {
+            $alasan[] = 'MK Prodi belum diselesaikan';
+        }
+        if ($akademik->nilai_e === 'yes') {
+            $alasan[] = 'Memiliki nilai E';
+        }
+        if ($akademik->nilai_d_melebihi_batas === 'yes') {
+            $alasan[] = 'Nilai D melebihi batas 5%';
+        }
+
         return $alasan;
     }
 
@@ -234,16 +252,16 @@ class ProfileExportService
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'CCCCCC']],
         ];
         $endCol = chr(64 + $colCount);
-        $sheet->getStyle('A' . $row . ':' . $endCol . $row)->applyFromArray($styleArray);
+        $sheet->getStyle('A'.$row.':'.$endCol.$row)->applyFromArray($styleArray);
     }
 
     private function saveFile($spreadsheet, $filename)
     {
         $writer = new Xlsx($spreadsheet);
-        $filename = $filename . '.xlsx';
-        $tempPath = storage_path('app/exports/' . $filename);
+        $filename = $filename.'.xlsx';
+        $tempPath = storage_path('app/exports/'.$filename);
 
-        if (!file_exists(storage_path('app/exports'))) {
+        if (! file_exists(storage_path('app/exports'))) {
             mkdir(storage_path('app/exports'), 0755, true);
         }
 

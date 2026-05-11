@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Kaprodi;
 
+use App\Http\Controllers\Controller;
 use App\Services\Kaprodi\KaprodiDashboardService;
 use App\Services\Kaprodi\StatistikKelulusanService;
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 
 /**
  * EWS Dashboard (Kaprodi Level)
@@ -18,6 +17,7 @@ use Illuminate\Http\Request;
 class DashboardController extends Controller
 {
     protected $kaprodiDashboardService;
+
     protected $statistikKelulusanService;
 
     public function __construct(

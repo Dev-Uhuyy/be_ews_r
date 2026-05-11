@@ -20,41 +20,41 @@ class KaprodiMahasiswaListService
         $prodiId = $this->getProdiId();
 
         $query = AkademikMahasiswa::select(
-                    'mahasiswa.id as mahasiswa_id',
-                    'mahasiswa.nim',
-                    'users.name as nama_mahasiswa',
-                    'mahasiswa.status_mahasiswa',
-                    'akademik_mahasiswa.tahun_masuk',
-                    'akademik_mahasiswa.sks_lulus',
-                    'akademik_mahasiswa.ipk',
-                    'akademik_mahasiswa.nilai_d_melebihi_batas',
-                    'akademik_mahasiswa.nilai_e',
-                    'early_warning_system.status as ews_status',
-                    'early_warning_system.status_kelulusan'
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->join('users', 'mahasiswa.user_id', '=', 'users.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('mahasiswa.prodi_id', $prodiId);
+            'mahasiswa.id as mahasiswa_id',
+            'mahasiswa.nim',
+            'users.name as nama_mahasiswa',
+            'mahasiswa.status_mahasiswa',
+            'akademik_mahasiswa.tahun_masuk',
+            'akademik_mahasiswa.sks_lulus',
+            'akademik_mahasiswa.ipk',
+            'akademik_mahasiswa.nilai_d_melebihi_batas',
+            'akademik_mahasiswa.nilai_e',
+            'early_warning_system.status as ews_status',
+            'early_warning_system.status_kelulusan'
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('mahasiswa.prodi_id', $prodiId);
 
         // Pencarian Nama/NIM
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('users.name', 'LIKE', "%{$search}%")
-                  ->orWhere('mahasiswa.nim', 'LIKE', "%{$search}%");
+                    ->orWhere('mahasiswa.nim', 'LIKE', "%{$search}%");
             });
         }
 
         // Filter status_mahasiswa
-        if (!empty($filters['status_mahasiswa'])) {
+        if (! empty($filters['status_mahasiswa'])) {
             $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [strtolower($filters['status_mahasiswa'])]);
         } else {
             $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
         }
 
         // Filter by tahun_masuk
-        if (!empty($filters['tahun_masuk'])) {
+        if (! empty($filters['tahun_masuk'])) {
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
         }
 
@@ -81,7 +81,7 @@ class KaprodiMahasiswaListService
         }
 
         // Filter status kelulusan
-        if (!empty($filters['status_kelulusan'])) {
+        if (! empty($filters['status_kelulusan'])) {
             $status = $filters['status_kelulusan'];
             if (in_array($status, ['eligible', 'noneligible'])) {
                 $query->where('early_warning_system.status_kelulusan', $status);
@@ -89,7 +89,7 @@ class KaprodiMahasiswaListService
         }
 
         // Filter EWS status
-        if (!empty($filters['ews_status'])) {
+        if (! empty($filters['ews_status'])) {
             $ewsStatus = $filters['ews_status'];
             if (in_array($ewsStatus, ['tepat_waktu', 'normal', 'perhatian', 'kritis'])) {
                 $query->where('early_warning_system.status', $ewsStatus);

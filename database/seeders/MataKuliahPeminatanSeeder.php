@@ -25,7 +25,7 @@ class MataKuliahPeminatanSeeder extends Seeder
 
         foreach ($prodis as $prodi) {
             $kode = $prodi->kode_prodi;
-            
+
             if (isset($peminatanMap[$kode])) {
                 foreach ($peminatanMap[$kode] as $peminatan) {
                     MataKuliahPeminatan::firstOrCreate(
@@ -35,6 +35,6 @@ class MataKuliahPeminatanSeeder extends Seeder
             }
         }
 
-        $this->command->info('✔ MataKuliahPeminatanSeeder: ' . MataKuliahPeminatan::count() . ' peminatan tersedia (spesifik prodi).');
+        $this->command->info('✔ MataKuliahPeminatanSeeder: '.MataKuliahPeminatan::count().' peminatan tersedia (spesifik prodi).');
     }
 }

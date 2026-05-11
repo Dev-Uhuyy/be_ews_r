@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleSeeder extends Seeder
 {
@@ -22,12 +23,12 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         // Reset cache permission
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // ─── Permissions EWS ───────────────────────────────────────────────────
         $permEwsMahasiswa = Permission::firstOrCreate(['name' => 'ews-mahasiswa', 'guard_name' => 'web']);
-        $permEwsKaprodi   = Permission::firstOrCreate(['name' => 'ews-kaprodi',   'guard_name' => 'web']);
-        $permEwsDekan     = Permission::firstOrCreate(['name' => 'ews-dekan',     'guard_name' => 'web']);
+        $permEwsKaprodi = Permission::firstOrCreate(['name' => 'ews-kaprodi',   'guard_name' => 'web']);
+        $permEwsDekan = Permission::firstOrCreate(['name' => 'ews-dekan',     'guard_name' => 'web']);
 
         // ─── Role: mahasiswa ────────────────────────────────────────────────────
         // Role ini sudah ada di DB dari sti-api. Kita hanya tambahkan permission EWS.
