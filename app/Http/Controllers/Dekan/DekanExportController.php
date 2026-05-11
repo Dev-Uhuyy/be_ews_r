@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Dekan;
 
+use App\Http\Controllers\Controller;
 use App\Services\Dekan\Export\DashboardExportService;
-use App\Services\Dekan\Export\StatistikKelulusanExportService;
 use App\Services\Dekan\Export\DetailAngkatanExportService;
 use App\Services\Dekan\Export\MahasiswaListExportService;
 use App\Services\Dekan\Export\NilaiMahasiswaExportService;
-use App\Http\Controllers\Controller;
+use App\Services\Dekan\Export\StatistikKelulusanExportService;
 use Illuminate\Http\Request;
 
 /**
@@ -48,6 +48,7 @@ class DekanExportController extends Controller
     {
         try {
             $filters = $request->query();
+
             return $this->dashboardExport->exportDashboardDetail($filters);
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportDashboardDetail');
@@ -63,6 +64,7 @@ class DekanExportController extends Controller
     {
         try {
             $filters = $request->query();
+
             return $this->statistikExport->exportStatistikKelulusan($filters);
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportStatistikKelulusan');
@@ -72,8 +74,8 @@ class DekanExportController extends Controller
     /**
      * Export Detail Angkatan to XLSX
      *
-     * @param string $tahunMasuk Tahun angkatan
-     * Query params: prodi_id (optional - filter ke satu prodi saja)
+     * @param  string  $tahunMasuk  Tahun angkatan
+     *                              Query params: prodi_id (optional - filter ke satu prodi saja)
      *
      * @tags Dekan - Export
      */
@@ -82,6 +84,7 @@ class DekanExportController extends Controller
         try {
             $filters = $request->query();
             $filters['tahunMasuk'] = $tahunMasuk;
+
             return $this->detailAngkatanExport->exportDetailAngkatan($filters);
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportDetailAngkatan');
@@ -99,6 +102,7 @@ class DekanExportController extends Controller
     {
         try {
             $filters = $request->query();
+
             return $this->mahasiswaListExport->exportMahasiswaList($filters);
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportMahasiswaList');
@@ -116,6 +120,7 @@ class DekanExportController extends Controller
     {
         try {
             $filters = $request->query();
+
             return $this->mahasiswaListExport->exportMahasiswaByStatus($filters);
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportMahasiswaByStatus');
@@ -133,6 +138,7 @@ class DekanExportController extends Controller
     {
         try {
             $filters = $request->query();
+
             return $this->nilaiMahasiswaExport->exportNilaiDetail($filters);
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportNilaiDetail');
@@ -150,6 +156,7 @@ class DekanExportController extends Controller
     {
         try {
             $filters = $request->query();
+
             return $this->nilaiMahasiswaExport->exportNilaiSummary($filters);
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'exportNilaiSummary');

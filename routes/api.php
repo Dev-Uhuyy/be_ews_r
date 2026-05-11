@@ -1,23 +1,23 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Kaprodi\EwsController as KaprodiEwsController;
-use App\Http\Controllers\Kaprodi\DashboardController as KaprodiDashboardController;
-use App\Http\Controllers\Dekan\EwsController as DekanEwsController;
+use App\Http\Controllers\Dekan\DekanCapaianMahasiswaController;
 use App\Http\Controllers\Dekan\DekanDashboardController;
+use App\Http\Controllers\Dekan\DekanExportController;
 use App\Http\Controllers\Dekan\DekanStatistikKelulusanController;
 use App\Http\Controllers\Dekan\DetailAngkatanController;
 use App\Http\Controllers\Dekan\DetailDashboardController;
+use App\Http\Controllers\Dekan\EwsController as DekanEwsController;
 use App\Http\Controllers\Dekan\MahasiswaListController;
 use App\Http\Controllers\Dekan\NilaiMahasiswaController;
-use App\Http\Controllers\Dekan\DekanExportController;
-use App\Http\Controllers\Dekan\DekanCapaianMahasiswaController;
+use App\Http\Controllers\Kaprodi\DashboardController as KaprodiDashboardController;
+use App\Http\Controllers\Kaprodi\EwsController as KaprodiEwsController;
+use App\Http\Controllers\Kaprodi\KaprodiCapaianMahasiswaController;
 use App\Http\Controllers\Kaprodi\KaprodiExportController;
 use App\Http\Controllers\Kaprodi\KaprodiMahasiswaController;
-use App\Http\Controllers\Kaprodi\KaprodiCapaianMahasiswaController;
-use App\Http\Controllers\Mahasiswa\ProfileExportController;
 use App\Http\Controllers\Mahasiswa\ProfileController;
+use App\Http\Controllers\Mahasiswa\ProfileExportController;
+use Illuminate\Support\Facades\Route;
 
 // ─── Public: Login ─────────────────────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login']);
@@ -42,7 +42,7 @@ Route::prefix('ews')->group(function () {
         Route::get('dashboard/mahasiswa', [KaprodiDashboardController::class, 'getMahasiswaListByCriteria']);
         Route::get('statistik-kelulusan', [KaprodiDashboardController::class, 'getStatistikKelulusan']);
         Route::post('mahasiswa/{mahasiswaId}/recalculate-status', [KaprodiEwsController::class, 'recalculateMahasiswaStatus']);
-        Route::post('recalculate-all-status',                     [KaprodiEwsController::class, 'recalculateAllStatus']);
+        Route::post('recalculate-all-status', [KaprodiEwsController::class, 'recalculateAllStatus']);
 
         // Kaprodi Mahasiswa routes
         Route::get('mahasiswa/list', [KaprodiMahasiswaController::class, 'getMahasiswaList']);
@@ -81,7 +81,7 @@ Route::prefix('ews')->group(function () {
         Route::get('mahasiswa/nilai-detail', [NilaiMahasiswaController::class, 'getNilaiMahasiswaList']);
         Route::get('mahasiswa/nilai-summary', [NilaiMahasiswaController::class, 'getNilaiMahasiswaSummary']);
         Route::post('mahasiswa/{mahasiswaId}/recalculate-status', [DekanEwsController::class, 'recalculateMahasiswaStatus']);
-        Route::post('recalculate-all-status',                     [DekanEwsController::class, 'recalculateAllStatus']);
+        Route::post('recalculate-all-status', [DekanEwsController::class, 'recalculateAllStatus']);
 
         // Capaian Mahasiswa routes
         Route::get('capaian-mahasiswa/top-matakuliah-gagal', [DekanCapaianMahasiswaController::class, 'getTop10MatakuliahGagal']);

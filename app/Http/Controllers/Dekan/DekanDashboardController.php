@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Dekan;
 
-use App\Services\Dekan\DekanDashboardService;
 use App\Http\Controllers\Controller;
+use App\Services\Dekan\DekanDashboardService;
 
 /**
  * @tags Dekan - Dashboard

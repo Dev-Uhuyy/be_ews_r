@@ -3,11 +3,11 @@
 namespace App\Services\Mahasiswa;
 
 use App\Models\AkademikMahasiswa;
+use App\Models\EarlyWarningSystem;
 use App\Models\IpsMahasiswa;
 use App\Models\KhsKrsMahasiswa;
-use App\Models\EarlyWarningSystem;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProfileService
 {
@@ -16,7 +16,7 @@ class ProfileService
         $user = Auth::user();
         $mahasiswa = $user->mahasiswa;
 
-        if (!$mahasiswa) {
+        if (! $mahasiswa) {
             throw new \Exception('Data mahasiswa tidak ditemukan');
         }
 
@@ -58,13 +58,13 @@ class ProfileService
 
     private function getIpsData($ips)
     {
-        if (!$ips) {
+        if (! $ips) {
             return [];
         }
 
         $ipsData = [];
         for ($i = 1; $i <= 14; $i++) {
-            $ipsField = 'ips_' . $i;
+            $ipsField = 'ips_'.$i;
             if ($ips->$ipsField !== null) {
                 $ipsData[] = [
                     'semester' => $i,
@@ -114,7 +114,7 @@ class ProfileService
 
     private function getProgressMk($akademik)
     {
-        if (!$akademik) {
+        if (! $akademik) {
             return [
                 'mk_nasional' => 'no',
                 'mk_fakultas' => 'no',
@@ -131,7 +131,7 @@ class ProfileService
 
     private function getAlasanTidakEligible($akademik)
     {
-        if (!$akademik) {
+        if (! $akademik) {
             return [];
         }
 

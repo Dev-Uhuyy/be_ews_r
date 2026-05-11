@@ -91,6 +91,7 @@ class DekanCapaianMahasiswaController extends Controller
      * - Nama Prodi
      * - Tren IPS (Naik / Turun / Stabil)
      * - Jumlah mata kuliah yang memiliki nilai E (gagal) per prodi
+     * - Rata-rata SKS lulus seluruh mahasiswa per prodi
      *
      * Query params (optional):
      * - prodi_id: Filter berdasarkan ID Prodi
@@ -125,6 +126,7 @@ class DekanCapaianMahasiswaController extends Controller
      * - Tahun Angkatan
      * - Tren IPS (Naik / Turun / Stabil)
      * - Jumlah mata kuliah yang memiliki nilai E (gagal) per prodi per angkatan
+     * - Rata-rata SKS lulus per tahun angkatan
      *
      * Query params (optional):
      * - prodi_id: Filter berdasarkan ID Prodi
@@ -197,6 +199,11 @@ class DekanCapaianMahasiswaController extends Controller
      * - matakuliah_id: ID Mata Kuliah yang akan dicek (required)
      * - prodi_id: Filter berdasarkan ID Prodi (optional)
      * - tahun_masuk: Filter berdasarkan tahun angkatan (optional)
+     *
+     * Response includes:
+     * - dosen_pengampu: Nama dosen pengampu matakuliah
+     * - kode_kelompok: Kode kelompok matakuliah
+     * - presensi: Persentase kehadiran mahasiswa (0-100)
      *
      * @tags Dekan - Capaian Mahasiswa
      */

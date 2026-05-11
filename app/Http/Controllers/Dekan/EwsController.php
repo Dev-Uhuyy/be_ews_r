@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Dekan;
 
 use App\Http\Controllers\Controller;
-use App\Services\Dekan\EwsService;
-use App\Services\Dekan\StatusMahasiswaService;
 use App\Jobs\RecalculateAllEwsJob;
 use App\Models\AkademikMahasiswa;
+use App\Models\Prodi;
+use App\Services\Dekan\EwsService;
+use App\Services\Dekan\StatusMahasiswaService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * @tags Dekan - EWS Management
@@ -15,6 +17,7 @@ use Illuminate\Http\Request;
 class EwsController extends Controller
 {
     protected $ewsService;
+
     protected $statusMahasiswaService;
 
     public function __construct(EwsService $ewsService, StatusMahasiswaService $statusMahasiswaService)
@@ -33,14 +36,14 @@ class EwsController extends Controller
             $tahunMasuk = $request->query('tahun_masuk', null);
 
             // Validasi tahun_masuk jika diberikan
-            if ($tahunMasuk !== null && (!is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100)) {
+            if ($tahunMasuk !== null && (! is_numeric($tahunMasuk) || $tahunMasuk < 2000 || $tahunMasuk > 2100)) {
                 return $this->errorResponse('Parameter tahun_masuk harus berupa angka tahun yang valid (2000-2100)', 400);
             }
 
             // Jika ada filter explicit prodi_id
             if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $distribusi = $this->statusMahasiswaService->getDistribusiStatusEws($tahunMasuk);
-                
+
                 if ($tahunMasuk && array_sum($distribusi) == 0) {
                     return $this->errorResponse('Tidak ditemukan data yang sesuai dengan filter', 404);
                 }
@@ -49,20 +52,20 @@ class EwsController extends Controller
             }
 
             // Jika tidak ada filter, tampilkan gabungan per prodi
-            $prodis = \App\Models\Prodi::all();
+            $prodis = Prodi::all();
             $dataGabungan = [];
 
             foreach ($prodis as $prodi) {
                 request()->merge(['prodi_id' => $prodi->id]);
                 $dist = $this->statusMahasiswaService->getDistribusiStatusEws($tahunMasuk);
-                
+
                 $dataGabungan[] = [
                     'prodi' => [
                         'id' => $prodi->id,
                         'kode' => $prodi->kode_prodi,
                         'nama' => $prodi->nama,
                     ],
-                    'distribusi' => $dist
+                    'distribusi' => $dist,
                 ];
             }
 
@@ -80,20 +83,21 @@ class EwsController extends Controller
 
     /**
      * Recalculate status EWS untuk 1 mahasiswa (real-time)
-     * @param int $mahasiswaId - ID dari tabel mahasiswa
+     *
+     * @param  int  $mahasiswaId  - ID dari tabel mahasiswa
      */
     public function recalculateMahasiswaStatus($mahasiswaId)
     {
         try {
             // Validasi mahasiswa_id
-            if (!is_numeric($mahasiswaId) || $mahasiswaId < 1) {
+            if (! is_numeric($mahasiswaId) || $mahasiswaId < 1) {
                 return $this->errorResponse('Parameter mahasiswa_id harus berupa angka yang valid', 400);
             }
 
             // Cari akademik mahasiswa by mahasiswa_id dengan scope prodi agar Dekan A tidak bisa recalculate mhs Dekan B
             $akademik = AkademikMahasiswa::where('mahasiswa_id', $mahasiswaId)
-                ->whereHas('mahasiswa', function($query) {
-                    $user = \Illuminate\Support\Facades\Auth::user();
+                ->whereHas('mahasiswa', function ($query) {
+                    $user = Auth::user();
                     if ($user && $user->hasRole('Dekan')) {
                         $query->where('prodi_id', $user->prodi_id);
                     }
@@ -101,7 +105,7 @@ class EwsController extends Controller
                 ->with('mahasiswa.user')
                 ->first();
 
-            if (!$akademik) {
+            if (! $akademik) {
                 return $this->errorResponse('Mahasiswa tidak ditemukan', 404);
             }
 
@@ -111,7 +115,7 @@ class EwsController extends Controller
             // Get detail mahasiswa lengkap setelah recalculate
             $detailMahasiswa = $this->statusMahasiswaService->getDetailMahasiswa($mahasiswaId);
 
-            if (!$detailMahasiswa) {
+            if (! $detailMahasiswa) {
                 return $this->errorResponse('Detail mahasiswa tidak ditemukan', 404);
             }
 
@@ -133,7 +137,7 @@ class EwsController extends Controller
         try {
             // Retrieve prodiId based on role
             $prodiId = null;
-            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = Auth::user();
             if ($user && $user->hasRole('Dekan')) {
                 $prodiId = $user->prodi_id;
             } elseif ($user && $user->hasRole('dekan') && request()->has('prodi_id') && request('prodi_id') != '') {

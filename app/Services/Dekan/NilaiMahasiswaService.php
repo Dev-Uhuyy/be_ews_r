@@ -3,8 +3,8 @@
 namespace App\Services\Dekan;
 
 use App\Models\AkademikMahasiswa;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-
 
 class NilaiMahasiswaService
 {
@@ -13,14 +13,14 @@ class NilaiMahasiswaService
      * With filtering support by prodi_id, tahun_masuk, and other criteria
      * When mahasiswa_id is provided, returns single student data without pagination
      *
-     * @param array $filters Filter parameters: prodi_id, tahun_masuk, has_nilai_d, has_nilai_e, mahasiswa_id, etc.
-     * @param int $perPage Number of items per page
-     * @param string $search Search by name or NIM
+     * @param  array  $filters  Filter parameters: prodi_id, tahun_masuk, has_nilai_d, has_nilai_e, mahasiswa_id, etc.
+     * @param  int  $perPage  Number of items per page
+     * @param  string  $search  Search by name or NIM
      * @return array
      */
     public function getNilaiMahasiswaList($filters = [], $perPage = 10, $search = null)
     {
-        $isSingleMahasiswa = !empty($filters['mahasiswa_id']);
+        $isSingleMahasiswa = ! empty($filters['mahasiswa_id']);
         $query = AkademikMahasiswa::query()
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
@@ -51,38 +51,38 @@ class NilaiMahasiswaService
 
         // Apply search
         if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('users.name', 'LIKE', '%' . $search . '%')
-                  ->orWhere('mahasiswa.nim', 'LIKE', '%' . $search . '%');
+            $query->where(function ($q) use ($search) {
+                $q->where('users.name', 'LIKE', '%'.$search.'%')
+                    ->orWhere('mahasiswa.nim', 'LIKE', '%'.$search.'%');
             });
         }
 
         // Apply filters
-        if (!empty($filters['prodi_id'])) {
+        if (! empty($filters['prodi_id'])) {
             $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
         }
-        if (!empty($filters['tahun_masuk'])) {
+        if (! empty($filters['tahun_masuk'])) {
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
         }
-        if (!empty($filters['has_nilai_d']) && $filters['has_nilai_d'] === 'true') {
+        if (! empty($filters['has_nilai_d']) && $filters['has_nilai_d'] === 'true') {
             $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', 'yes');
         }
-        if (!empty($filters['has_nilai_e']) && $filters['has_nilai_e'] === 'true') {
+        if (! empty($filters['has_nilai_e']) && $filters['has_nilai_e'] === 'true') {
             $query->where('akademik_mahasiswa.nilai_e', 'yes');
         }
-        if (!empty($filters['status_kelulusan'])) {
+        if (! empty($filters['status_kelulusan'])) {
             $query->where('early_warning_system.status_kelulusan', $filters['status_kelulusan']);
         }
-        if (!empty($filters['mk_nasional_kurang']) && $filters['mk_nasional_kurang'] === 'true') {
+        if (! empty($filters['mk_nasional_kurang']) && $filters['mk_nasional_kurang'] === 'true') {
             $query->where('akademik_mahasiswa.mk_nasional', 'no');
         }
-        if (!empty($filters['mk_fakultas_kurang']) && $filters['mk_fakultas_kurang'] === 'true') {
+        if (! empty($filters['mk_fakultas_kurang']) && $filters['mk_fakultas_kurang'] === 'true') {
             $query->where('akademik_mahasiswa.mk_fakultas', 'no');
         }
-        if (!empty($filters['mk_prodi_kurang']) && $filters['mk_prodi_kurang'] === 'true') {
+        if (! empty($filters['mk_prodi_kurang']) && $filters['mk_prodi_kurang'] === 'true') {
             $query->where('akademik_mahasiswa.mk_prodi', 'no');
         }
-        if (!empty($filters['mahasiswa_id'])) {
+        if (! empty($filters['mahasiswa_id'])) {
             $query->where('mahasiswa.id', $filters['mahasiswa_id']);
         }
 
@@ -104,7 +104,7 @@ class NilaiMahasiswaService
         $mandatoryQuery = DB::table('mata_kuliahs')
             ->whereIn('tipe_mk', ['nasional', 'fakultas', 'prodi']);
 
-        if (!empty($filters['prodi_id'])) {
+        if (! empty($filters['prodi_id'])) {
             $mandatoryQuery->where('prodi_id', $filters['prodi_id']);
         }
 
@@ -116,6 +116,7 @@ class NilaiMahasiswaService
             if ($mahasiswa) {
                 $mahasiswa = $this->enrichMahasiswaNilai($mahasiswa, $mandatoryMKsByCategory);
             }
+
             return [
                 'data' => $mahasiswa ? [$mahasiswa] : [],
                 'total_mahasiswa' => 1,
@@ -137,8 +138,8 @@ class NilaiMahasiswaService
     /**
      * Enrich mahasiswa object with nilai D, E, and missing MK details
      *
-     * @param mixed $mahasiswa
-     * @param \Illuminate\Support\Collection $mandatoryMKsByCategory
+     * @param  mixed  $mahasiswa
+     * @param  Collection  $mandatoryMKsByCategory
      * @return mixed
      */
     private function enrichMahasiswaNilai($mahasiswa, $mandatoryMKsByCategory)
@@ -146,7 +147,7 @@ class NilaiMahasiswaService
         // Get latest grades for this student (latest per mata kuliah)
         $latestKhs = DB::table('khs_krs_mahasiswa as khs1')
             ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
-            ->whereIn('khs1.id', function($query) use ($mahasiswa) {
+            ->whereIn('khs1.id', function ($query) use ($mahasiswa) {
                 $query->select(DB::raw('MAX(id)'))
                     ->from('khs_krs_mahasiswa as khs2')
                     ->where('khs2.mahasiswa_id', $mahasiswa->mahasiswa_id)
@@ -198,7 +199,7 @@ class NilaiMahasiswaService
             $missingNasional = [];
             foreach ($nasionalMandatory as $mk) {
                 $studentGrade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
-                if (!$studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
+                if (! $studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
                     $missingNasional[] = [
                         'kode' => $mk->kode,
                         'nama' => $mk->name,
@@ -219,7 +220,7 @@ class NilaiMahasiswaService
             $missingfakultas = [];
             foreach ($fakultasMandatory as $mk) {
                 $studentGrade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
-                if (!$studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
+                if (! $studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
                     $missingfakultas[] = [
                         'kode' => $mk->kode,
                         'nama' => $mk->name,
@@ -240,7 +241,7 @@ class NilaiMahasiswaService
             $missingProdi = [];
             foreach ($prodiMandatory as $mk) {
                 $studentGrade = $latestKhs->firstWhere('matakuliah_id', $mk->id);
-                if (!$studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
+                if (! $studentGrade || $studentGrade->nilai_akhir_huruf === 'E') {
                     $missingProdi[] = [
                         'kode' => $mk->kode,
                         'nama' => $mk->name,
@@ -264,7 +265,7 @@ class NilaiMahasiswaService
     /**
      * Get summary statistics for nilai D, E, and missing MK across all filtered mahasiswa
      *
-     * @param array $filters
+     * @param  array  $filters
      * @return array
      */
     public function getNilaiMahasiswaSummary($filters = [])
@@ -283,10 +284,10 @@ class NilaiMahasiswaService
             );
 
         // Apply filters
-        if (!empty($filters['prodi_id'])) {
+        if (! empty($filters['prodi_id'])) {
             $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
         }
-        if (!empty($filters['tahun_masuk'])) {
+        if (! empty($filters['tahun_masuk'])) {
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
         }
 

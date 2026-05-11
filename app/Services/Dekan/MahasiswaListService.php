@@ -4,7 +4,6 @@ namespace App\Services\Dekan;
 
 use App\Models\AkademikMahasiswa;
 
-
 class MahasiswaListService
 {
     /**
@@ -23,32 +22,34 @@ class MahasiswaListService
     public function getMahasiswaList($filters = [])
     {
         $query = AkademikMahasiswa::select(
-                    'mahasiswa.id as mahasiswa_id',
-                    'mahasiswa.nim',
-                    'users.name as nama_mahasiswa',
-                    'prodis.nama as nama_prodi',
-                    'prodis.kode_prodi',
-                    'akademik_mahasiswa.tahun_masuk',
-                    'akademik_mahasiswa.sks_lulus',
-                    'akademik_mahasiswa.ipk',
-                    'akademik_mahasiswa.nilai_d_melebihi_batas',
-                    'akademik_mahasiswa.nilai_e',
-                    'early_warning_system.status as ews_status',
-                    'early_warning_system.status_kelulusan'
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->join('users', 'mahasiswa.user_id', '=', 'users.id')
-                ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            'mahasiswa.id as mahasiswa_id',
+            'mahasiswa.nim',
+            'users.name as nama_mahasiswa',
+            'mahasiswa.status_mahasiswa',
+            'prodis.id as prodi_id',
+            'prodis.nama as nama_prodi',
+            'prodis.kode_prodi',
+            'akademik_mahasiswa.tahun_masuk',
+            'akademik_mahasiswa.sks_lulus',
+            'akademik_mahasiswa.ipk',
+            'akademik_mahasiswa.nilai_d_melebihi_batas',
+            'akademik_mahasiswa.nilai_e',
+            'early_warning_system.status as ews_status',
+            'early_warning_system.status_kelulusan'
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus")');
 
         // Filter by prodi_id
-        if (!empty($filters['prodi_id'])) {
+        if (! empty($filters['prodi_id'])) {
             $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
         }
 
         // Filter by tahun_masuk
-        if (!empty($filters['tahun_masuk'])) {
+        if (! empty($filters['tahun_masuk'])) {
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
         }
 
@@ -83,7 +84,7 @@ class MahasiswaListService
         }
 
         // Filter status kelulusan
-        if (!empty($filters['status_kelulusan'])) {
+        if (! empty($filters['status_kelulusan'])) {
             $status = $filters['status_kelulusan'];
             if (in_array($status, ['eligible', 'noneligible'])) {
                 $query->where('early_warning_system.status_kelulusan', $status);
@@ -91,7 +92,7 @@ class MahasiswaListService
         }
 
         // Filter EWS status
-        if (!empty($filters['ews_status'])) {
+        if (! empty($filters['ews_status'])) {
             $ewsStatus = $filters['ews_status'];
             if (in_array($ewsStatus, ['tepat_waktu', 'normal', 'perhatian', 'kritis'])) {
                 $query->where('early_warning_system.status', $ewsStatus);
@@ -107,6 +108,7 @@ class MahasiswaListService
                 'mahasiswa_id' => $mhs->mahasiswa_id,
                 'nim' => $mhs->nim,
                 'nama_mahasiswa' => $mhs->nama_mahasiswa,
+                'status_mahasiswa' => $mhs->status_mahasiswa,
                 'prodi' => [
                     'id' => $mhs->prodi_id,
                     'kode_prodi' => $mhs->kode_prodi,
@@ -141,59 +143,69 @@ class MahasiswaListService
      */
     public function getMahasiswaByStatus($filters = [])
     {
-        $query = AkademikMahasiswa::select(
-                    'mahasiswa.id as mahasiswa_id',
-                    'mahasiswa.nim',
-                    'users.name as nama_mahasiswa',
-                    'prodis.id as prodi_id',
-                    'prodis.nama as nama_prodi',
-                    'prodis.kode_prodi',
-                    'akademik_mahasiswa.tahun_masuk',
-                    'akademik_mahasiswa.sks_lulus',
-                    'akademik_mahasiswa.ipk',
-                    'mahasiswa.status_mahasiswa',
-                    'early_warning_system.status as ews_status',
-                    'early_warning_system.status_kelulusan'
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->join('users', 'mahasiswa.user_id', '=', 'users.id')
-                ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+        $perPage = isset($filters['per_page']) ? (int) $filters['per_page'] : 20;
+        $perPage = max(1, min($perPage, 100));
+        $page = isset($filters['page']) ? (int) $filters['page'] : 1;
+        $page = max(1, $page);
 
-        // Filter by prodi_id
-        if (!empty($filters['prodi_id'])) {
+        $query = AkademikMahasiswa::select(
+            'mahasiswa.id as mahasiswa_id',
+            'mahasiswa.nim',
+            'users.name as nama_mahasiswa',
+            'prodis.id as prodi_id',
+            'prodis.nama as nama_prodi',
+            'prodis.kode_prodi',
+            'akademik_mahasiswa.tahun_masuk',
+            'akademik_mahasiswa.sks_lulus',
+            'akademik_mahasiswa.ipk',
+            'mahasiswa.status_mahasiswa',
+            'early_warning_system.status as ews_status',
+            'early_warning_system.status_kelulusan'
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus")');
+
+        if (! empty($filters['prodi_id'])) {
             $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
         }
 
-        // Filter by tahun_masuk
-        if (!empty($filters['tahun_masuk'])) {
+        if (! empty($filters['tahun_masuk'])) {
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
         }
 
-        // Filter status_mahasiswa (aktif/cuti/mangkir)
-        if (!empty($filters['status_mahasiswa'])) {
+        if (! empty($filters['status_mahasiswa'])) {
             $statusMhs = strtolower($filters['status_mahasiswa']);
-            if (in_array($statusMhs, ['aktif', 'cuti', 'mangkir'])) {
+            if (in_array($statusMhs, ['aktif', 'mangkir', 'do', 'tidak_aktif'])) {
                 $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [$statusMhs]);
             }
         }
 
-        // Filter EWS status
-        if (!empty($filters['ews_status'])) {
+        if (! empty($filters['ews_status'])) {
             $ewsStatus = $filters['ews_status'];
             if (in_array($ewsStatus, ['tepat_waktu', 'normal', 'perhatian', 'kritis'])) {
                 $query->where('early_warning_system.status', $ewsStatus);
             }
         }
 
+        $total = $query->count();
+
         $mahasiswas = $query->orderBy('prodis.nama', 'asc')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
             ->orderBy('users.name', 'asc')
+            ->offset(($page - 1) * $perPage)
+            ->limit($perPage)
             ->get();
 
+        $lastPage = (int) ceil($total / $perPage);
+
         return [
-            'total' => $mahasiswas->count(),
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => $lastPage,
             'mahasiswa' => $mahasiswas->map(function ($mhs) {
                 return [
                     'mahasiswa_id' => $mhs->mahasiswa_id,

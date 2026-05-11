@@ -28,19 +28,19 @@ trait ProdiBelongsTo
 
         // Jika prodiId diberikan secara eksplisit, gunakan
         if ($prodiId !== null) {
-            return $query->where($this->getTable() . '.prodi_id', $prodiId);
+            return $query->where($this->getTable().'.prodi_id', $prodiId);
         }
 
         // Cek auth logic
         if ($user) {
             if ($user->hasRole('kaprodi')) {
                 // Kaprodi: Wajib limit sesuai prodi mereka
-                return $query->where($this->getTable() . '.prodi_id', $user->prodi_id);
+                return $query->where($this->getTable().'.prodi_id', $user->prodi_id);
             }
             if ($user->hasRole('dekan')) {
                 // Dekan: Bisa filter request jika ada (kalau tidak, munculkan semua)
                 if (request()->has('prodi_id') && request('prodi_id') != '') {
-                    return $query->where($this->getTable() . '.prodi_id', request('prodi_id'));
+                    return $query->where($this->getTable().'.prodi_id', request('prodi_id'));
                 }
             }
         }

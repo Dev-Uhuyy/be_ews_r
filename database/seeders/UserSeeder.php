@@ -26,12 +26,12 @@ class UserSeeder extends Seeder
         $kaprodiA11 = User::firstOrCreate(
             ['email' => 'kaprodi_a11@ews.com'],
             [
-                'name'     => 'Kaprodi TI Test',
+                'name' => 'Kaprodi TI Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA11?->id,
             ]
         );
-        if (!$kaprodiA11->hasRole('kaprodi')) {
+        if (! $kaprodiA11->hasRole('kaprodi')) {
             $kaprodiA11->assignRole('kaprodi');
         }
 
@@ -39,12 +39,12 @@ class UserSeeder extends Seeder
         $kaprodiA12 = User::firstOrCreate(
             ['email' => 'kaprodi_a12@ews.com'],
             [
-                'name'     => 'Kaprodi SI Test',
+                'name' => 'Kaprodi SI Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA12?->id,
             ]
         );
-        if (!$kaprodiA12->hasRole('kaprodi')) {
+        if (! $kaprodiA12->hasRole('kaprodi')) {
             $kaprodiA12->assignRole('kaprodi');
         }
 
@@ -52,12 +52,12 @@ class UserSeeder extends Seeder
         $kaprodiA14 = User::firstOrCreate(
             ['email' => 'kaprodi_a14@ews.com'],
             [
-                'name'     => 'Kaprodi DKV Test',
+                'name' => 'Kaprodi DKV Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA14?->id,
             ]
         );
-        if (!$kaprodiA14->hasRole('kaprodi')) {
+        if (! $kaprodiA14->hasRole('kaprodi')) {
             $kaprodiA14->assignRole('kaprodi');
         }
 
@@ -65,12 +65,12 @@ class UserSeeder extends Seeder
         $kaprodiA15 = User::firstOrCreate(
             ['email' => 'kaprodi_a15@ews.com'],
             [
-                'name'     => 'Kaprodi Ilkom Test',
+                'name' => 'Kaprodi Ilkom Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA15?->id,
             ]
         );
-        if (!$kaprodiA15->hasRole('kaprodi')) {
+        if (! $kaprodiA15->hasRole('kaprodi')) {
             $kaprodiA15->assignRole('kaprodi');
         }
 
@@ -78,12 +78,12 @@ class UserSeeder extends Seeder
         $dekan = User::firstOrCreate(
             ['email' => 'dekan@ews.com'],
             [
-                'name'     => 'Dekan EWS Test',
+                'name' => 'Dekan EWS Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => null, // dekan level fakultas
             ]
         );
-        if (!$dekan->hasRole('dekan')) {
+        if (! $dekan->hasRole('dekan')) {
             $dekan->assignRole('dekan');
         }
 
@@ -93,12 +93,12 @@ class UserSeeder extends Seeder
         $mahasiswa = User::firstOrCreate(
             ['email' => 'mahasiswa@ews.com'],
             [
-                'name'     => 'Mahasiswa EWS Test',
+                'name' => 'Mahasiswa EWS Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA11?->id,
             ]
         );
-        if (!$mahasiswa->hasRole('mahasiswa')) {
+        if (! $mahasiswa->hasRole('mahasiswa')) {
             $mahasiswa->assignRole('mahasiswa');
         }
 

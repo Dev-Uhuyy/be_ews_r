@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\ProdiBelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
-use App\Traits\ProdiBelongsTo;
 
 class Mahasiswa extends Model
 {
-    use SoftDeletes, HasFactory, Notifiable, ProdiBelongsTo;
+    use HasFactory, Notifiable, ProdiBelongsTo, SoftDeletes;
 
     protected $table = 'mahasiswa';
 

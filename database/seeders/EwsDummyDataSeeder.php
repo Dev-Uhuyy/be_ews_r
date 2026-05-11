@@ -2,16 +2,20 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
-use App\Models\Mahasiswa;
 use App\Models\AkademikMahasiswa;
-use App\Models\Prodi;
-use App\Models\MataKuliah;
-use App\Models\KhsKrsMahasiswa;
+use App\Models\Dosen;
 use App\Models\IpsMahasiswa;
+use App\Models\KelompokMataKuliah;
+use App\Models\KhsKrsMahasiswa;
+use App\Models\Mahasiswa;
+use App\Models\MataKuliah;
+use App\Models\Prodi;
+use App\Models\User;
 use App\Services\Kaprodi\EwsService;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class EwsDummyDataSeeder extends Seeder
 {
@@ -28,16 +32,17 @@ class EwsDummyDataSeeder extends Seeder
         $targetPerTahun = 75;
 
         // Ensure roles are assigned faster by getting the models
-        $mahasiswaRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'mahasiswa']);
+        $mahasiswaRole = Role::firstOrCreate(['name' => 'mahasiswa']);
 
         foreach ($prodis as $prodi) {
             $this->command->info("Seeding Mahasiswa for Prodi: {$prodi->kode_prodi} - {$prodi->nama}");
 
-            $dosenId = \App\Models\Dosen::where('prodi_id', $prodi->id)->first()?->id;
+            $dosenId = Dosen::where('prodi_id', $prodi->id)->first()?->id;
 
             // Jika dosen tidak ada untuk prodi ini, lewati mahasiswa untuk prodi ini agar tidak amburadul
-            if (!$dosenId) {
+            if (! $dosenId) {
                 $this->command->warn("  ⚠ Dosen untuk prodi {$prodi->kode_prodi} kosong. Melewati seeding prodi ini.");
+
                 continue;
             }
 
@@ -47,7 +52,7 @@ class EwsDummyDataSeeder extends Seeder
             // Jika untuk suatu alasan kosong, tetap beri penanganan sementara
             if ($mks->isEmpty()) {
                 $dummyMk = MataKuliah::firstOrCreate(
-                    ['kode' => $prodi->kode_prodi . '.DUMMY.1'],
+                    ['kode' => $prodi->kode_prodi.'.DUMMY.1'],
                     [
                         'prodi_id' => $prodi->id,
                         'name' => "Pemrograman Dasar {$prodi->kode_prodi}",
@@ -56,28 +61,28 @@ class EwsDummyDataSeeder extends Seeder
                         'tipe_mk' => 'prodi',
                     ]
                 );
-                
+
                 $mks = collect([$dummyMk]);
-                
+
                 // Assign a generic kelompok
-                \App\Models\KelompokMataKuliah::firstOrCreate([
+                KelompokMataKuliah::firstOrCreate([
                     'mata_kuliah_id' => $dummyMk->id,
-                    'kode' => 'A'
+                    'kode' => 'A',
                 ], ['dosen_pengampu_id' => $dosenId]);
             }
 
             foreach ($tahunMasukList as $tahun) {
                 $this->command->info("  - Tahun Masuk: {$tahun}");
 
-                $currentYear = (int)date('Y');
+                $currentYear = (int) date('Y');
                 $diffYear = max(0, $currentYear - $tahun);
                 // Assume 2 semesters per year.
                 $baseSemesterAktif = ($diffYear * 2) + 1;
 
-                \Illuminate\Support\Facades\DB::beginTransaction();
+                DB::beginTransaction();
                 try {
                     for ($i = 100; $i <= (100 + $targetPerTahun); $i++) {
-                        $nim = $prodi->kode_prodi . '.' . $tahun . '.' . str_pad($i, 5, '0', STR_PAD_LEFT);
+                        $nim = $prodi->kode_prodi.'.'.$tahun.'.'.str_pad($i, 5, '0', STR_PAD_LEFT);
                         $email = "{$nim}@ews.com";
 
                         // 1. Create User
@@ -90,7 +95,7 @@ class EwsDummyDataSeeder extends Seeder
                             ]
                         );
 
-                        if (!$user->hasRole('mahasiswa')) {
+                        if (! $user->hasRole('mahasiswa')) {
                             $user->assignRole($mahasiswaRole);
                         }
 
@@ -113,7 +118,9 @@ class EwsDummyDataSeeder extends Seeder
 
                         // Hitung IPK sementara (di-update ulang setelah IPS dibuat)
                         $sksLulus = rand(20, 150);
-                        if ($statusMahasiswa == 'lulus') $sksLulus = max(144, $sksLulus);
+                        if ($statusMahasiswa == 'lulus') {
+                            $sksLulus = max(144, $sksLulus);
+                        }
 
                         $akademik = AkademikMahasiswa::updateOrCreate(
                             ['mahasiswa_id' => $mahasiswa->id],
@@ -141,7 +148,7 @@ class EwsDummyDataSeeder extends Seeder
                             $nilaiAkhir = $nilaiOptions[array_rand($nilaiOptions)];
 
                             // Get kelompok specifically for this dosen/mk
-                            $kelompok = \App\Models\KelompokMataKuliah::where('mata_kuliah_id', $mk->id)->first();
+                            $kelompok = KelompokMataKuliah::where('mata_kuliah_id', $mk->id)->first();
                             $kId = $kelompok ? $kelompok->id : null;
 
                             KhsKrsMahasiswa::updateOrCreate(
@@ -150,6 +157,7 @@ class EwsDummyDataSeeder extends Seeder
                                     'kelompok_id' => $kId,
                                     'semester_ambil' => rand(1, max(1, $semesterAktif)),
                                     'status' => 'B',
+                                    'absen' => round(rand(0, 16) * 6.25),
                                     'nilai_akhir_huruf' => $nilaiAkhir,
                                 ]
                             );
@@ -158,7 +166,7 @@ class EwsDummyDataSeeder extends Seeder
                         // Trigger E for someone randomly to make EWS more active
                         if ($mkCount > 0 && rand(1, 100) <= 25) { // 25% chance
                             $firstMk = $mks->first();
-                            $kelompok = \App\Models\KelompokMataKuliah::where('mata_kuliah_id', $firstMk->id)->first();
+                            $kelompok = KelompokMataKuliah::where('mata_kuliah_id', $firstMk->id)->first();
                             $kId = $kelompok ? $kelompok->id : null;
 
                             KhsKrsMahasiswa::updateOrCreate(
@@ -167,7 +175,8 @@ class EwsDummyDataSeeder extends Seeder
                                     'kelompok_id' => $kId,
                                     'semester_ambil' => $semesterAktif,
                                     'status' => 'B',
-                                    'nilai_akhir_huruf' => 'E'
+                                    'absen' => round(rand(0, 16) * 6.25),
+                                    'nilai_akhir_huruf' => 'E',
                                 ]
                             );
                         }
@@ -176,15 +185,15 @@ class EwsDummyDataSeeder extends Seeder
                         // IPS di-set hanya sampai semester yang действительно sudah ditempuh
                         // Semester 1 = ips_1, dst.
                         $ipsData = [
-                            'ips_1'  => rand(200, 400) / 100,
-                            'ips_2'  => $semesterAktif >= 2  ? rand(200, 400) / 100 : null,
-                            'ips_3'  => $semesterAktif >= 3  ? rand(200, 400) / 100 : null,
-                            'ips_4'  => $semesterAktif >= 4  ? rand(200, 400) / 100 : null,
-                            'ips_5'  => $semesterAktif >= 5  ? rand(150, 400) / 100 : null,
-                            'ips_6'  => $semesterAktif >= 6  ? rand(150, 400) / 100 : null,
-                            'ips_7'  => $semesterAktif >= 7  ? rand(150, 400) / 100 : null,
-                            'ips_8'  => $semesterAktif >= 8  ? rand(150, 400) / 100 : null,
-                            'ips_9'  => $semesterAktif >= 9  ? rand(150, 400) / 100 : null,
+                            'ips_1' => rand(200, 400) / 100,
+                            'ips_2' => $semesterAktif >= 2 ? rand(200, 400) / 100 : null,
+                            'ips_3' => $semesterAktif >= 3 ? rand(200, 400) / 100 : null,
+                            'ips_4' => $semesterAktif >= 4 ? rand(200, 400) / 100 : null,
+                            'ips_5' => $semesterAktif >= 5 ? rand(150, 400) / 100 : null,
+                            'ips_6' => $semesterAktif >= 6 ? rand(150, 400) / 100 : null,
+                            'ips_7' => $semesterAktif >= 7 ? rand(150, 400) / 100 : null,
+                            'ips_8' => $semesterAktif >= 8 ? rand(150, 400) / 100 : null,
+                            'ips_9' => $semesterAktif >= 9 ? rand(150, 400) / 100 : null,
                             'ips_10' => $semesterAktif >= 10 ? rand(150, 400) / 100 : null,
                             'ips_11' => $semesterAktif >= 11 ? rand(150, 400) / 100 : null,
                             'ips_12' => $semesterAktif >= 12 ? rand(150, 400) / 100 : null,
@@ -193,7 +202,7 @@ class EwsDummyDataSeeder extends Seeder
                         ];
 
                         // Hitung IPK sebagai rata-rata semua IPS yang ada
-                        $activeIps = array_filter($ipsData, fn($v) => $v !== null);
+                        $activeIps = array_filter($ipsData, fn ($v) => $v !== null);
                         $calculatedIpk = count($activeIps) > 0 ? round(array_sum($activeIps) / count($activeIps), 2) : null;
 
                         IpsMahasiswa::updateOrCreate(
@@ -207,26 +216,41 @@ class EwsDummyDataSeeder extends Seeder
                         // 7. Recalculate Status EWS for this student via EwsService
                         $ewsService->updateStatus($akademik);
                     }
-                    \Illuminate\Support\Facades\DB::commit();
+                    DB::commit();
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\DB::rollBack();
-                    $this->command->error("Gagal seeding tahun {$tahun}: " . $e->getMessage());
+                    DB::rollBack();
+                    $this->command->error("Gagal seeding tahun {$tahun}: ".$e->getMessage());
                 }
             }
         }
     }
 
-    private function getRandomStatus($semester) {
+    private function getRandomStatus($semester)
+    {
         $r = rand(1, 100);
         if ($semester <= 6) {
-            if ($r <= 85) return 'aktif';
-            if ($r <= 95) return 'cuti';
+            if ($r <= 85) {
+                return 'aktif';
+            }
+            if ($r <= 95) {
+                return 'cuti';
+            }
+
             return 'mangkir';
         } else {
-            if ($r <= 60) return 'aktif';
-            if ($r <= 80) return 'lulus';
-            if ($r <= 85) return 'cuti';
-            if ($r <= 95) return 'mangkir';
+            if ($r <= 60) {
+                return 'aktif';
+            }
+            if ($r <= 80) {
+                return 'lulus';
+            }
+            if ($r <= 85) {
+                return 'cuti';
+            }
+            if ($r <= 95) {
+                return 'mangkir';
+            }
+
             return 'do';
         }
     }

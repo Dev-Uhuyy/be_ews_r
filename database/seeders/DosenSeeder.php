@@ -33,8 +33,9 @@ class DosenSeeder extends Seeder
             $prodi = Prodi::where('kode_prodi', $data['kode_prodi'])->first();
 
             // Pastikan user-nya ada
-            if (!User::find($data['user_id'])) {
+            if (! User::find($data['user_id'])) {
                 $this->command->warn("⚠ User ID {$data['user_id']} tidak ditemukan, dosen untuk {$data['kode_prodi']} dilewati.");
+
                 continue;
             }
 
@@ -42,11 +43,11 @@ class DosenSeeder extends Seeder
                 ['user_id' => $data['user_id']],
                 [
                     'prodi_id' => $prodi?->id,
-                    'npp'      => $data['npp'],
+                    'npp' => $data['npp'],
                 ]
             );
         }
 
-        $this->command->info('✔ DosenSeeder: ' . Dosen::count() . ' dosen tersedia.');
+        $this->command->info('✔ DosenSeeder: '.Dosen::count().' dosen tersedia.');
     }
 }

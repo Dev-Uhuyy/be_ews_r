@@ -23,10 +23,10 @@ class ProdiSeeder extends Seeder
         foreach ($prodis as $prodi) {
             Prodi::firstOrCreate(
                 ['kode_prodi' => $prodi['kode_prodi']],
-                ['nama'       => $prodi['nama']]
+                ['nama' => $prodi['nama']]
             );
         }
 
-        $this->command->info('✔ ProdiSeeder: ' . count($prodis) . ' prodi tersedia.');
+        $this->command->info('✔ ProdiSeeder: '.count($prodis).' prodi tersedia.');
     }
 }

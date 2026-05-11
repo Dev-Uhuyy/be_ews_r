@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Kaprodi;
 
+use App\Http\Controllers\Controller;
 use App\Services\Kaprodi\KaprodiMahasiswaListService;
 use App\Services\Kaprodi\KaprodiNilaiMahasiswaService;
-use App\Http\Controllers\Controller;
 
 /**
  * @tags Kaprodi - Mahasiswa List
@@ -12,13 +12,14 @@ use App\Http\Controllers\Controller;
 class KaprodiMahasiswaController extends Controller
 {
     protected $mahasiswaListService;
+
     protected $nilaiMahasiswaService;
 
     public function __construct(
-        KaprodiMahasiswaListService  $mahasiswaListService,
+        KaprodiMahasiswaListService $mahasiswaListService,
         KaprodiNilaiMahasiswaService $nilaiMahasiswaService
     ) {
-        $this->mahasiswaListService  = $mahasiswaListService;
+        $this->mahasiswaListService = $mahasiswaListService;
         $this->nilaiMahasiswaService = $nilaiMahasiswaService;
     }
 
@@ -116,7 +117,7 @@ class KaprodiMahasiswaController extends Controller
         try {
             $filters = request()->query();
             $perPage = (int) request()->query('per_page', 10);
-            $search  = request()->query('search');
+            $search = request()->query('search');
 
             $data = $this->nilaiMahasiswaService->getNilaiMahasiswaList($filters, $perPage, $search);
 

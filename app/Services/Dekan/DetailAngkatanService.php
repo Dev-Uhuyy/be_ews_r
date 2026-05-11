@@ -1,32 +1,32 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Dekan;
 
 use App\Models\AkademikMahasiswa;
 use App\Models\KhsKrsMahasiswa;
+use App\Models\Prodi;
 use Illuminate\Support\Facades\DB;
 
 class DetailAngkatanService
 {
-    /**
-     * Get detail mahasiswa per angkatan (tahun_masuk)
-     * Optional filter: prodi_id
-     */
-    public function getDetailAngkatan($tahunMasuk, $prodiId = null)
+    public function getDetailAngkatan(int $tahunMasuk, ?int $prodiId = null): array
     {
         $query = AkademikMahasiswa::select(
-                    'mahasiswa.id as mahasiswa_id',
-                    'mahasiswa.nim',
-                    'users.name as nama_mahasiswa',
-                    'akademik_mahasiswa.sks_lulus',
-                    'akademik_mahasiswa.ipk',
-                    DB::raw('early_warning_system.status_kelulusan as eligible')
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->join('users', 'mahasiswa.user_id', '=', 'users.id')
-                ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-                ->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk)
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            'akademik_mahasiswa.id as akademik_id',
+            'mahasiswa.id as mahasiswa_id',
+            'mahasiswa.nim',
+            'users.name as nama_mahasiswa',
+            'akademik_mahasiswa.sks_lulus',
+            'akademik_mahasiswa.ipk',
+            'early_warning_system.status_kelulusan as eligible'
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
         if ($prodiId) {
             $query->where('mahasiswa.prodi_id', $prodiId);
@@ -34,10 +34,16 @@ class DetailAngkatanService
 
         $mahasiswas = $query->orderBy('users.name', 'asc')->get();
 
+        $akademikIds = $mahasiswas->pluck('akademik_id')->toArray();
+        $mahasiswaIds = $mahasiswas->pluck('mahasiswa_id')->toArray();
+
+        $allKhsData = $this->getAllNilaiDetails($mahasiswaIds);
+        $allMkStatus = $this->getAllMkStatus($akademikIds);
+
         $result = [];
         foreach ($mahasiswas as $mhs) {
-            $detail = $this->getNilaiDetail($mhs->mahasiswa_id);
-            $mkStatus = $this->getMkStatus($mhs->mahasiswa_id);
+            $detail = $allKhsData[$mhs->mahasiswa_id] ?? ['jumlah_nilai_d' => 0, 'total_sks_nilai_d' => 0, 'jumlah_nilai_e' => 0, 'total_sks_nilai_e' => 0];
+            $mkStatus = $allMkStatus[$mhs->akademik_id] ?? ['mk_nasional' => 'no', 'mk_fakultMagento' => 'no', 'mk_prodi' => 'no'];
 
             $result[] = [
                 'mahasiswa_id' => $mhs->mahasiswa_id,
@@ -54,7 +60,7 @@ class DetailAngkatanService
                     'total_sks' => $detail['total_sks_nilai_e'],
                 ],
                 'mk_nasional' => $mkStatus['mk_nasional'],
-                'mk_fakultas' => $mkStatus['mk_fakultas'],
+                'mk_fakultMagento' => $mkStatus['mk_fakultMagento'],
                 'mk_prodi' => $mkStatus['mk_prodi'],
                 'eligible' => $mhs->eligible ?? 'noneligible',
             ];
@@ -63,75 +69,76 @@ class DetailAngkatanService
         return $result;
     }
 
-    /**
-     * Get detail nilai D dan E dari khs_krs_mahasiswa
-     */
-    private function getNilaiDetail($mahasiswaId)
+    private function getAllNilaiDetails(array $mahasiswaIds): array
     {
+        if (empty($mahasiswaIds)) {
+            return [];
+        }
+
         $khsData = KhsKrsMahasiswa::join('mata_kuliahs', 'khs_krs_mahasiswa.matakuliah_id', '=', 'mata_kuliahs.id')
-            ->where('khs_krs_mahasiswa.mahasiswa_id', $mahasiswaId)
-            ->whereIn('khs_krs_mahasiswa.id', function ($query) use ($mahasiswaId) {
+            ->whereIn('khs_krs_mahasiswa.mahasiswa_id', $mahasiswaIds)
+            ->whereIn('khs_krs_mahasiswa.id', function ($query) use ($mahasiswaIds) {
                 $query->select(DB::raw('MAX(id)'))
                     ->from('khs_krs_mahasiswa')
-                    ->where('mahasiswa_id', $mahasiswaId)
+                    ->whereIn('mahasiswa_id', $mahasiswaIds)
                     ->groupBy('matakuliah_id');
             })
             ->select(
+                'khs_krs_mahasiswa.mahasiswa_id',
                 'khs_krs_mahasiswa.nilai_akhir_huruf',
                 'mata_kuliahs.sks'
             )
             ->get();
 
-        $jumlahNilaiD = 0;
-        $totalSksNilaiD = 0;
-        $jumlahNilaiE = 0;
-        $totalSksNilaiE = 0;
+        $result = [];
+        foreach ($mahasiswaIds as $mhsId) {
+            $result[$mhsId] = ['jumlah_nilai_d' => 0, 'total_sks_nilai_d' => 0, 'jumlah_nilai_e' => 0, 'total_sks_nilai_e' => 0];
+        }
 
         foreach ($khsData as $khs) {
+            $mhsId = $khs->mahasiswa_id;
             if ($khs->nilai_akhir_huruf === 'D') {
-                $jumlahNilaiD++;
-                $totalSksNilaiD += $khs->sks ?? 0;
+                $result[$mhsId]['jumlah_nilai_d']++;
+                $result[$mhsId]['total_sks_nilai_d'] += $khs->sks ?? 0;
             } elseif ($khs->nilai_akhir_huruf === 'E') {
-                $jumlahNilaiE++;
-                $totalSksNilaiE += $khs->sks ?? 0;
+                $result[$mhsId]['jumlah_nilai_e']++;
+                $result[$mhsId]['total_sks_nilai_e'] += $khs->sks ?? 0;
             }
         }
 
-        return [
-            'jumlah_nilai_d' => $jumlahNilaiD,
-            'total_sks_nilai_d' => $totalSksNilaiD,
-            'jumlah_nilai_e' => $jumlahNilaiE,
-            'total_sks_nilai_e' => $totalSksNilaiE,
-        ];
+        return $result;
     }
 
-    /**
-     * Get status MK Nasional, Fakultas, Prodi
-     */
-    private function getMkStatus($mahasiswaId)
+    private function getAllMkStatus(array $akademikIds): array
     {
-        $akademik = AkademikMahasiswa::where('mahasiswa_id', $mahasiswaId)->first();
+        if (empty($akademikIds)) {
+            return [];
+        }
 
-        return [
-            'mk_nasional' => $akademik->mk_nasional ?? 'no',
-            'mk_fakultas' => $akademik->mk_fakultas ?? 'no',
-            'mk_prodi' => $akademik->mk_prodi ?? 'no',
-        ];
+        $akademiks = AkademikMahasiswa::whereIn('id', $akademikIds)->get()->keyBy('id');
+
+        $result = [];
+        foreach ($akademikIds as $id) {
+            $akademik = $akademiks->get($id);
+            $result[$id] = [
+                'mk_nasional' => $akademik?->mk_nasional ?? 'no',
+                'mk_fakultMagento' => $akademik?->mk_fakultMagento ?? 'no',
+                'mk_prodi' => $akademik?->mk_prodi ?? 'no',
+            ];
+        }
+
+        return $result;
     }
 
-    /**
-     * Get list tahun angkatan dan prodi yang tersedia
-     * Optional filter: prodi_id
-     */
-    public function getTahunAngkatan($prodiId = null)
+    public function getTahunAngkatan(?int $prodiId = null): array
     {
         $query = AkademikMahasiswa::select(
-                    'tahun_masuk',
-                    DB::raw('GROUP_CONCAT(DISTINCT mahasiswa.prodi_id) as prodi_ids')
-                )
-                ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-                ->whereNotNull('tahun_masuk')
-                ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            'tahun_masuk',
+            DB::raw('GROUP_CONCAT(DISTINCT mahasiswa.prodi_id) as prodi_ids')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereNotNull('tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
         if ($prodiId) {
             $query->where('mahasiswa.prodi_id', $prodiId);
@@ -141,52 +148,25 @@ class DetailAngkatanService
             ->orderBy('tahun_masuk', 'desc')
             ->get();
 
-        $prodis = \App\Models\Prodi::all();
+        $prodis = Prodi::query()->when($prodiId, fn ($q) => $q->where('id', $prodiId))->get();
 
-        if ($prodiId) {
-            $prodiDetails = $prodis->filter(function ($prodi) use ($prodiId) {
-                return $prodi->id == $prodiId;
-            })->map(function ($prodi) {
-                return [
-                    'id' => $prodi->id,
-                    'kode_prodi' => $prodi->kode_prodi,
-                    'nama_prodi' => $prodi->nama,
-                ];
-            })->values();
-        } else {
-            $prodiDetails = $prodis->map(function ($prodi) {
-                return [
-                    'id' => $prodi->id,
-                    'kode_prodi' => $prodi->kode_prodi,
-                    'nama_prodi' => $prodi->nama,
-                ];
-            });
-        }
+        $prodiDetails = $prodis->map(fn ($prodi) => [
+            'id' => $prodi->id,
+            'kode_prodi' => $prodi->kode_prodi,
+            'nama_prodi' => $prodi->nama,
+        ])->values();
 
-        $tahunAngkatan = $tahunAngkatanData->map(function ($item) use ($prodis, $prodiId) {
+        $tahunAngkatan = $tahunAngkatanData->map(function ($item) use ($prodis): array {
             $prodiIds = $item->prodi_ids ? explode(',', $item->prodi_ids) : [];
-
-            if ($prodiId) {
-                $filteredProdis = $prodis->filter(function ($prodi) use ($prodiIds) {
-                    return in_array($prodi->id, $prodiIds);
-                });
-            } else {
-                $filteredProdis = $prodis->filter(function ($prodi) use ($prodiIds) {
-                    return in_array($prodi->id, $prodiIds);
-                });
-            }
-
-            $prodiDetails = $filteredProdis->map(function ($prodi) {
-                return [
-                    'id' => $prodi->id,
-                    'kode_prodi' => $prodi->kode_prodi,
-                    'nama_prodi' => $prodi->nama,
-                ];
-            })->values();
+            $filteredProdis = $prodis->filter(fn ($prodi) => in_array($prodi->id, $prodiIds));
 
             return [
                 'tahun_masuk' => $item->tahun_masuk,
-                'prodi' => $prodiDetails,
+                'prodi' => $filteredProdis->map(fn ($prodi) => [
+                    'id' => $prodi->id,
+                    'kode_prodi' => $prodi->kode_prodi,
+                    'nana_prodi' => $prodi->nama,
+                ])->values(),
             ];
         });
 

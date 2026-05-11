@@ -19,6 +19,8 @@ class KaprodiCapaianMahasiswaService
     {
         $prodiId = $this->getProdiId();
 
+        $prodiQuery = DB::table('prodis')->where('id', $prodiId)->first();
+
         $query = DB::table('khs_krs_mahasiswa as khs')
             ->join('mata_kuliahs as mk', 'khs.matakuliah_id', '=', 'mk.id')
             ->join('mahasiswa', 'khs.mahasiswa_id', '=', 'mahasiswa.id')
@@ -31,30 +33,39 @@ class KaprodiCapaianMahasiswaService
                 'mk.kode as kode_matakuliah',
                 'mk.name as nama_matakuliah',
                 'mk.sks',
-                DB::raw('COUNT(DISTINCT khs.mahasiswa_id) as jumlah_mahasiswa_gagal'),
-                DB::raw('MAX(khs.id) as latest_khs_id')
+                DB::raw('COUNT(DISTINCT khs.mahasiswa_id) as jumlah_mahasiswa_gagal')
             )
             ->groupBy('mk.id', 'mk.kode', 'mk.name', 'mk.sks');
 
-        if (!empty($filters['tahun_masuk'])) {
+        if (! empty($filters['tahun_masuk'])) {
             $query->where('am.tahun_masuk', $filters['tahun_masuk']);
         }
 
         $results = $query->orderBy('jumlah_mahasiswa_gagal', 'desc')->get();
 
-        $formattedData = $results->map(function ($mk) {
-            return [
+        $top10 = $results->take(10)->values();
+        $totalPerProdi = $results->sum('jumlah_mahasiswa_gagal');
+
+        $formattedData = [
+            'prodi' => [
+                'id' => $prodiId,
+                'kode_prodi' => $prodiQuery->kode_prodi,
+                'nama_prodi' => $prodiQuery->nama,
+            ],
+            'total_mahasiswa_gagal' => $totalPerProdi,
+            'top_matakuliah_gagal' => $top10->map(fn ($mk) => [
                 'matakuliah_id' => $mk->matakuliah_id,
                 'kode_matakuliah' => $mk->kode_matakuliah,
                 'nama_matakuliah' => $mk->nama_matakuliah,
                 'sks' => $mk->sks,
                 'jumlah_mahasiswa_gagal' => $mk->jumlah_mahasiswa_gagal,
-            ];
-        })->values()->toArray();
+            ])->toArray(),
+        ];
 
         return [
-            'total_matakuliah' => count($formattedData),
-            'data' => $formattedData,
+            'total_prodi' => 1,
+            'total_gagal' => $totalPerProdi,
+            'data_per_prodi' => [$formattedData],
         ];
     }
 
@@ -210,6 +221,8 @@ class KaprodiCapaianMahasiswaService
     {
         $prodiId = $this->getProdiId();
 
+        $prodiQuery = DB::table('prodis')->where('id', $prodiId)->first();
+
         // Get jumlah matakuliah gagal per angkatan
         $sqlGagal = "
             SELECT
@@ -270,7 +283,7 @@ class KaprodiCapaianMahasiswaService
             }
 
             if ($ipsTerakhir !== null && $ipsSebelum !== null) {
-                if (!isset($ipsDataByTahun[$tahun])) {
+                if (! isset($ipsDataByTahun[$tahun])) {
                     $ipsDataByTahun[$tahun] = [
                         'total_ips_terakhir' => 0,
                         'total_ips_sebelum' => 0,
@@ -282,6 +295,20 @@ class KaprodiCapaianMahasiswaService
                 $ipsDataByTahun[$tahun]['count']++;
             }
         }
+
+        // Get SKS data per angkatan
+        $sksQuery = DB::table('akademik_mahasiswa as akademik')
+            ->join('mahasiswa as m', 'akademik.mahasiswa_id', '=', 'm.id')
+            ->whereRaw('LOWER(m.status_mahasiswa) NOT IN (\'lulus\', \'do\')')
+            ->where('m.prodi_id', $prodiId)
+            ->select(
+                'akademik.tahun_masuk as tahun_angkatan',
+                DB::raw('SUM(akademik.sks_lulus) as total_sks_lulus'),
+                DB::raw('COUNT(*) as jumlah_mahasiswa')
+            )
+            ->groupBy('akademik.tahun_masuk');
+
+        $sksResults = $sksQuery->get()->keyBy('tahun_angkatan');
 
         $formattedData = [];
         foreach ($ipsDataByTahun as $tahun => $data) {
@@ -298,15 +325,25 @@ class KaprodiCapaianMahasiswaService
             }
 
             $gagalData = $gagalByTahun->get($tahun);
+            $sksData = $sksResults->get($tahun);
+            $rataRataSks = ($sksData && $sksData->jumlah_mahasiswa > 0)
+                ? round($sksData->total_sks_lulus / $sksData->jumlah_mahasiswa, 2)
+                : 0;
 
             $formattedData[] = [
+                'prodi' => [
+                    'id' => $prodiId,
+                    'kode_prodi' => $prodiQuery->kode_prodi,
+                    'nama_prodi' => $prodiQuery->nama,
+                ],
                 'tahun_angkatan' => (int) $tahun,
                 'tren_ips' => $trenIPS,
                 'jumlah_matakuliah_gagal' => $gagalData ? (int) $gagalData->jumlah_matakuliah_gagal : 0,
+                'rata_rata_sks_lulus' => $rataRataSks,
             ];
         }
 
-        usort($formattedData, function($a, $b) {
+        usort($formattedData, function ($a, $b) {
             return $a['tahun_angkatan'] - $b['tahun_angkatan'];
         });
 
@@ -322,7 +359,7 @@ class KaprodiCapaianMahasiswaService
     public function getListMataKuliahPerProdi($filters = [])
     {
         $prodiId = $this->getProdiId();
-        $groupByAngkatan = !empty($filters['tahun_masuk']);
+        $groupByAngkatan = ! empty($filters['tahun_masuk']);
 
         if ($groupByAngkatan) {
             $sql = "
@@ -420,44 +457,55 @@ class KaprodiCapaianMahasiswaService
                 m.nim,
                 u.name as nama_mahasiswa,
                 akademik.tahun_masuk as tahun_angkatan,
-                khs.nilai_akhir_huruf as nilai
+                khs.nilai_akhir_huruf as nilai,
+                kel.id as kelompok_id,
+                kel.kode as kode_kelompok,
+                dos_user.name as nama_dosen_pengampu,
+                khs.absen
             FROM khs_krs_mahasiswa khs
             JOIN mahasiswa m ON khs.mahasiswa_id = m.id
             JOIN users u ON m.user_id = u.id
             JOIN akademik_mahasiswa akademik ON khs.mahasiswa_id = akademik.mahasiswa_id
+            JOIN kelompok_mata_kuliah kel ON khs.kelompok_id = kel.id
+            JOIN dosen dos ON kel.dosen_pengampu_id = dos.id
+            JOIN users dos_user ON dos.user_id = dos_user.id
             WHERE khs.matakuliah_id = ?
             AND khs.nilai_akhir_huruf = 'E'
             AND LOWER(m.status_mahasiswa) NOT IN ('lulus', 'do')
             AND m.prodi_id = ?
         ";
 
-        if (!empty($filters['tahun_masuk'])) {
-            $sql .= " AND akademik.tahun_masuk = " . intval($filters['tahun_masuk']);
+        if (! empty($filters['tahun_masuk'])) {
+            $sql .= ' AND akademik.tahun_masuk = '.intval($filters['tahun_masuk']);
         }
 
-        $sql .= " ORDER BY akademik.tahun_masuk ASC, u.name ASC";
+        $sql .= ' ORDER BY akademik.tahun_masuk ASC, kel.kode ASC, u.name ASC';
 
         $results = DB::select($sql, [$filters['matakuliah_id'], $prodiId]);
 
-        // Group by tahun angkatan
-        $groupedByTahun = collect($results)->groupBy('tahun_angkatan');
+        // Group by tahun angkatan + kelompok_id (each kelompok has different dosen)
+        $groupedByKey = collect($results)->groupBy(fn ($item) => $item->tahun_angkatan.'_'.$item->kelompok_id);
 
         $formattedData = [];
-        foreach ($groupedByTahun as $tahun => $mahasiswaList) {
+        foreach ($groupedByKey as $key => $mahasiswaList) {
+            $firstItem = $mahasiswaList->first();
             $formattedData[] = [
-                'tahun_angkatan' => (int) $tahun,
+                'tahun_angkatan' => (int) $firstItem->tahun_angkatan,
+                'dosen_pengampu' => $firstItem->nama_dosen_pengampu ?? null,
+                'kode_kelompok' => $firstItem->kode_kelompok ?? null,
                 'jumlah_mahasiswa' => $mahasiswaList->count(),
                 'mahasiswa' => $mahasiswaList->map(function ($m) {
                     return [
                         'mahasiswa_id' => (int) $m->mahasiswa_id,
                         'nim' => $m->nim,
                         'nama_mahasiswa' => $m->nama_mahasiswa,
+                        'presensi' => $m->absen ?? 0,
                     ];
                 })->values()->toArray(),
             ];
         }
 
-        usort($formattedData, function($a, $b) {
+        usort($formattedData, function ($a, $b) {
             return $a['tahun_angkatan'] - $b['tahun_angkatan'];
         });
 
@@ -527,7 +575,7 @@ class KaprodiCapaianMahasiswaService
         }
 
         // Sort by nama_mahasiswa
-        usort($mahasiswaList, function($a, $b) {
+        usort($mahasiswaList, function ($a, $b) {
             return strcmp($a['nama_mahasiswa'], $b['nama_mahasiswa']);
         });
 

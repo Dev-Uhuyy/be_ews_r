@@ -19,41 +19,44 @@ class AkademikMahasiswaSeeder extends Seeder
 
         if ($mahasiswas->isEmpty()) {
             $this->command->warn('⚠ Tidak ada mahasiswa ditemukan.');
+
             return;
         }
-        
+
         $dosenCache = [];
 
         foreach ($mahasiswas as $mhs) {
-            if (!array_key_exists($mhs->prodi_id, $dosenCache)) {
+            if (! array_key_exists($mhs->prodi_id, $dosenCache)) {
                 $dosenProdi = Dosen::where('prodi_id', $mhs->prodi_id)->first();
                 $dosenCache[$mhs->prodi_id] = $dosenProdi;
             }
-            
+
             $dosen = $dosenCache[$mhs->prodi_id];
-            
-            if (!$dosen) continue;
+
+            if (! $dosen) {
+                continue;
+            }
 
             AkademikMahasiswa::firstOrCreate(
                 ['mahasiswa_id' => $mhs->id],
                 [
-                    'dosen_wali_id'  => $dosen->id,
+                    'dosen_wali_id' => $dosen->id,
                     'semester_aktif' => 5,
-                    'tahun_masuk'    => 2020,
-                    'ipk'            => null,
-                    'mk_nasional'    => 'no',
-                    'mk_fakultas'    => 'no',
-                    'mk_prodi'       => 'no',
-                    'sks_tempuh'     => null,
-                    'sks_now'        => null,
-                    'sks_lulus'      => null,
-                    'sks_gagal'      => null,
+                    'tahun_masuk' => 2020,
+                    'ipk' => null,
+                    'mk_nasional' => 'no',
+                    'mk_fakultas' => 'no',
+                    'mk_prodi' => 'no',
+                    'sks_tempuh' => null,
+                    'sks_now' => null,
+                    'sks_lulus' => null,
+                    'sks_gagal' => null,
                     'nilai_d_melebihi_batas' => 'no',
-                    'nilai_e'        => 'no',
+                    'nilai_e' => 'no',
                 ]
             );
         }
 
-        $this->command->info('✔ AkademikMahasiswaSeeder: ' . $mahasiswas->count() . ' record akademik dibuat (multi-prodi).');
+        $this->command->info('✔ AkademikMahasiswaSeeder: '.$mahasiswas->count().' record akademik dibuat (multi-prodi).');
     }
 }

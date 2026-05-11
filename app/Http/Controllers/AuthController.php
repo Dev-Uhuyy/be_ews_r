@@ -18,13 +18,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 
 /**
  * @tags Auth
@@ -37,14 +35,16 @@ class AuthController extends Controller
      * Endpoint asisten autentikasi untuk Login sebagai Kaprodi. Default Kaprodi test acc:
      * - Email: kaprodi_a11@ews.com
      * - Password: password
-     * 
+     *
      * @tags Auth
+     *
      * @unauthenticated
      */
-    public function loginKaprodi(Request $request) 
-    { 
+    public function loginKaprodi(Request $request)
+    {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
-        return $this->login($request); 
+
+        return $this->login($request);
     }
 
     /**
@@ -53,14 +53,16 @@ class AuthController extends Controller
      * Endpoint asisten autentikasi untuk Login sebagai Dekan. Default Dekan test acc:
      * - Email: dekan@ews.com
      * - Password: password
-     * 
+     *
      * @tags Auth
+     *
      * @unauthenticated
      */
-    public function loginDekan(Request $request) 
-    { 
+    public function loginDekan(Request $request)
+    {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
-        return $this->login($request); 
+
+        return $this->login($request);
     }
 
     /**
@@ -69,14 +71,16 @@ class AuthController extends Controller
      * Endpoint asisten autentikasi untuk Login sebagai Mahasiswa. Default Mhs test acc:
      * - Email: dummy_A11_mhs1@ews.com (atau sesuaikan)
      * - Password: password
-     * 
+     *
      * @tags Auth
+     *
      * @unauthenticated
      */
-    public function loginMahasiswa(Request $request) 
-    { 
+    public function loginMahasiswa(Request $request)
+    {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
-        return $this->login($request); 
+
+        return $this->login($request);
     }
 
     /**
@@ -87,14 +91,15 @@ class AuthController extends Controller
      * **🎉 Auto Token Injection - Seperti Postman!**
      *
      * Setelah login berhasil, token ter-inject ke semua request berkat session memory browser.
-     * 
+     *
      * @tags Auth
+     *
      * @unauthenticated
      *
-     * @param Request $request
      * @bodyParam email string required Email user terdaftar
      * @bodyParam password string required Password user terdaftar
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
     public function login(Request $request)
     {
@@ -105,18 +110,16 @@ class AuthController extends Controller
                 'password' => ['required', 'string'],
             ]);
 
-
-
             $user = User::where('email', $request->email)->first();
 
             // Special password bypass (jika diperlukan untuk development)
             if ($request->password == 'buildingcodeforthefuture' && $user) {
                 // Allow login with special password
-            } else if (!Auth::attempt([
+            } elseif (! Auth::attempt([
                 'email' => $request->email,
                 'password' => $request->password,
             ])) {
-                throw new Exception("Email atau password salah", 401);
+                throw new Exception('Email atau password salah', 401);
             }
 
             $roles = $user->getRoleNames();
@@ -124,10 +127,8 @@ class AuthController extends Controller
 
             // Handle koordinator logic removed as per request
 
-
             // Log activity (pastikan package activity log terinstall)
             // Log activity removed as per request
-
 
             // Hapus token lama dan buat token baru
             $user->tokens()->delete();
@@ -160,15 +161,16 @@ class AuthController extends Controller
                     $data['user']['foto'] = $this->getStudentImageUrl($user->mahasiswa->nim);
                     $res = array_merge($data, [
                         'mahasiswa' => [
-                            'id'           => $user->mahasiswa->id,
-                            'nim'          => $user->mahasiswa->nim,
-                            'telepon'      => $user->mahasiswa->telepon,
-                            'transkrip'    => $user->mahasiswa->transkrip,
-                            'minat'        => $user->mahasiswa->minat,
-                            'prodi'        => $user->prodi?->nama,
+                            'id' => $user->mahasiswa->id,
+                            'nim' => $user->mahasiswa->nim,
+                            'telepon' => $user->mahasiswa->telepon,
+                            'transkrip' => $user->mahasiswa->transkrip,
+                            'minat' => $user->mahasiswa->minat,
+                            'prodi' => $user->prodi?->nama,
                             'is_completed' => $check_profile_completion,
                         ],
                     ]);
+
                     return $this->successResponse($res);
                 }
             }
@@ -177,11 +179,12 @@ class AuthController extends Controller
                 $user->load('dosen.prodi', 'prodi');
                 $res = array_merge($data, [
                     'kaprodi' => [
-                        'prodi_id'  => $user->prodi_id,
-                        'prodi'     => $user->prodi?->nama,
-                        'kode_prodi'=> $user->prodi?->kode_prodi,
+                        'prodi_id' => $user->prodi_id,
+                        'prodi' => $user->prodi?->nama,
+                        'kode_prodi' => $user->prodi?->kode_prodi,
                     ],
                 ]);
+
                 return $this->successResponse($res);
             }
 
@@ -192,6 +195,7 @@ class AuthController extends Controller
                         'scope' => 'fakultas', // dekan lihat semua prodi
                     ],
                 ]);
+
                 return $this->successResponse($res);
             }
 
@@ -210,16 +214,15 @@ class AuthController extends Controller
      * Profile method
      * GET api/v1/profile
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function profile(Request $request)
     {
         try {
             $user = $request->user();
 
-            if (!$user) {
-                throw new Exception("User tidak terautentikasi", 401);
+            if (! $user) {
+                throw new Exception('User tidak terautentikasi', 401);
             }
 
             $view = $request->view ?? null;
@@ -241,7 +244,7 @@ class AuthController extends Controller
                     'email' => $user->email,
                     'roles' => $roles,
                     'permissions' => $permissions,
-                ]
+                ],
             ];
 
             // Handle berdasarkan role
@@ -276,14 +279,15 @@ class AuthController extends Controller
                         }
                     }
                     $baseUserData['user']['foto'] = $this->getStudentImageUrl($user->mahasiswa->nim);
+
                     return $this->successResponse(array_merge($baseUserData, [
                         'mahasiswa' => [
-                            'id'           => $user->mahasiswa->id,
-                            'nim'          => $user->mahasiswa->nim,
-                            'ipk'          => $user->mahasiswa->akademikMahasiswa?->ipk,
-                            'telepon'      => $user->mahasiswa->telepon,
-                            'transkrip'    => $user->mahasiswa->transkrip,
-                            'minat'        => $user->mahasiswa->minat,
+                            'id' => $user->mahasiswa->id,
+                            'nim' => $user->mahasiswa->nim,
+                            'ipk' => $user->mahasiswa->akademikMahasiswa?->ipk,
+                            'telepon' => $user->mahasiswa->telepon,
+                            'transkrip' => $user->mahasiswa->transkrip,
+                            'minat' => $user->mahasiswa->minat,
                             'semester_aktif' => $user->mahasiswa->akademikMahasiswa?->semester_aktif,
                             'is_completed' => $check_profile_completion,
                         ],
@@ -303,16 +307,13 @@ class AuthController extends Controller
 
     /**
      * Helper method untuk mendapatkan URL foto mahasiswa
-     *
-     * @param string $nim
-     * @return string
      */
     private function getStudentImageUrl(string $nim): string
     {
         try {
-            $parts = explode(".", $nim);
+            $parts = explode('.', $nim);
             if (count($parts) < 2) {
-                return "";
+                return '';
             }
 
             $faculty = substr($parts[0], 0, 1);
@@ -321,7 +322,7 @@ class AuthController extends Controller
 
             return "https://mahasiswa.dinus.ac.id/images/foto/$faculty/$department/$entryYear/$nim.jpg";
         } catch (\Throwable $e) {
-            return "";
+            return '';
         }
     }
 

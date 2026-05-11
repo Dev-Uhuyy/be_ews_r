@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
-use App\Services\Mahasiswa\Export\ProfileExportService;
 use App\Http\Controllers\Controller;
+use App\Services\Mahasiswa\Export\ProfileExportService;
 
 /**
  * @tags Mahasiswa - Export
