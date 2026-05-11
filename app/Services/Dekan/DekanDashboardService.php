@@ -40,7 +40,7 @@ class DekanDashboardService
         $totalAktif = ($statusBreakdown->get('aktif')->jumlah ?? 0) + ($statusBreakdown->get('Aktif')->jumlah ?? 0);
         $totalMangkir = ($statusBreakdown->get('mangkir')->jumlah ?? 0) + ($statusBreakdown->get('Mangkir')->jumlah ?? 0);
         $totalCuti = ($statusBreakdown->get('cuti')->jumlah ?? 0) + ($statusBreakdown->get('Cuti')->jumlah ?? 0);
-        $totalDO = (clone $query)->whereRaw('LOWER(status_mahasiswa) = "do"')->count();
+        $totalDO = Mahasiswa::whereRaw('LOWER(status_mahasiswa) = "do"')->count();
 
         return [
             'total_mahasiswa' => $totalMahasiswa,
@@ -100,11 +100,12 @@ class DekanDashboardService
 
     private function getRingkasanPerProdi(Prodi $prodi): array
     {
-        $query = AkademikMahasiswa::select(
+        $queryNonDo = AkademikMahasiswa::select(
             DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_tidak_aktif'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
@@ -116,7 +117,12 @@ class DekanDashboardService
             ->where('mahasiswa.prodi_id', $prodi->id)
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
-        $stats = $query->first();
+        $statsNonDo = $queryNonDo->first();
+
+        $jumlahDo = AkademikMahasiswa::join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->where('mahasiswa.prodi_id', $prodi->id)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"')
+            ->count();
 
         return [
             'prodi' => [
@@ -124,15 +130,17 @@ class DekanDashboardService
                 'kode_prodi' => $prodi->kode_prodi,
                 'nama_prodi' => $prodi->nama,
             ],
-            'jumlah_mahasiswa' => $stats->jumlah_mahasiswa ?? 0,
-            'jumlah_mahasiswa_aktif' => $stats->jumlah_mahasiswa_aktif ?? 0,
-            'jumlah_mahasiswa_cuti' => $stats->jumlah_mahasiswa_cuti ?? 0,
-            'jumlah_mahasiswa_mangkir' => $stats->jumlah_mahasiswa_mangkir ?? 0,
-            'ipk_rata_rata' => $stats->ipk_rata_rata ?? 0,
-            'jumlah_tepat_waktu' => $stats->jumlah_tepat_waktu ?? 0,
-            'jumlah_normal' => $stats->jumlah_normal ?? 0,
-            'jumlah_perhatian' => $stats->jumlah_perhatian ?? 0,
-            'jumlah_kritis' => $stats->jumlah_kritis ?? 0,
+            'jumlah_mahasiswa' => $statsNonDo->jumlah_mahasiswa ?? 0,
+            'jumlah_mahasiswa_aktif' => $statsNonDo->jumlah_mahasiswa_aktif ?? 0,
+            'jumlah_mahasiswa_cuti' => $statsNonDo->jumlah_mahasiswa_cuti ?? 0,
+            'jumlah_mahasiswa_mangkir' => $statsNonDo->jumlah_mahasiswa_mangkir ?? 0,
+            'jumlah_mahasiswa_do' => $jumlahDo,
+            'jumlah_mahasiswa_tidak_aktif' => $statsNonDo->jumlah_mahasiswa_tidak_aktif ?? 0,
+            'ipk_rata_rata' => $statsNonDo->ipk_rata_rata ?? 0,
+            'jumlah_tepat_waktu' => $statsNonDo->jumlah_tepat_waktu ?? 0,
+            'jumlah_normal' => $statsNonDo->jumlah_normal ?? 0,
+            'jumlah_perhatian' => $statsNonDo->jumlah_perhatian ?? 0,
+            'jumlah_kritis' => $statsNonDo->jumlah_kritis ?? 0,
         ];
     }
 }

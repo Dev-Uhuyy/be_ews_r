@@ -40,6 +40,8 @@ class NilaiMahasiswaService
                 'akademik_mahasiswa.tahun_masuk',
                 'akademik_mahasiswa.ipk',
                 'akademik_mahasiswa.sks_lulus',
+                'akademik_mahasiswa.sks_now',
+                'akademik_mahasiswa.sks_tempuh',
                 'akademik_mahasiswa.mk_nasional',
                 'akademik_mahasiswa.mk_fakultas',
                 'akademik_mahasiswa.mk_prodi',
