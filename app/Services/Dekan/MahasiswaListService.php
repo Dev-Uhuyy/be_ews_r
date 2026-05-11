@@ -41,7 +41,7 @@ class MahasiswaListService
             ->join('users', 'mahasiswa.user_id', '=', 'users.id')
             ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus")');
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
 
         // Filter by prodi_id
         if (! empty($filters['prodi_id'])) {
@@ -148,6 +148,9 @@ class MahasiswaListService
         $page = isset($filters['page']) ? (int) $filters['page'] : 1;
         $page = max(1, $page);
 
+        $statusMhsFilter = ! empty($filters['status_mahasiswa']) ? strtolower($filters['status_mahasiswa']) : null;
+        $includeDo = $statusMhsFilter === 'do';
+
         $query = AkademikMahasiswa::select(
             'mahasiswa.id as mahasiswa_id',
             'mahasiswa.nim',
@@ -165,8 +168,11 @@ class MahasiswaListService
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->join('users', 'mahasiswa.user_id', '=', 'users.id')
             ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
-            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus")');
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id');
+
+        if (! $includeDo) {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+        }
 
         if (! empty($filters['prodi_id'])) {
             $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
@@ -176,10 +182,9 @@ class MahasiswaListService
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
         }
 
-        if (! empty($filters['status_mahasiswa'])) {
-            $statusMhs = strtolower($filters['status_mahasiswa']);
-            if (in_array($statusMhs, ['aktif', 'mangkir', 'do', 'tidak_aktif'])) {
-                $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [$statusMhs]);
+        if (! empty($statusMhsFilter)) {
+            if (in_array($statusMhsFilter, ['aktif', 'cuti', 'mangkir', 'do', 'tidak_aktif', 'meninggal'])) {
+                $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [$statusMhsFilter]);
             }
         }
 

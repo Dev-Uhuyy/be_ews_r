@@ -100,9 +100,24 @@ trait ExportFormatterTrait
             ],
         ]);
         $sheet->getRowDimension($row)->setRowHeight(22);
+    }
 
-        // Freeze panes below header row
-        $sheet->freezePane('A'.($row + 1));
+    protected function writeHeaderRowNoFreeze($sheet, int $row, array $headers): void
+    {
+        foreach ($headers as $col => $label) {
+            $sheet->setCellValueByColumnAndRow($col + 1, $row, $label);
+        }
+
+        $endCol = $this->colLetter(count($headers));
+        $sheet->getStyle("A{$row}:{$endCol}{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3D8BCD']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+            'borders' => [
+                'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'B0C4D8']],
+            ],
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(22);
     }
 
     // ──────────────────────────────────────────────────────────────

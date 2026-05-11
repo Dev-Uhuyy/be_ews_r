@@ -35,6 +35,7 @@ class DetailDashboardService
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_cuti'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_tidak_aktif'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
@@ -50,19 +51,33 @@ class DetailDashboardService
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
             ->get();
 
+        $doPerTahun = AkademikMahasiswa::select(
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(*) as jumlah_do')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->where('mahasiswa.prodi_id', $prodi->id)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"')
+            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->get()
+            ->keyBy('tahun_masuk');
+
         return [
             'prodi' => [
                 'id' => $prodi->id,
                 'kode_prodi' => $prodi->kode_prodi,
                 'nama_prodi' => $prodi->nama,
             ],
-            'tahun_angkatan' => $tahunData->map(function ($item) {
+            'tahun_angkatan' => $tahunData->map(function ($item) use ($doPerTahun) {
                 return [
                     'tahun_masuk' => $item->tahun_masuk,
                     'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
                     'mahasiswa_aktif' => $item->mahasiswa_aktif,
                     'jumlah_cuti' => $item->jumlah_cuti,
                     'jumlah_mangkir' => $item->jumlah_mangkir,
+                    'jumlah_do' => $doPerTahun->get($item->tahun_masuk)->jumlah_do ?? 0,
+                    'jumlah_tidak_aktif' => $item->jumlah_tidak_aktif,
                     'ipk_rata_rata' => $item->ipk_rata_rata,
                     'tepat_waktu' => $item->tepat_waktu,
                     'normal' => $item->normal,

@@ -75,14 +75,6 @@ class MahasiswaListExportService
 
         $query = $this->getBaseQuery($filters);
 
-        // Specific status filters
-        if (! empty($filters['status_mahasiswa'])) {
-            $statusMhs = strtolower($filters['status_mahasiswa']);
-            if (in_array($statusMhs, ['aktif', 'cuti', 'mangkir'])) {
-                $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [$statusMhs]);
-            }
-        }
-
         $mahasiswas = $query->orderBy('prodis.nama', 'asc')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
             ->orderBy('users.name', 'asc')
@@ -129,14 +121,19 @@ class MahasiswaListExportService
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->join('users', 'mahasiswa.user_id', '=', 'users.id')
             ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
-            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id');
 
         if (! empty($filters['prodi_id'])) {
             $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
         }
         if (! empty($filters['tahun_masuk'])) {
             $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
+        }
+        if (! empty($filters['status_mahasiswa'])) {
+            $statusMhs = strtolower($filters['status_mahasiswa']);
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [$statusMhs]);
+        } else {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
         }
         if (! empty($filters['ipk_max']) && is_numeric($filters['ipk_max'])) {
             $query->where('akademik_mahasiswa.ipk', '<', $filters['ipk_max']);
