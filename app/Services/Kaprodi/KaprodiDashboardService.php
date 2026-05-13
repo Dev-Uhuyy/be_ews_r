@@ -52,6 +52,7 @@ class KaprodiDashboardService
         $totalNormal = ($statusBreakdown->get('normal')->jumlah ?? 0) + ($statusBreakdown->get('Normal')->jumlah ?? 0);
         $totalMangkir = ($statusBreakdown->get('mangkir')->jumlah ?? 0) + ($statusBreakdown->get('Mangkir')->jumlah ?? 0);
         $totalCuti = ($statusBreakdown->get('cuti')->jumlah ?? 0) + ($statusBreakdown->get('Cuti')->jumlah ?? 0);
+        $totalTidakAktif = ($statusBreakdown->get('tidak_aktif')->jumlah ?? 0) + ($statusBreakdown->get('Tidak Aktif')->jumlah ?? 0);
         $totalDO = Mahasiswa::where('prodi_id', $prodiId)
             ->whereRaw('LOWER(status_mahasiswa) = "do"')
             ->count();
@@ -62,6 +63,7 @@ class KaprodiDashboardService
             'total_mahasiswa_normal' => $totalNormal,
             'total_mahasiswa_mangkir' => $totalMangkir,
             'total_mahasiswa_cuti' => $totalCuti,
+            'total_mahasiswa_tidak_aktif' => $totalTidakAktif,
             'total_mahasiswa_do' => $totalDO,
         ];
     }
@@ -114,6 +116,7 @@ class KaprodiDashboardService
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_tidak_aktif'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
@@ -128,6 +131,23 @@ class KaprodiDashboardService
             ->groupBy('akademik_mahasiswa.tahun_masuk')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
             ->get();
+
+        $doData = AkademikMahasiswa::select(
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_do')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"')
+            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->get()
+            ->keyBy('tahun_masuk');
+
+        $tahunData = $tahunData->map(function ($item) use ($doData) {
+            $item->jumlah_do = $doData->get($item->tahun_masuk)->jumlah_do ?? 0;
+            return $item;
+        });
 
         return [
             'prodi' => [

@@ -34,8 +34,6 @@ class StatistikKelulusanService
             'ipk_rata_rata' => $statsPerProdi['ipk_rata_rata'],
             'jumlah_aktif' => $statsPerProdi['jumlah_aktif'],
             'jumlah_mangkir' => $statsPerProdi['jumlah_mangkir'],
-            'jumlah_do' => $statsPerProdi['jumlah_do'],
-            'jumlah_tidak_aktif' => $statsPerProdi['jumlah_tidak_aktif'],
             'detail_per_tahun' => $detailPerTahun,
         ];
     }
@@ -54,9 +52,7 @@ class StatistikKelulusanService
             DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_aktif'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "do" THEN 1 ELSE 0 END) as jumlah_do'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_tidak_aktif')
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir')
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
@@ -80,8 +76,6 @@ class StatistikKelulusanService
             'ipk_rata_rata' => $stats->ipk_rata_rata ?? 0,
             'jumlah_aktif' => $stats->jumlah_aktif ?? 0,
             'jumlah_mangkir' => $stats->jumlah_mangkir ?? 0,
-            'jumlah_do' => $stats->jumlah_do ?? 0,
-            'jumlah_tidak_aktif' => $stats->jumlah_tidak_aktif ?? 0,
         ];
     }
 
@@ -98,9 +92,7 @@ class StatistikKelulusanService
             DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_aktif'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "do" THEN 1 ELSE 0 END) as jumlah_do'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_tidak_aktif')
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir')
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')

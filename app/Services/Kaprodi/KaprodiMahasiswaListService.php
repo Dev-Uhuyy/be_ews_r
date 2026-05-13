@@ -27,8 +27,6 @@ class KaprodiMahasiswaListService
             'akademik_mahasiswa.tahun_masuk',
             'akademik_mahasiswa.sks_lulus',
             'akademik_mahasiswa.ipk',
-            'akademik_mahasiswa.nilai_d_melebihi_batas',
-            'akademik_mahasiswa.nilai_e',
             'early_warning_system.status as ews_status',
             'early_warning_system.status_kelulusan'
         )
@@ -109,8 +107,6 @@ class KaprodiMahasiswaListService
                 'tahun_masuk' => $mhs->tahun_masuk,
                 'sks_total' => $mhs->sks_lulus ?? 0,
                 'ipk' => $mhs->ipk ?? 0,
-                'nilai_d_melebihi_batas' => $mhs->nilai_d_melebihi_batas ?? 'no',
-                'nilai_e' => $mhs->nilai_e ?? 'no',
                 'ews_status' => $mhs->ews_status ?? null,
                 'status_kelulusan' => $mhs->status_kelulusan ?? null,
             ];
