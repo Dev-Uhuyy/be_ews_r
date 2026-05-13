@@ -29,7 +29,7 @@ class StatistikKelulusanExportService
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Statistik Kelulusan');
 
-        $headers = ['Tahun Masuk', 'Jumlah Mhs', 'IPK < 2', 'SKS < 144', 'Nilai D > 5%', 'Ada Nilai E', 'Eligible', 'Tidak Eligible', 'IPK Rata', 'Aktif', 'Mangkir', 'DO', 'Tidak Aktif'];
+        $headers = ['Tahun Masuk', 'Jumlah Mhs', 'IPK < 2', 'SKS < 144', 'Nilai D > 5%', 'Ada Nilai E', 'Eligible', 'Tidak Eligible', 'IPK Rata', 'Aktif', 'Mangkir'];
         $this->writeTitleBlock($sheet, 'LAPORAN STATISTIK KELULUSAN', $prodi->kode_prodi.' - '.$prodi->nama, $tahunMasuk ? 'Angkatan: '.$tahunMasuk : 'Semua Angkatan', count($headers));
 
         $startRow = 6;
@@ -48,10 +48,8 @@ class StatistikKelulusanExportService
         $sheet->setCellValue('I'.$startRow, number_format((float) $stats['ipk_rata_rata'], 2));
         $sheet->setCellValue('J'.$startRow, $stats['jumlah_aktif']);
         $sheet->setCellValue('K'.$startRow, $stats['jumlah_mangkir']);
-        $sheet->setCellValue('L'.$startRow, $stats['jumlah_do']);
-        $sheet->setCellValue('M'.$startRow, $stats['jumlah_tidak_aktif']);
-        $sheet->getStyle('A'.$startRow.':M'.$startRow)->getFont()->setBold(true);
-        $sheet->getStyle('A'.$startRow.':M'.$startRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E0E0E0');
+        $sheet->getStyle('A'.$startRow.':K'.$startRow)->getFont()->setBold(true);
+        $sheet->getStyle('A'.$startRow.':K'.$startRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E0E0E0');
         $startRow += 2;
 
         $this->writeHeaderRow($sheet, $startRow, $headers);
@@ -70,8 +68,6 @@ class StatistikKelulusanExportService
             $sheet->setCellValue('I'.$startRow, number_format((float) $row->ipk_rata_rata, 2));
             $sheet->setCellValue('J'.$startRow, $row->jumlah_aktif);
             $sheet->setCellValue('K'.$startRow, $row->jumlah_mangkir);
-            $sheet->setCellValue('L'.$startRow, $row->jumlah_do);
-            $sheet->setCellValue('M'.$startRow, $row->jumlah_tidak_aktif);
             $this->styleDataRow($sheet, $startRow, count($headers), $i % 2 === 1);
             $startRow++;
         }
@@ -92,9 +88,7 @@ class StatistikKelulusanExportService
             DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_aktif'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "do" THEN 1 ELSE 0 END) as jumlah_do'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_tidak_aktif')
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir')
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
@@ -119,9 +113,7 @@ class StatistikKelulusanExportService
             DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_aktif'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "do" THEN 1 ELSE 0 END) as jumlah_do'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_tidak_aktif')
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir')
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')

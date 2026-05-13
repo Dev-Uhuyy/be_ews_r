@@ -31,7 +31,7 @@ class DashboardExportService
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Ringkasan Prodi');
 
-        $headers = ['Tahun Masuk', 'Jml Mahasiswa', 'Aktif', 'Cuti', 'Mangkir', 'IPK Rata-rata', 'Tepat Waktu', 'Normal', 'Perhatian', 'Kritis'];
+        $headers = ['Tahun Masuk', 'Jml Mahasiswa', 'Aktif', 'Cuti', 'Mangkir', 'DO', 'Meninggal', 'IPK Rata-rata', 'Tepat Waktu', 'Normal', 'Perhatian', 'Kritis'];
         $this->writeTitleBlock($sheet, 'RINGKASAN PROGRAM STUDI', $prodi->kode_prodi.' - '.$prodi->nama, $tahunMasuk ? 'Filter Tahun Masuk: '.$tahunMasuk : 'Semua Tahun Angkatan', count($headers));
 
         $startRow = 6;
@@ -45,11 +45,13 @@ class DashboardExportService
             $sheet->setCellValue('C'.$startRow, $row->jumlah_mahasiswa_aktif);
             $sheet->setCellValue('D'.$startRow, $row->jumlah_mahasiswa_cuti);
             $sheet->setCellValue('E'.$startRow, $row->jumlah_mahasiswa_mangkir);
-            $sheet->setCellValue('F'.$startRow, number_format((float) $row->ipk_rata_rata, 2));
-            $sheet->setCellValue('G'.$startRow, $row->jumlah_tepat_waktu);
-            $sheet->setCellValue('H'.$startRow, $row->jumlah_normal);
-            $sheet->setCellValue('I'.$startRow, $row->jumlah_perhatian);
-            $sheet->setCellValue('J'.$startRow, $row->jumlah_kritis);
+            $sheet->setCellValue('F'.$startRow, $row->jumlah_do ?? 0);
+            $sheet->setCellValue('G'.$startRow, $row->jumlah_mahasiswa_tidak_aktif ?? 0);
+            $sheet->setCellValue('H'.$startRow, number_format((float) $row->ipk_rata_rata, 2));
+            $sheet->setCellValue('I'.$startRow, $row->jumlah_tepat_waktu);
+            $sheet->setCellValue('J'.$startRow, $row->jumlah_normal);
+            $sheet->setCellValue('K'.$startRow, $row->jumlah_perhatian);
+            $sheet->setCellValue('L'.$startRow, $row->jumlah_kritis);
             $this->styleDataRow($sheet, $startRow, count($headers), $i % 2 === 1);
             $startRow++;
         }
@@ -105,6 +107,7 @@ class DashboardExportService
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif"   THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti"    THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
+            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_tidak_aktif'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal"      THEN 1 ELSE 0 END) as jumlah_normal'),
@@ -121,7 +124,26 @@ class DashboardExportService
             $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
         }
 
-        return $query->groupBy('akademik_mahasiswa.tahun_masuk')->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')->get();
+        $tahunData = $query->groupBy('akademik_mahasiswa.tahun_masuk')->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')->get();
+
+        $doData = AkademikMahasiswa::select(
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_do')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"')
+            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->get()
+            ->keyBy('tahun_masuk');
+
+        $tahunData = $tahunData->map(function ($item) use ($doData) {
+            $item->jumlah_do = $doData->get($item->tahun_masuk)->jumlah_do ?? 0;
+            return $item;
+        });
+
+        return $tahunData;
     }
 
     private function getTahunData($prodiId, $tahunMasuk = null)
