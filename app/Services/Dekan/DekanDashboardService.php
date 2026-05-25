@@ -27,26 +27,23 @@ class DekanDashboardService
 
     private function getStatistikGlobal(): array
     {
-        $query = Mahasiswa::whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")');
-
-        $totalMahasiswa = (clone $query)->count();
-
-        $statusBreakdown = Mahasiswa::select('status_mahasiswa', DB::raw('COUNT(*) as jumlah'))
+        $stats = Mahasiswa::select(
+            DB::raw('COUNT(*) as total_mahasiswa'),
+            DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as total_aktif'),
+            DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as total_mangkir'),
+            DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as total_cuti'),
+            DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "do" THEN 1 ELSE 0 END) as total_do')
+        )
             ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")')
-            ->groupBy('status_mahasiswa')
-            ->get()
-            ->keyBy('status_mahasiswa');
+            ->first();
 
-        $totalAktif = ($statusBreakdown->get('aktif')->jumlah ?? 0) + ($statusBreakdown->get('Aktif')->jumlah ?? 0);
-        $totalMangkir = ($statusBreakdown->get('mangkir')->jumlah ?? 0) + ($statusBreakdown->get('Mangkir')->jumlah ?? 0);
-        $totalCuti = ($statusBreakdown->get('cuti')->jumlah ?? 0) + ($statusBreakdown->get('Cuti')->jumlah ?? 0);
         $totalDO = Mahasiswa::whereRaw('LOWER(status_mahasiswa) = "do"')->count();
 
         return [
-            'total_mahasiswa' => $totalMahasiswa,
-            'total_mahasiswa_aktif' => $totalAktif,
-            'total_mahasiswa_mangkir' => $totalMangkir,
-            'total_mahasiswa_cuti' => $totalCuti,
+            'total_mahasiswa' => $stats->total_mahasiswa ?? 0,
+            'total_mahasiswa_aktif' => ($stats->total_aktif ?? 0),
+            'total_mahasiswa_mangkir' => ($stats->total_mangkir ?? 0),
+            'total_mahasiswa_cuti' => ($stats->total_cuti ?? 0),
             'total_mahasiswa_do' => $totalDO,
         ];
     }
@@ -90,17 +87,10 @@ class DekanDashboardService
 
     private function getTabelRingkasanProdi($prodis): array
     {
-        $result = [];
-        foreach ($prodis as $prodi) {
-            $result[] = $this->getRingkasanPerProdi($prodi);
-        }
+        $prodiIds = $prodis->pluck('id')->toArray();
 
-        return $result;
-    }
-
-    private function getRingkasanPerProdi(Prodi $prodi): array
-    {
-        $queryNonDo = AkademikMahasiswa::select(
+        $nonDoStats = AkademikMahasiswa::select(
+            'mahasiswa.prodi_id',
             DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
@@ -114,33 +104,48 @@ class DekanDashboardService
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->where('mahasiswa.prodi_id', $prodi->id)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->groupBy('mahasiswa.prodi_id')
+            ->get()
+            ->keyBy('prodi_id');
 
-        $statsNonDo = $queryNonDo->first();
-
-        $jumlahDo = AkademikMahasiswa::join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-            ->where('mahasiswa.prodi_id', $prodi->id)
+        $doStats = AkademikMahasiswa::select(
+            'mahasiswa.prodi_id',
+            DB::raw('COUNT(*) as jumlah_do')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"')
-            ->count();
+            ->groupBy('mahasiswa.prodi_id')
+            ->get()
+            ->keyBy('prodi_id');
 
-        return [
-            'prodi' => [
-                'id' => $prodi->id,
-                'kode_prodi' => $prodi->kode_prodi,
-                'nama_prodi' => $prodi->nama,
-            ],
-            'jumlah_mahasiswa' => $statsNonDo->jumlah_mahasiswa ?? 0,
-            'jumlah_mahasiswa_aktif' => $statsNonDo->jumlah_mahasiswa_aktif ?? 0,
-            'jumlah_mahasiswa_cuti' => $statsNonDo->jumlah_mahasiswa_cuti ?? 0,
-            'jumlah_mahasiswa_mangkir' => $statsNonDo->jumlah_mahasiswa_mangkir ?? 0,
-            'jumlah_mahasiswa_do' => $jumlahDo,
-            'jumlah_mahasiswa_tidak_aktif' => $statsNonDo->jumlah_mahasiswa_tidak_aktif ?? 0,
-            'ipk_rata_rata' => $statsNonDo->ipk_rata_rata ?? 0,
-            'jumlah_tepat_waktu' => $statsNonDo->jumlah_tepat_waktu ?? 0,
-            'jumlah_normal' => $statsNonDo->jumlah_normal ?? 0,
-            'jumlah_perhatian' => $statsNonDo->jumlah_perhatian ?? 0,
-            'jumlah_kritis' => $statsNonDo->jumlah_kritis ?? 0,
-        ];
+        $result = [];
+        foreach ($prodis as $prodi) {
+            $statsNonDo = $nonDoStats->get($prodi->id);
+            $statsDo = $doStats->get($prodi->id);
+
+            $result[] = [
+                'prodi' => [
+                    'id' => $prodi->id,
+                    'kode_prodi' => $prodi->kode_prodi,
+                    'nama_prodi' => $prodi->nama,
+                ],
+                'jumlah_mahasiswa' => $statsNonDo->jumlah_mahasiswa ?? 0,
+                'jumlah_mahasiswa_aktif' => $statsNonDo->jumlah_mahasiswa_aktif ?? 0,
+                'jumlah_mahasiswa_cuti' => $statsNonDo->jumlah_mahasiswa_cuti ?? 0,
+                'jumlah_mahasiswa_mangkir' => $statsNonDo->jumlah_mahasiswa_mangkir ?? 0,
+                'jumlah_mahasiswa_do' => $statsDo->jumlah_do ?? 0,
+                'jumlah_mahasiswa_tidak_aktif' => $statsNonDo->jumlah_mahasiswa_tidak_aktif ?? 0,
+                'ipk_rata_rata' => $statsNonDo->ipk_rata_rata ?? 0,
+                'jumlah_tepat_waktu' => $statsNonDo->jumlah_tepat_waktu ?? 0,
+                'jumlah_normal' => $statsNonDo->jumlah_normal ?? 0,
+                'jumlah_perhatian' => $statsNonDo->jumlah_perhatian ?? 0,
+                'jumlah_kritis' => $statsNonDo->jumlah_kritis ?? 0,
+            ];
+        }
+
+        return $result;
     }
 }

@@ -13,23 +13,15 @@ class DetailDashboardService
      */
     public function getDetailDashboard($prodiId = null)
     {
-        $prodis = $prodiId
-            ? Prodi::where('id', $prodiId)->get()
-            : Prodi::all();
+        $prodisQuery = $prodiId
+            ? Prodi::where('id', $prodiId)
+            : Prodi::query();
 
-        $result = [];
+        $prodis = $prodisQuery->get();
+        $prodiIds = $prodis->pluck('id')->toArray();
 
-        foreach ($prodis as $prodi) {
-            $dataPerProdi = $this->getDataPerProdi($prodi);
-            $result[] = $dataPerProdi;
-        }
-
-        return $result;
-    }
-
-    private function getDataPerProdi($prodi)
-    {
         $tahunData = AkademikMahasiswa::select(
+            'mahasiswa.prodi_id',
             'akademik_mahasiswa.tahun_masuk',
             DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
@@ -44,48 +36,58 @@ class DetailDashboardService
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->where('mahasiswa.prodi_id', $prodi->id)
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
             ->whereNotNull('akademik_mahasiswa.tahun_masuk')
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
-            ->get();
+            ->get()
+            ->groupBy('prodi_id');
 
-        $doPerTahun = AkademikMahasiswa::select(
+        $doPerProdi = AkademikMahasiswa::select(
+            'mahasiswa.prodi_id',
             'akademik_mahasiswa.tahun_masuk',
             DB::raw('COUNT(*) as jumlah_do')
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-            ->where('mahasiswa.prodi_id', $prodi->id)
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
             ->whereNotNull('akademik_mahasiswa.tahun_masuk')
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"')
-            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
             ->get()
-            ->keyBy('tahun_masuk');
+            ->groupBy('prodi_id');
 
-        return [
-            'prodi' => [
-                'id' => $prodi->id,
-                'kode_prodi' => $prodi->kode_prodi,
-                'nama_prodi' => $prodi->nama,
-            ],
-            'tahun_angkatan' => $tahunData->map(function ($item) use ($doPerTahun) {
-                return [
-                    'tahun_masuk' => $item->tahun_masuk,
-                    'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
-                    'mahasiswa_aktif' => $item->mahasiswa_aktif,
-                    'jumlah_cuti' => $item->jumlah_cuti,
-                    'jumlah_mangkir' => $item->jumlah_mangkir,
-                    'jumlah_do' => $doPerTahun->get($item->tahun_masuk)->jumlah_do ?? 0,
-                    'jumlah_tidak_aktif' => $item->jumlah_tidak_aktif,
-                    'ipk_rata_rata' => $item->ipk_rata_rata,
-                    'tepat_waktu' => $item->tepat_waktu,
-                    'normal' => $item->normal,
-                    'perhatian' => $item->perhatian,
-                    'kritis' => $item->kritis,
-                ];
-            }),
-        ];
+        $result = [];
+        foreach ($prodis as $prodi) {
+            $prodiTahunData = $tahunData->get($prodi->id, collect());
+            $prodiDoData = $doPerProdi->get($prodi->id, collect())->keyBy('tahun_masuk');
+
+            $result[] = [
+                'prodi' => [
+                    'id' => $prodi->id,
+                    'kode_prodi' => $prodi->kode_prodi,
+                    'nama_prodi' => $prodi->nama,
+                ],
+                'tahun_angkatan' => $prodiTahunData->map(function ($item) use ($prodiDoData) {
+                    return [
+                        'tahun_masuk' => $item->tahun_masuk,
+                        'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
+                        'mahasiswa_aktif' => $item->mahasiswa_aktif,
+                        'jumlah_cuti' => $item->jumlah_cuti,
+                        'jumlah_mangkir' => $item->jumlah_mangkir,
+                        'jumlah_do' => $prodiDoData->get($item->tahun_masuk)->jumlah_do ?? 0,
+                        'jumlah_tidak_aktif' => $item->jumlah_tidak_aktif,
+                        'ipk_rata_rata' => $item->ipk_rata_rata,
+                        'tepat_waktu' => $item->tepat_waktu,
+                        'normal' => $item->normal,
+                        'perhatian' => $item->perhatian,
+                        'kritis' => $item->kritis,
+                    ];
+                })->values()->toArray(),
+            ];
+        }
+
+        return $result;
     }
 
     /**

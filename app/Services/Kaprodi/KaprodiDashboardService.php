@@ -88,23 +88,19 @@ class KaprodiDashboardService
 
     private function getStatistikKelulusan($prodiId)
     {
-        $eligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
+        $stats = EarlyWarningSystem::select(
+            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as noneligible')
+        )
+            ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->where('mahasiswa.prodi_id', $prodiId)
-            ->where('early_warning_system.status_kelulusan', 'eligible')
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-            ->count();
-
-        $noneligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
-            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-            ->where('mahasiswa.prodi_id', $prodiId)
-            ->where('early_warning_system.status_kelulusan', 'noneligible')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
-            ->count();
+            ->first();
 
         return [
-            'eligible' => $eligible,
-            'non_eligible' => $noneligible,
+            'eligible' => $stats->eligible ?? 0,
+            'non_eligible' => $stats->noneligible ?? 0,
         ];
     }
 

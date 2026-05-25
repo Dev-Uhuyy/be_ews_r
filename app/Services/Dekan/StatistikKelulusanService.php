@@ -139,7 +139,7 @@ class StatistikKelulusanService
 
     private function getStatistikPerProdi($prodi)
     {
-        $query = AkademikMahasiswa::select(
+        $stats = AkademikMahasiswa::select(
             DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa'),
             DB::raw('SUM(CASE WHEN akademik_mahasiswa.ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
             DB::raw('SUM(CASE WHEN akademik_mahasiswa.sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
@@ -153,9 +153,9 @@ class StatistikKelulusanService
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->where('mahasiswa.prodi_id', $prodi->id);
-
-        $stats = $query->first();
+            ->where('mahasiswa.prodi_id', $prodi->id)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->first();
 
         return [
             'prodi' => [
