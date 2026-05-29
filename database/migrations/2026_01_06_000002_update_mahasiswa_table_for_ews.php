@@ -13,13 +13,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('mahasiswa', function (Blueprint $table) {
-            // Add prodi_id FK
-            $table->foreignId('prodi_id')
-                ->nullable()
-                ->after('user_id')
-                ->constrained('prodis')
-                ->nullOnDelete();
-
             // Add minat column
             $table->string('minat', 255)->nullable()->after('telepon');
 
@@ -28,7 +21,7 @@ return new class extends Migration
         });
 
         // Update status_mahasiswa enum to include 'cuti' and 'DO'
-        DB::statement("ALTER TABLE mahasiswa MODIFY COLUMN status_mahasiswa ENUM('lulus','aktif','mangkir','tidak_aktif','cuti','DO') DEFAULT 'aktif'");
+        DB::statement("ALTER TABLE mahasiswa MODIFY COLUMN status_mahasiswa ENUM('lulus','aktif','mangkir','tidak-aktif','cuti','DO') DEFAULT 'aktif'");
 
         // Drop sks and ipk columns (moved to akademik_mahasiswa)
         Schema::table('mahasiswa', function (Blueprint $table) {
@@ -46,7 +39,7 @@ return new class extends Migration
             $table->integer('sks')->nullable();
         });
 
-        DB::statement("ALTER TABLE mahasiswa MODIFY COLUMN status_mahasiswa ENUM('lulus','aktif','mangkir','tidak_aktif') DEFAULT 'aktif'");
+        DB::statement("ALTER TABLE mahasiswa MODIFY COLUMN status_mahasiswa ENUM('lulus','aktif','mangkir','tidak-aktif') DEFAULT 'aktif'");
 
         Schema::table('mahasiswa', function (Blueprint $table) {
             $table->dropColumn(['cuti_2', 'minat']);
