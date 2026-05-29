@@ -15,7 +15,7 @@ class RoleSeeder extends Seeder
      * Role EWS:
      *  - mahasiswa      → melihat status EWS, KHS/KRS, dan mengajukan tindak lanjut
      *  - admin          → dashboard EWS prodi, manage status, verifikasi tindak lanjut
-     *  - super_fakultass → dashboard level fakultas, statistik semua prodi
+     *  - super_fakultas → dashboard level fakultas, statistik semua prodi
      *
      * Catatan: sti-api sudah punya role 'mahasiswa', 'dosen', 'koordinator', 'mitra'.
      * Seeder ini menambahkan role EWS baru tanpa mengganggu role existing.
@@ -40,12 +40,12 @@ class RoleSeeder extends Seeder
         $roleAdmin->givePermissionTo($permEwsAdmin);
         $roleAdmin->givePermissionTo($permEwsMahasiswa);
 
-        // ─── Role: super_fakultass (Dekan Fakultas) ───────────────────────────────
-        $roleSuperFakultass = Role::firstOrCreate(['name' => 'super_fakultass', 'guard_name' => 'web']);
+        // ─── Role: super_fakultas (Dekan Fakultas) ───────────────────────────────
+        $roleSuperFakultass = Role::firstOrCreate(['name' => 'super_fakultas', 'guard_name' => 'web']);
         $roleSuperFakultass->givePermissionTo($permEwsSuperFakultass);
         $roleSuperFakultass->givePermissionTo($permEwsAdmin);
         $roleSuperFakultass->givePermissionTo($permEwsMahasiswa);
 
-        $this->command->info('✔ RoleSeeder: 3 role EWS siap (mahasiswa, admin, super_fakultass).');
+        $this->command->info('✔ RoleSeeder: 3 role EWS siap (mahasiswa, admin, super_fakultas).');
     }
 }

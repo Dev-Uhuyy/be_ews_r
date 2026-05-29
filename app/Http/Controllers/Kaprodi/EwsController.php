@@ -147,7 +147,7 @@ class EwsController extends Controller
             $user = Auth::user();
             if ($user && $user->hasRole('admin')) {
                 $prodiId = $user->prodi_id;
-            } elseif ($user && $user->hasRole('super_fakultass') && request()->has('prodi_id') && request('prodi_id') != '') {
+            } elseif ($user && $user->hasRole('super_fakultas') && request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodiId = request('prodi_id');
             }
 

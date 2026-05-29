@@ -37,7 +37,7 @@ trait ProdiBelongsTo
                 // Admin: Wajib limit sesuai prodi mereka
                 return $query->where($this->getTable().'.prodi_id', $user->prodi_id);
             }
-            if ($user->hasRole('super_fakultass')) {
+            if ($user->hasRole('super_fakultas')) {
                 // Super Fakultas: Bisa filter request jika ada (kalau tidak, munculkan semua)
                 if (request()->has('prodi_id') && request('prodi_id') != '') {
                     return $query->where($this->getTable().'.prodi_id', request('prodi_id'));

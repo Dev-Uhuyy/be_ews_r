@@ -188,10 +188,10 @@ class AuthController extends Controller
                 return $this->successResponse($res);
             }
 
-            if ($roles->first() == 'super_fakultass') {
+            if ($roles->first() == 'super_fakultas') {
                 $user->load('prodi');
                 $res = array_merge($data, [
-                    'super_fakultass' => [
+                    'super_fakultas' => [
                         'scope' => 'fakultas',
                     ],
                 ]);

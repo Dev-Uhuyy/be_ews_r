@@ -98,7 +98,7 @@ class EwsController extends Controller
             $akademik = AkademikMahasiswa::where('mahasiswa_id', $mahasiswaId)
                 ->whereHas('mahasiswa', function ($query) {
                     $user = Auth::user();
-                    if ($user && $user->hasRole('super_fakultass')) {
+                    if ($user && $user->hasRole('super_fakultas')) {
                         $query->where('prodi_id', $user->prodi_id);
                     }
                 })
@@ -138,9 +138,9 @@ class EwsController extends Controller
             // Retrieve prodiId based on role
             $prodiId = null;
             $user = Auth::user();
-            if ($user && $user->hasRole('super_fakultass')) {
+            if ($user && $user->hasRole('super_fakultas')) {
                 $prodiId = $user->prodi_id;
-            } elseif ($user && $user->hasRole('super_fakultass') && request()->has('prodi_id') && request('prodi_id') != '') {
+            } elseif ($user && $user->hasRole('super_fakultas') && request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodiId = request('prodi_id');
             }
 

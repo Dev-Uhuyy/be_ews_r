@@ -12,7 +12,7 @@ class UserSeeder extends Seeder
     /**
      * Seed user test EWS per role.
      *
-     * Role EWS: mahasiswa | admin | super_fakultass
+     * Role EWS: mahasiswa | admin | super_fakultas
      * User existing di DB tidak diubah, hanya tambah user test EWS.
      */
     public function run(): void
@@ -76,15 +76,15 @@ class UserSeeder extends Seeder
 
         // 2. Akun Super Fakultas
         $superFakultass = User::firstOrCreate(
-            ['email' => 'super_fakultass@ews.com'],
+            ['email' => 'super_fakultas@ews.com'],
             [
                 'name' => 'Super Fakultas EWS Test',
                 'password' => Hash::make('password'),
-                'prodi_id' => null, // super_fakultass level fakultas
+                'prodi_id' => null, // super_fakultas level fakultas
             ]
         );
-        if (! $superFakultass->hasRole('super_fakultass')) {
-            $superFakultass->assignRole('super_fakultass');
+        if (! $superFakultass->hasRole('super_fakultas')) {
+            $superFakultass->assignRole('super_fakultas');
         }
 
         // 3. Akun Mahasiswa test
@@ -106,7 +106,7 @@ class UserSeeder extends Seeder
         $this->command->line('  admin_a12@ews.com   / password  (role: admin - SI)');
         $this->command->line('  admin_a14@ews.com   / password  (role: admin - DKV)');
         $this->command->line('  admin_a15@ews.com   / password  (role: admin - Ilkom)');
-        $this->command->line('  super_fakultass@ews.com / password  (role: super_fakultass)');
+        $this->command->line('  super_fakultas@ews.com / password  (role: super_fakultas)');
         $this->command->line('  mahasiswa@ews.com  / password  (role: mahasiswa)');
     }
 }

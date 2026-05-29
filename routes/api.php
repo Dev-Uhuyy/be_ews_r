@@ -68,7 +68,7 @@ Route::prefix('ews')->group(function () {
 
     // ── DEKAN (Dekan Fakultas) ────────────────────────────────────────────────
     // Akses: recalculate EWS + Dashboard
-    Route::middleware(['sti_api_token', 'role:super_fakultass'])->prefix('dekan')->group(function () {
+    Route::middleware(['sti_api_token', 'role:super_fakultas'])->prefix('dekan')->group(function () {
         Route::get('dashboard', [DekanDashboardController::class, 'getDashboard']);
         Route::get('dashboard/detail', [DetailDashboardController::class, 'getDetailDashboard']);
         Route::get('dashboard/mahasiswa', [DetailDashboardController::class, 'getMahasiswaListByCriteria']);

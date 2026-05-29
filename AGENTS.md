@@ -28,7 +28,7 @@ composer test    # clears config cache first, then artisan test
 ### Roles & Route Prefix
 | Role | Prefix | Scope |
 |------|--------|-------|
-| super_fakultass | `/api/ews/dekan` | All prodi in fakultass |
+| super_fakultas | `/api/ews/dekan` | All prodi in fakultass |
 | admin | `/api/ews/kaprodi` | Own prodi only |
 | koor | `/api/ews/koor` | Own prodi only (recalculate, surat rekomitmen) |
 | dosen | `/api/ews/dosen` | Own mahasiswa Wali only |

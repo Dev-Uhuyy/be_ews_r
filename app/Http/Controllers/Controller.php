@@ -46,19 +46,19 @@ abstract class Controller
             ];
         }
 
-        if ($user->hasRole('super_fakultass')) {
+        if ($user->hasRole('super_fakultas')) {
             if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodi = Prodi::find(request('prodi_id'));
 
                 return [
-                    'role' => 'super_fakultass',
+                    'role' => 'super_fakultas',
                     'scope_data' => 'Filter Prodi Spesifik',
                     'nama_prodi' => $prodi?->nama ?? 'Unknown Prodi',
                 ];
             }
 
             return [
-                'role' => 'super_fakultass',
+                'role' => 'super_fakultas',
                 'scope_data' => 'Seluruh Fakultas (Semua Prodi)',
             ];
         }
