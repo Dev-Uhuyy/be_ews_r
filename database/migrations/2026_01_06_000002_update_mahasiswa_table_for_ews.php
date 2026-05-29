@@ -12,12 +12,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('mahasiswa', function (Blueprint $table) {
-            // Add minat column
-
-            // Add cuti_2 column
-            $table->enum('cuti_2', ['yes', 'no'])->default('no')->after('minat');
-        });
 
         // Update status_mahasiswa enum to include 'cuti' and 'DO'
         DB::statement("ALTER TABLE mahasiswa MODIFY COLUMN status_mahasiswa ENUM('lulus','aktif','mangkir','tidak-aktif','cuti','DO') DEFAULT 'aktif'");
