@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\AkademikMahasiswa;
 use App\Models\EarlyWarningSystem;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -94,7 +95,7 @@ abstract class EwsServiceBase
         return 'noneligible';
     }
 
-    private function getMahasiswaGradeCounts(int $mahasiswaId): array
+    private function getMahasiswaGradeCounts(int $mahasiswaId): Collection
     {
         return DB::table('khs_krs_mahasiswa as khs1')
             ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
