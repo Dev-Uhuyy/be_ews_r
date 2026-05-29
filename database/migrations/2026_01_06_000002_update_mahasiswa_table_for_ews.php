@@ -14,7 +14,6 @@ return new class extends Migration
     {
         Schema::table('mahasiswa', function (Blueprint $table) {
             // Add minat column
-            $table->string('minat', 255)->nullable()->after('telepon');
 
             // Add cuti_2 column
             $table->enum('cuti_2', ['yes', 'no'])->default('no')->after('minat');
