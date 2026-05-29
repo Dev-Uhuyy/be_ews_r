@@ -16,9 +16,9 @@ class StatistikKelulusanService
     {
         $user = Auth::user();
         if ($user) {
-            if ($user->hasRole('kaprodi')) {
+            if ($user->hasRole('admin')) {
                 $query->where('mahasiswa.prodi_id', $user->prodi_id);
-            } elseif ($user->hasRole('dekan') && request()->has('prodi_id') && request('prodi_id') != '') {
+            } elseif ($user->hasRole('super_fakultass') && request()->has('prodi_id') && request('prodi_id') != '') {
                 $query->where('mahasiswa.prodi_id', request('prodi_id'));
             }
         }

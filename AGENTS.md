@@ -28,13 +28,17 @@ composer test    # clears config cache first, then artisan test
 ### Roles & Route Prefix
 | Role | Prefix | Scope |
 |------|--------|-------|
-| dekan | `/api/ews/dekan` | All prodi in fakultas |
-| kaprodi | `/api/ews/kaprodi` | Own prodi only |
+| super_fakultass | `/api/ews/dekan` | All prodi in fakultass |
+| admin | `/api/ews/kaprodi` | Own prodi only |
 | koor | `/api/ews/koor` | Own prodi only (recalculate, surat rekomitmen) |
 | dosen | `/api/ews/dosen` | Own mahasiswa Wali only |
 | mahasiswa | `/api/ews/mahasiswa` | Own data only |
 
 ### Login Endpoints (public)
+```
+POST /api/login-admin
+POST /api/login-super-fakultass
+POST /api/login-mahasiswa
 ```
 POST /api/login-dekan
 POST /api/login-kaprodi
@@ -44,7 +48,7 @@ All return `{ access_token, user, role_specific_data }`. Token passed as `Author
 
 ### Important Service Files
 - `app/Services/Dekan/EwsService.php` — Core EWS status calculation logic
-- `app/Services/Kaprodi/EwsService.php` — Kaprodi-specific EWS logic
+- `app/Services/Kaprodi/EwsService.php` — Admin-specific EWS logic
 - `app/Observers/AkademikMahasiswaObserver.php` — Auto-recalculates EWS on akademik data change
 - `app/Jobs/RecalculateAllEwsJob.php` — Batch recalculation job (chunk 100, excludes Lulus/DO)
 

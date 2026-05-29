@@ -37,28 +37,28 @@ abstract class Controller
         }
 
         // Eager load if needed, but normally $user->prodi relies on prodi_id
-        if ($user->hasRole('kaprodi')) {
+        if ($user->hasRole('admin')) {
             return [
-                'role' => 'kaprodi',
+                'role' => 'admin',
                 'scope_data' => 'Prodi Spesifik',
                 'nama_prodi' => $user->prodi?->nama ?? 'Unknown Prodi',
                 'kode_prodi' => $user->prodi?->kode_prodi ?? 'Unknown',
             ];
         }
 
-        if ($user->hasRole('dekan')) {
+        if ($user->hasRole('super_fakultass')) {
             if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodi = Prodi::find(request('prodi_id'));
 
                 return [
-                    'role' => 'dekan',
+                    'role' => 'super_fakultass',
                     'scope_data' => 'Filter Prodi Spesifik',
                     'nama_prodi' => $prodi?->nama ?? 'Unknown Prodi',
                 ];
             }
 
             return [
-                'role' => 'dekan',
+                'role' => 'super_fakultass',
                 'scope_data' => 'Seluruh Fakultas (Semua Prodi)',
             ];
         }

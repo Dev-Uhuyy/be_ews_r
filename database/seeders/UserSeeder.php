@@ -12,7 +12,7 @@ class UserSeeder extends Seeder
     /**
      * Seed user test EWS per role.
      *
-     * Role EWS: mahasiswa | kaprodi | dekan
+     * Role EWS: mahasiswa | admin | super_fakultass
      * User existing di DB tidak diubah, hanya tambah user test EWS.
      */
     public function run(): void
@@ -22,69 +22,69 @@ class UserSeeder extends Seeder
         $prodiA14 = Prodi::where('kode_prodi', 'A14')->first();
         $prodiA15 = Prodi::where('kode_prodi', 'A15')->first();
 
-        // 1. Akun Kaprodi (Kepala Program Studi) - A11
-        $kaprodiA11 = User::firstOrCreate(
-            ['email' => 'kaprodi_a11@ews.com'],
+        // 1. Akun Admin (Kepala Program Studi) - A11
+        $adminA11 = User::firstOrCreate(
+            ['email' => 'admin_a11@ews.com'],
             [
-                'name' => 'Kaprodi TI Test',
+                'name' => 'Admin TI Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA11?->id,
             ]
         );
-        if (! $kaprodiA11->hasRole('kaprodi')) {
-            $kaprodiA11->assignRole('kaprodi');
+        if (! $adminA11->hasRole('admin')) {
+            $adminA11->assignRole('admin');
         }
 
-        // Akun Kaprodi - A12
-        $kaprodiA12 = User::firstOrCreate(
-            ['email' => 'kaprodi_a12@ews.com'],
+        // Akun Admin - A12
+        $adminA12 = User::firstOrCreate(
+            ['email' => 'admin_a12@ews.com'],
             [
-                'name' => 'Kaprodi SI Test',
+                'name' => 'Admin SI Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA12?->id,
             ]
         );
-        if (! $kaprodiA12->hasRole('kaprodi')) {
-            $kaprodiA12->assignRole('kaprodi');
+        if (! $adminA12->hasRole('admin')) {
+            $adminA12->assignRole('admin');
         }
 
-        // Akun Kaprodi - A14
-        $kaprodiA14 = User::firstOrCreate(
-            ['email' => 'kaprodi_a14@ews.com'],
+        // Akun Admin - A14
+        $adminA14 = User::firstOrCreate(
+            ['email' => 'admin_a14@ews.com'],
             [
-                'name' => 'Kaprodi DKV Test',
+                'name' => 'Admin DKV Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA14?->id,
             ]
         );
-        if (! $kaprodiA14->hasRole('kaprodi')) {
-            $kaprodiA14->assignRole('kaprodi');
+        if (! $adminA14->hasRole('admin')) {
+            $adminA14->assignRole('admin');
         }
 
-        // Akun Kaprodi - A15
-        $kaprodiA15 = User::firstOrCreate(
-            ['email' => 'kaprodi_a15@ews.com'],
+        // Akun Admin - A15
+        $adminA15 = User::firstOrCreate(
+            ['email' => 'admin_a15@ews.com'],
             [
-                'name' => 'Kaprodi Ilkom Test',
+                'name' => 'Admin Ilkom Test',
                 'password' => Hash::make('password'),
                 'prodi_id' => $prodiA15?->id,
             ]
         );
-        if (! $kaprodiA15->hasRole('kaprodi')) {
-            $kaprodiA15->assignRole('kaprodi');
+        if (! $adminA15->hasRole('admin')) {
+            $adminA15->assignRole('admin');
         }
 
-        // 2. Akun Dekan
-        $dekan = User::firstOrCreate(
-            ['email' => 'dekan@ews.com'],
+        // 2. Akun Super Fakultas
+        $superFakultass = User::firstOrCreate(
+            ['email' => 'super_fakultass@ews.com'],
             [
-                'name' => 'Dekan EWS Test',
+                'name' => 'Super Fakultas EWS Test',
                 'password' => Hash::make('password'),
-                'prodi_id' => null, // dekan level fakultas
+                'prodi_id' => null, // super_fakultass level fakultas
             ]
         );
-        if (! $dekan->hasRole('dekan')) {
-            $dekan->assignRole('dekan');
+        if (! $superFakultass->hasRole('super_fakultass')) {
+            $superFakultass->assignRole('super_fakultass');
         }
 
         // 3. Akun Mahasiswa test
@@ -102,11 +102,11 @@ class UserSeeder extends Seeder
             $mahasiswa->assignRole('mahasiswa');
         }
 
-        $this->command->line('  kaprodi_a11@ews.com / password  (role: kaprodi - TI)');
-        $this->command->line('  kaprodi_a12@ews.com / password  (role: kaprodi - SI)');
-        $this->command->line('  kaprodi_a14@ews.com / password  (role: kaprodi - DKV)');
-        $this->command->line('  kaprodi_a15@ews.com / password  (role: kaprodi - Ilkom)');
-        $this->command->line('  dekan@ews.com       / password  (role: dekan)');
-        $this->command->line('  mahasiswa@ews.com   / password  (role: mahasiswa)');
+        $this->command->line('  admin_a11@ews.com   / password  (role: admin - TI)');
+        $this->command->line('  admin_a12@ews.com   / password  (role: admin - SI)');
+        $this->command->line('  admin_a14@ews.com   / password  (role: admin - DKV)');
+        $this->command->line('  admin_a15@ews.com   / password  (role: admin - Ilkom)');
+        $this->command->line('  super_fakultass@ews.com / password  (role: super_fakultass)');
+        $this->command->line('  mahasiswa@ews.com  / password  (role: mahasiswa)');
     }
 }

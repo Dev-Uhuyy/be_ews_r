@@ -16,6 +16,6 @@ class EwsService extends EwsServiceBase
             return null;
         }
 
-        return $user->hasRole('dekan') ? $user->prodi_id : null;
+        return $user->hasRole('super_fakultass') ? $user->prodi_id : null;
     }
 }

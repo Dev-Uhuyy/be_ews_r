@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * @tags Dekan - EWS Management
+ * @tags Super Fakultas - EWS Management
  */
 class EwsController extends Controller
 {
@@ -98,7 +98,7 @@ class EwsController extends Controller
             $akademik = AkademikMahasiswa::where('mahasiswa_id', $mahasiswaId)
                 ->whereHas('mahasiswa', function ($query) {
                     $user = Auth::user();
-                    if ($user && $user->hasRole('Dekan')) {
+                    if ($user && $user->hasRole('super_fakultass')) {
                         $query->where('prodi_id', $user->prodi_id);
                     }
                 })
@@ -138,9 +138,9 @@ class EwsController extends Controller
             // Retrieve prodiId based on role
             $prodiId = null;
             $user = Auth::user();
-            if ($user && $user->hasRole('Dekan')) {
+            if ($user && $user->hasRole('super_fakultass')) {
                 $prodiId = $user->prodi_id;
-            } elseif ($user && $user->hasRole('dekan') && request()->has('prodi_id') && request('prodi_id') != '') {
+            } elseif ($user && $user->hasRole('super_fakultass') && request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodiId = request('prodi_id');
             }
 

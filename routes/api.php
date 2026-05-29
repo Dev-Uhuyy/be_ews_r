@@ -36,7 +36,7 @@ Route::prefix('ews')->group(function () {
 
     // ── KAPRODI (Kepala Program Studi) ────────────────────────────────────────
     // Akses: recalculate EWS + Dashboard (hanya prodi sendiri)
-    Route::middleware(['sti_api_token', 'role:kaprodi'])->prefix('kaprodi')->group(function () {
+    Route::middleware(['sti_api_token', 'role:admin'])->prefix('kaprodi')->group(function () {
         Route::get('dashboard', [KaprodiDashboardController::class, 'getDashboard']);
         Route::get('dashboard/detail', [KaprodiDashboardController::class, 'getDetailDashboard']);
         Route::get('dashboard/mahasiswa', [KaprodiDashboardController::class, 'getMahasiswaListByCriteria']);
@@ -68,7 +68,7 @@ Route::prefix('ews')->group(function () {
 
     // ── DEKAN (Dekan Fakultas) ────────────────────────────────────────────────
     // Akses: recalculate EWS + Dashboard
-    Route::middleware(['sti_api_token', 'role:dekan'])->prefix('dekan')->group(function () {
+    Route::middleware(['sti_api_token', 'role:super_fakultass'])->prefix('dekan')->group(function () {
         Route::get('dashboard', [DekanDashboardController::class, 'getDashboard']);
         Route::get('dashboard/detail', [DetailDashboardController::class, 'getDetailDashboard']);
         Route::get('dashboard/mahasiswa', [DetailDashboardController::class, 'getMahasiswaListByCriteria']);

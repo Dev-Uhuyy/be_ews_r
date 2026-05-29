@@ -94,7 +94,7 @@ abstract class EwsServiceBase
         return 'noneligible';
     }
 
-    private function getMahasiswaGradeCounts(int $mahasiswaId): array
+    private function getMahasiswaGradeCounts(int $mahasiswaId)
     {
         return DB::table('khs_krs_mahasiswa as khs1')
             ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
