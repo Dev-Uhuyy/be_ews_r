@@ -11,7 +11,7 @@ use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Models\User;
-use App\Services\Kaprodi\EwsService;
+use App\Services\Admin\EwsService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;

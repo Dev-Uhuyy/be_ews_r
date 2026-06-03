@@ -28,7 +28,7 @@ class RoleSeeder extends Seeder
         // ─── Permissions EWS ───────────────────────────────────────────────────
         $permEwsMahasiswa = Permission::firstOrCreate(['name' => 'ews-mahasiswa', 'guard_name' => 'web']);
         $permEwsAdmin = Permission::firstOrCreate(['name' => 'ews-admin',   'guard_name' => 'web']);
-        $permEwsSuperFakultass = Permission::firstOrCreate(['name' => 'ews-super-fakultass',     'guard_name' => 'web']);
+        $permEwsSuperFakultas = Permission::firstOrCreate(['name' => 'ews-super-fakultas',     'guard_name' => 'web']);
 
         // ─── Role: mahasiswa ────────────────────────────────────────────────────
         // Role ini sudah ada di DB dari sti-api. Kita hanya tambahkan permission EWS.
@@ -40,11 +40,11 @@ class RoleSeeder extends Seeder
         $roleAdmin->givePermissionTo($permEwsAdmin);
         $roleAdmin->givePermissionTo($permEwsMahasiswa);
 
-        // ─── Role: super_fakultas (Dekan Fakultas) ───────────────────────────────
-        $roleSuperFakultass = Role::firstOrCreate(['name' => 'super_fakultas', 'guard_name' => 'web']);
-        $roleSuperFakultass->givePermissionTo($permEwsSuperFakultass);
-        $roleSuperFakultass->givePermissionTo($permEwsAdmin);
-        $roleSuperFakultass->givePermissionTo($permEwsMahasiswa);
+        // ─── Role: super_fakultas ───────────────────────────────
+        $roleSuperFakultas = Role::firstOrCreate(['name' => 'super_fakultas', 'guard_name' => 'web']);
+        $roleSuperFakultas->givePermissionTo($permEwsSuperFakultas);
+        $roleSuperFakultas->givePermissionTo($permEwsAdmin);
+        $roleSuperFakultas->givePermissionTo($permEwsMahasiswa);
 
         $this->command->info('✔ RoleSeeder: 3 role EWS siap (mahasiswa, admin, super_fakultas).');
     }
