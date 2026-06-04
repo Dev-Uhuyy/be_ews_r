@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class IpsMahasiswa extends Model
 {
+    use HasFactory;
     protected $table = 'ips_mahasiswa';
 
     protected $fillable = [

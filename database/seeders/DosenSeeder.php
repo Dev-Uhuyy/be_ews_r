@@ -10,44 +10,113 @@ use Illuminate\Database\Seeder;
 class DosenSeeder extends Seeder
 {
     /**
-     * Seed dosen untuk setiap user berkategori 'dosen' di DB.
+     * Seed dosen untuk SETIAP user berkategori 'dosen' di DB.
      *
-     * Catatan: Di sti_api.sql, user dosen ada (misal user_id 10, 21, 32, 43).
-     * Seeder ini membuat record dosen untuk setiap prodi jika belum ada.
+     * DosenSeeder tidak hardcode user_id lagi (vulnerable to schema change).
+     * Lookup by role 'dosen' + prodi_id. User dosen di-seed oleh UserSeeder
+     * dengan email dosen_<KODEPRODI>_<N>@ews.com (6 per prodi).
      */
     public function run(): void
     {
-        // Data dosen per prodi — berdasarkan user dosen di sti_api.sql
-        $dosens = [
-            // Prodi A11 - user_id 10 (Dosen A11)
-            ['user_id' => 10, 'kode_prodi' => 'A11', 'npp' => 'A11.001'],
-            // Prodi A12 - user_id 21 (Dosen A12)
-            ['user_id' => 21, 'kode_prodi' => 'A12', 'npp' => 'A12.001'],
-            // Prodi A14 - user_id 32 (Dosen A14)
-            ['user_id' => 32, 'kode_prodi' => 'A14', 'npp' => 'A14.001'],
-            // Prodi A15 - user_id 43 (Dosen A15)
-            ['user_id' => 43, 'kode_prodi' => 'A15', 'npp' => 'A15.001'],
-        ];
+        $prodis = Prodi::all();
+        $dosenRole = \Spatie\Permission\Models\Role::where('name', 'dosen')->first();
 
-        foreach ($dosens as $data) {
-            $prodi = Prodi::where('kode_prodi', $data['kode_prodi'])->first();
+        if (! $dosenRole) {
+            $this->command->warn('⚠ Role "dosen" belum ada. Jalankan RoleSeeder dulu.');
 
-            // Pastikan user-nya ada
-            if (! User::find($data['user_id'])) {
-                $this->command->warn("⚠ User ID {$data['user_id']} tidak ditemukan, dosen untuk {$data['kode_prodi']} dilewati.");
+            return;
+        }
+
+        // Ambil semua user dengan role 'dosen'
+        $dosenUsers = User::role('dosen')->get();
+
+        if ($dosenUsers->isEmpty()) {
+            $this->command->warn('⚠ Tidak ada user dengan role "dosen". Jalankan UserSeeder dulu.');
+
+            return;
+        }
+
+        $count = 0;
+        $nppTracker = []; // Track NPP yang dipakai per prodi untuk hindari duplicate
+        foreach ($dosenUsers as $i => $user) {
+            $prodi = $prodis->firstWhere('id', $user->prodi_id);
+
+            if (! $prodi) {
+                $this->command->warn("⚠ User dosen {$user->email} tidak punya prodi, skip.");
 
                 continue;
             }
 
-            Dosen::firstOrCreate(
-                ['user_id' => $data['user_id']],
-                [
-                    'prodi_id' => $prodi?->id,
-                    'npp' => $data['npp'],
-                ]
-            );
+            // Jika dosen untuk user ini sudah ada, skip
+            $existing = Dosen::where('user_id', $user->id)->first();
+            if ($existing) {
+                $count++;
+                continue;
+            }
+
+            // Generate NPP unik: increment kalau sudah dipakai
+            $userIndex = ($nppTracker[$prodi->kode_prodi] ?? 0) + 1;
+            $nppTracker[$prodi->kode_prodi] = $userIndex;
+
+            // Cek kalau NPP sudah dipakai dosen LAIN
+            while (Dosen::where('npp', "{$prodi->kode_prodi}.".str_pad((string) $userIndex, 3, '0', STR_PAD_LEFT))->exists()) {
+                $userIndex++;
+                $nppTracker[$prodi->kode_prodi] = $userIndex;
+            }
+
+            $npp = "{$prodi->kode_prodi}.".str_pad((string) $userIndex, 3, '0', STR_PAD_LEFT);
+
+            Dosen::create([
+                'user_id' => $user->id,
+                'prodi_id' => $prodi->id,
+                'npp' => $npp,
+                'gelar_depan' => $this->getGelarDepan($userIndex),
+                'gelar_belakang' => $this->getGelarBelakang($userIndex),
+                'bidang_kajian' => $this->getBidangKajian($prodi->kode_prodi, $userIndex),
+                'status_dosen' => 'Aktif',
+                'jumlah_lulusan' => fake()->numberBetween(0, 50),
+                'lulus_persen' => fake()->randomFloat(2, 50, 95),
+                'total_mhs_ta' => fake()->numberBetween(0, 15),
+                'total_mhs_saat_ini' => fake()->numberBetween(0, 12),
+                'kuota_ta_baru' => fake()->numberBetween(2, 8),
+            ]);
+            $count++;
         }
 
-        $this->command->info('✔ DosenSeeder: '.Dosen::count().' dosen tersedia.');
+        $this->command->info("✔ DosenSeeder: {$count} dosen tersedia untuk ".count($prodis)." prodi.");
+    }
+
+    private function getGelarDepan(int $i): string
+    {
+        $gelar = ['', 'Dr.', 'Prof.', 'Dr.', '', 'Prof.'];
+
+        return $gelar[($i - 1) % 6];
+    }
+
+    private function getGelarBelakang(int $i): string
+    {
+        $gelar = ['M.Kom.', 'M.T.', 'M.Cs.', 'Ph.D.', 'M.Si.', 'M.Kom.'];
+
+        return $gelar[($i - 1) % 6];
+    }
+
+    private function getBidangKajian(string $kodeProdi, int $i): string
+    {
+        // Peminatan dari prodi yang ada
+        $map = [
+            'A11' => ['SC', 'RPLD', 'SK3D'],
+            'A12' => ['EIS', 'EB', 'DATA'],
+            'A14' => ['DG', 'MM', 'AN'],
+            'A15' => ['PR', 'JR', 'BROAD'],
+            'A16' => ['PRD', 'VFX', 'AUD'],
+            'A17' => ['2D', '3D', 'GAME'],
+            'A18' => ['PJJ-A', 'PJJ-B', 'PJJ-C'],
+            'A22' => ['A22-A', 'A22-B', 'A22-C'],
+            'P31' => ['RISET', 'TERAPAN', 'KONS'],
+            'P41' => ['P41-A', 'P41-B', 'P41-C'],
+        ];
+        $options = $map[$kodeProdi] ?? ['UMUM'];
+
+        return $options[($i - 1) % 3];
     }
 }
