@@ -32,7 +32,9 @@ class DetailDashboardService
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as perhatian'),
-            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as kritis')
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as kritis'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible')
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
@@ -82,6 +84,8 @@ class DetailDashboardService
                         'normal' => $item->normal,
                         'perhatian' => $item->perhatian,
                         'kritis' => $item->kritis,
+                        'eligible' => $item->eligible ?? 0,
+                        'tidak_eligible' => $item->tidak_eligible ?? 0,
                     ];
                 })->values()->toArray(),
             ];
@@ -108,13 +112,19 @@ class DetailDashboardService
             'akademik_mahasiswa.sks_lulus',
             'akademik_mahasiswa.ipk',
             'mahasiswa.status_mahasiswa',
-            'early_warning_system.status as ews_status'
+            'early_warning_system.status as ews_status',
+            'early_warning_system.status_kelulusan'
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->join('users', 'mahasiswa.user_id', '=', 'users.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->where('mahasiswa.prodi_id', $prodiId)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            ->where('mahasiswa.prodi_id', $prodiId);
+
+        if ($criteria === 'do') {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"');
+        } else {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+        }
 
         if ($tahunMasuk) {
             $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
@@ -132,17 +142,28 @@ class DetailDashboardService
                 case 'mangkir':
                     $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "mangkir"');
                     break;
+                case 'do':
+                    break;
                 case 'cuti_2x':
                     $query->where('mahasiswa.cuti_2', 'yes');
                     break;
                 case 'tepat_waktu':
                     $query->where('early_warning_system.status', 'tepat_waktu');
                     break;
+                case 'normal':
+                    $query->where('early_warning_system.status', 'normal');
+                    break;
                 case 'perhatian':
                     $query->where('early_warning_system.status', 'perhatian');
                     break;
                 case 'kritis':
                     $query->where('early_warning_system.status', 'kritis');
+                    break;
+                case 'eligible':
+                    $query->where('early_warning_system.status_kelulusan', 'eligible');
+                    break;
+                case 'noneligible':
+                    $query->where('early_warning_system.status_kelulusan', 'noneligible');
                     break;
             }
         }
@@ -165,6 +186,7 @@ class DetailDashboardService
                         'ipk' => $mhs->ipk ?? 0,
                         'status_mahasiswa' => $mhs->status_mahasiswa,
                         'ews_status' => $mhs->ews_status,
+                        'status_kelulusan' => $mhs->status_kelulusan,
                     ];
                 })->values(),
             ];

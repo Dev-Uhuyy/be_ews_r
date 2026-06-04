@@ -58,6 +58,14 @@ Route::prefix('ews')->group(function () {
         Route::get('capaian-mahasiswa/mahasiswa-gagal', [AdminCapaianMahasiswaController::class, 'getListMahasiswaGagalPerMataKuliah']);
         Route::get('capaian-mahasiswa/mahasiswa-gagal-by-angkatan', [AdminCapaianMahasiswaController::class, 'getListMahasiswaGagalByAngkatan']);
 
+        // Capaian Mahasiswa Export routes
+        Route::get('capaian-mahasiswa/export/top-matakuliah-gagal', [AdminCapaianMahasiswaController::class, 'exportTopMatakuliahGagal']);
+        Route::get('capaian-mahasiswa/export/rata-rata-ips', [AdminCapaianMahasiswaController::class, 'exportRataRataIps']);
+        Route::get('capaian-mahasiswa/export/tabel-capaian', [AdminCapaianMahasiswaController::class, 'exportTabelCapaian']);
+        Route::get('capaian-mahasiswa/export/tabel-capaian/detail', [AdminCapaianMahasiswaController::class, 'exportTabelCapaianDetail']);
+        Route::get('capaian-mahasiswa/export/list-matakuliah', [AdminCapaianMahasiswaController::class, 'exportListMatakuliah']);
+        Route::get('capaian-mahasiswa/export/mahasiswa-gagal', [AdminCapaianMahasiswaController::class, 'exportMahasiswaGagal']);
+
         // Export routes
         Route::get('export/dashboard', [AdminExportController::class, 'exportDashboard']);
         Route::get('export/dashboard-detail', [AdminExportController::class, 'exportDashboardDetail']);
@@ -104,6 +112,14 @@ Route::prefix('ews')->group(function () {
 
         // List Mahasiswa Gagal per Mata Kuliah
         Route::get('capaian-mahasiswa/mahasiswa-gagal', [SuperFakultasCapaianMahasiswaController::class, 'getListMahasiswaGagalPerMataKuliah']);
+
+        // Capaian Mahasiswa Export routes
+        Route::get('capaian-mahasiswa/export/top-matakuliah-gagal', [SuperFakultasCapaianMahasiswaController::class, 'exportTopMatakuliahGagal']);
+        Route::get('capaian-mahasiswa/export/rata-rata-ips', [SuperFakultasCapaianMahasiswaController::class, 'exportRataRataIps']);
+        Route::get('capaian-mahasiswa/export/tabel-capaian', [SuperFakultasCapaianMahasiswaController::class, 'exportTabelCapaian']);
+        Route::get('capaian-mahasiswa/export/tabel-capaian/detail', [SuperFakultasCapaianMahasiswaController::class, 'exportTabelCapaianDetail']);
+        Route::get('capaian-mahasiswa/export/list-matakuliah', [SuperFakultasCapaianMahasiswaController::class, 'exportListMatakuliah']);
+        Route::get('capaian-mahasiswa/export/mahasiswa-gagal', [SuperFakultasCapaianMahasiswaController::class, 'exportMahasiswaGagal']);
     });
 
     // ── MAHASISWA ─────────────────────────────────────────────────────────────

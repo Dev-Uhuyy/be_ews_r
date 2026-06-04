@@ -102,7 +102,7 @@ class StatistikKelulusanExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'SuperFakultas_Statistik_Kelulusan_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'SuperFakultas_Statistik_Kelulusan_'.date('Y-m-d'));
     }
 
     private function getStatistikPerProdi($prodiId)

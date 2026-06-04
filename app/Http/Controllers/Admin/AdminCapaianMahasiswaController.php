@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Admin\AdminCapaianMahasiswaService;
+use Illuminate\Http\Request;
 
 /**
  * @tags Admin - Capaian Mahasiswa
@@ -212,6 +213,111 @@ class AdminCapaianMahasiswaController extends Controller
             );
         } catch (\Exception $e) {
             return $this->exceptionError($e, 'getListMahasiswaGagalByAngkatan');
+        }
+    }
+
+    // ── Export Endpoints ─────────────────────────────────────────────────────
+
+    /**
+     * Export Top Mata Kuliah Gagal to XLSX
+     *
+     * Query params (optional): tahun_masuk
+     *
+     * @tags Admin - Capaian Mahasiswa
+     */
+    public function exportTopMatakuliahGagal(Request $request)
+    {
+        try {
+            $filters = $request->query();
+
+            return $this->capaianMahasiswaService->exportTopMatakuliahGagal($filters);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportTopMatakuliahGagal');
+        }
+    }
+
+    /**
+     * Export Rata-rata IPS to XLSX
+     *
+     * @tags Admin - Capaian Mahasiswa
+     */
+    public function exportRataRataIps(Request $request)
+    {
+        try {
+            $filters = $request->query();
+
+            return $this->capaianMahasiswaService->exportRataRataIps($filters);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportRataRataIps');
+        }
+    }
+
+    /**
+     * Export Tabel Capaian to XLSX
+     *
+     * @tags Admin - Capaian Mahasiswa
+     */
+    public function exportTabelCapaian(Request $request)
+    {
+        try {
+            $filters = $request->query();
+
+            return $this->capaianMahasiswaService->exportTabelCapaian($filters);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportTabelCapaian');
+        }
+    }
+
+    /**
+     * Export Detail Tabel Capaian to XLSX
+     *
+     * @tags Admin - Capaian Mahasiswa
+     */
+    public function exportTabelCapaianDetail(Request $request)
+    {
+        try {
+            $filters = $request->query();
+
+            return $this->capaianMahasiswaService->exportTabelCapaianDetail($filters);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportTabelCapaianDetail');
+        }
+    }
+
+    /**
+     * Export List Mata Kuliah Gagal to XLSX
+     *
+     * Query params (optional): tahun_masuk
+     *
+     * @tags Admin - Capaian Mahasiswa
+     */
+    public function exportListMatakuliah(Request $request)
+    {
+        try {
+            $filters = $request->query();
+
+            return $this->capaianMahasiswaService->exportListMatakuliah($filters);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportListMatakuliah');
+        }
+    }
+
+    /**
+     * Export Mahasiswa Gagal per Mata Kuliah to XLSX
+     *
+     * Query params (required): matakuliah_id
+     * Query params (optional): tahun_masuk
+     *
+     * @tags Admin - Capaian Mahasiswa
+     */
+    public function exportMahasiswaGagal(Request $request)
+    {
+        try {
+            $filters = $request->query();
+
+            return $this->capaianMahasiswaService->exportMahasiswaGagal($filters);
+        } catch (\Exception $e) {
+            return $this->exceptionError($e, 'exportMahasiswaGagal');
         }
     }
 }

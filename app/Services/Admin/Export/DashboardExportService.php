@@ -57,7 +57,7 @@ class DashboardExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'Admin_Ringkasan_'.$prodi->kode_prodi.'_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'Admin_Ringkasan_'.$prodi->kode_prodi.'_'.date('Y-m-d'));
     }
 
     /**
@@ -96,7 +96,7 @@ class DashboardExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'Admin_Dashboard_Detail_'.$prodi->kode_prodi.'_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'Admin_Dashboard_Detail_'.$prodi->kode_prodi.'_'.date('Y-m-d'));
     }
 
     private function getRingkasanPerTahun($prodiId, $tahunMasuk = null)

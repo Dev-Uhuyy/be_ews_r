@@ -84,7 +84,7 @@ class DashboardExportService
         }
         $this->autoSizeColumns($sheet2, count($headers2));
 
-        $this->saveFile($spreadsheet, 'SuperFakultas_Ringkasan_Prodi_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'SuperFakultas_Ringkasan_Prodi_'.date('Y-m-d'));
     }
 
     public function exportDashboardDetail($filters = [])
@@ -134,7 +134,7 @@ class DashboardExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'SuperFakultas_Dashboard_Detail_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'SuperFakultas_Dashboard_Detail_'.date('Y-m-d'));
     }
 
     // ── Queries ──────────────────────────────────────────────────────────────

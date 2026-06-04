@@ -93,7 +93,7 @@ class MahasiswaListExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'Admin_Mahasiswa_List_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'Admin_Mahasiswa_List_'.date('Y-m-d'));
     }
 
     private function buildFilterDescription($f)

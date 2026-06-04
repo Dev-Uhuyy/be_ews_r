@@ -43,7 +43,7 @@ class DetailAngkatanService
         $result = [];
         foreach ($mahasiswas as $mhs) {
             $detail = $allKhsData[$mhs->mahasiswa_id] ?? ['jumlah_nilai_d' => 0, 'total_sks_nilai_d' => 0, 'jumlah_nilai_e' => 0, 'total_sks_nilai_e' => 0];
-            $mkStatus = $allMkStatus[$mhs->akademik_id] ?? ['mk_nasional' => 'no', 'mk_fakultMagento' => 'no', 'mk_prodi' => 'no'];
+            $mkStatus = $allMkStatus[$mhs->akademik_id] ?? ['mk_nasional' => 'no', 'mk_fakultas' => 'no', 'mk_prodi' => 'no'];
 
             $result[] = [
                 'mahasiswa_id' => $mhs->mahasiswa_id,
@@ -60,7 +60,7 @@ class DetailAngkatanService
                     'total_sks' => $detail['total_sks_nilai_e'],
                 ],
                 'mk_nasional' => $mkStatus['mk_nasional'],
-                'mk_fakultMagento' => $mkStatus['mk_fakultMagento'],
+                'mk_fakultas' => $mkStatus['mk_fakultas'],
                 'mk_prodi' => $mkStatus['mk_prodi'],
                 'eligible' => $mhs->eligible ?? 'noneligible',
             ];
@@ -122,7 +122,7 @@ class DetailAngkatanService
             $akademik = $akademiks->get($id);
             $result[$id] = [
                 'mk_nasional' => $akademik?->mk_nasional ?? 'no',
-                'mk_fakultMagento' => $akademik?->mk_fakultMagento ?? 'no',
+                'mk_fakultas' => $akademik?->mk_fakultas ?? 'no',
                 'mk_prodi' => $akademik?->mk_prodi ?? 'no',
             ];
         }

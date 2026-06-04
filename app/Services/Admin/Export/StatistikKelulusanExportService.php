@@ -73,7 +73,7 @@ class StatistikKelulusanExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'Admin_Statistik_Kelulusan_'.$prodi->kode_prodi.'_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'Admin_Statistik_Kelulusan_'.$prodi->kode_prodi.'_'.date('Y-m-d'));
     }
 
     private function getStatistikPerProdi($prodiId, $tahunMasuk = null)

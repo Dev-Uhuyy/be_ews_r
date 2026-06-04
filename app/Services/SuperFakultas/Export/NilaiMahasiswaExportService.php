@@ -42,7 +42,7 @@ class NilaiMahasiswaExportService
 
         $this->autoSizeColumns($sheet, count($headers));
         $suffix = $isSingleMahasiswa ? '_Mhs_'.$filters['mahasiswa_id'] : '';
-        $this->saveFile($spreadsheet, 'SuperFakultas_Nilai_Detail'.$suffix.'_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'SuperFakultas_Nilai_Detail'.$suffix.'_'.date('Y-m-d'));
     }
 
     private function writeSingleMahasiswa($sheet, $mhs, $startRow)
@@ -142,7 +142,7 @@ class NilaiMahasiswaExportService
         $this->styleDataRow($sheet, $startRow, count($headers));
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'SuperFakultas_Nilai_Summary_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'SuperFakultas_Nilai_Summary_'.date('Y-m-d'));
     }
 
     private function enrichMahasiswaNilai($mhs, $mandatoryMKsByCategory)

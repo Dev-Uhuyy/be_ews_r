@@ -78,7 +78,7 @@ class DetailAngkatanExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
-        $this->saveFile($spreadsheet, 'SuperFakultas_Detail_Angkatan_'.$tahunMasuk.'_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'SuperFakultas_Detail_Angkatan_'.$tahunMasuk.'_'.date('Y-m-d'));
     }
 
     private function getNilaiDetail($mahasiswaId)

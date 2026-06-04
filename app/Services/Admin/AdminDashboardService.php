@@ -117,7 +117,9 @@ class AdminDashboardService
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "perhatian" THEN 1 ELSE 0 END) as jumlah_perhatian'),
-            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as jumlah_kritis')
+            DB::raw('SUM(CASE WHEN early_warning_system.status = "kritis" THEN 1 ELSE 0 END) as jumlah_kritis'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
+            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as tidak_eligible')
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
@@ -142,6 +144,8 @@ class AdminDashboardService
 
         $tahunData = $tahunData->map(function ($item) use ($doData) {
             $item->jumlah_do = $doData->get($item->tahun_masuk)->jumlah_do ?? 0;
+            $item->eligible = $item->eligible ?? 0;
+            $item->tidak_eligible = $item->tidak_eligible ?? 0;
             return $item;
         });
 
@@ -240,13 +244,19 @@ class AdminDashboardService
             'akademik_mahasiswa.sks_lulus',
             'akademik_mahasiswa.ipk',
             'mahasiswa.status_mahasiswa',
-            'early_warning_system.status as ews_status'
+            'early_warning_system.status as ews_status',
+            'early_warning_system.status_kelulusan as status_kelulusan'
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->join('users', 'mahasiswa.user_id', '=', 'users.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->where('mahasiswa.prodi_id', $prodiId)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            ->where('mahasiswa.prodi_id', $prodiId);
+
+        if ($criteria === 'do') {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"');
+        } else {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+        }
 
         if ($tahunMasuk) {
             $query->where('akademik_mahasiswa.tahun_masuk', $tahunMasuk);
@@ -257,17 +267,34 @@ class AdminDashboardService
                 case 'aktif':
                     $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "aktif"');
                     break;
+                case 'cuti':
+                    $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "cuti"');
+                    break;
+                case 'mangkir':
+                    $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "mangkir"');
+                    break;
+                case 'do':
+                    break;
                 case 'cuti_2x':
                     $query->where('mahasiswa.cuti_2', 'yes');
                     break;
                 case 'tepat_waktu':
                     $query->where('early_warning_system.status', 'tepat_waktu');
                     break;
+                case 'normal':
+                    $query->where('early_warning_system.status', 'normal');
+                    break;
                 case 'perhatian':
                     $query->where('early_warning_system.status', 'perhatian');
                     break;
                 case 'kritis':
                     $query->where('early_warning_system.status', 'kritis');
+                    break;
+                case 'eligible':
+                    $query->where('early_warning_system.status_kelulusan', 'eligible');
+                    break;
+                case 'noneligible':
+                    $query->where('early_warning_system.status_kelulusan', 'noneligible');
                     break;
             }
         }
@@ -289,6 +316,7 @@ class AdminDashboardService
                         'ipk' => $mhs->ipk ?? 0,
                         'status_mahasiswa' => $mhs->status_mahasiswa,
                         'ews_status' => $mhs->ews_status,
+                        'status_kelulusan' => $mhs->status_kelulusan ?? null,
                     ];
                 })->values(),
             ];

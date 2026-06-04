@@ -622,4 +622,42 @@ class CapaianMahasiswaService
             'data' => $formattedData,
         ];
     }
+
+    // ── Export Wrappers ──────────────────────────────────────────────────────
+
+    public function exportTopMatakuliahGagal($filters = [])
+    {
+        return app(\App\Services\SuperFakultas\Export\CapaianTopMatakuliahExportService::class)
+            ->exportXlsx($filters);
+    }
+
+    public function exportRataRataIps($filters = [])
+    {
+        return app(\App\Services\SuperFakultas\Export\CapaianRataRataIpsExportService::class)
+            ->exportXlsx($filters);
+    }
+
+    public function exportTabelCapaian($filters = [])
+    {
+        return app(\App\Services\SuperFakultas\Export\CapaianTabelCapaianExportService::class)
+            ->exportXlsx($filters);
+    }
+
+    public function exportTabelCapaianDetail($filters = [])
+    {
+        return app(\App\Services\SuperFakultas\Export\CapaianTabelCapaianDetailExportService::class)
+            ->exportXlsx($filters);
+    }
+
+    public function exportListMatakuliah($filters = [])
+    {
+        return app(\App\Services\SuperFakultas\Export\CapaianListMatakuliahExportService::class)
+            ->exportXlsx($filters);
+    }
+
+    public function exportMahasiswaGagal($filters = [])
+    {
+        return app(\App\Services\SuperFakultas\Export\CapaianMahasiswaGagalExportService::class)
+            ->exportXlsx($filters);
+    }
 }
