@@ -21,6 +21,8 @@ class MahasiswaListService
      */
     public function getMahasiswaList($filters = [])
     {
+        $perPage = max((int) ($filters['per_page'] ?? 10), 1);
+
         $query = AkademikMahasiswa::select(
             'mahasiswa.id as mahasiswa_id',
             'mahasiswa.nim',
@@ -101,9 +103,10 @@ class MahasiswaListService
 
         $mahasiswas = $query->orderBy('prodis.nama', 'asc')
             ->orderBy('users.name', 'asc')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
-        return $mahasiswas->map(function ($mhs) {
+        $mahasiswas->getCollection()->transform(function ($mhs) {
             return [
                 'mahasiswa_id' => $mhs->mahasiswa_id,
                 'nim' => $mhs->nim,
@@ -123,6 +126,8 @@ class MahasiswaListService
                 'status_kelulusan' => $mhs->status_kelulusan ?? null,
             ];
         });
+
+        return $mahasiswas;
     }
 
     /**
@@ -144,5 +149,108 @@ class MahasiswaListService
             'status_kelulusan_options' => ['eligible', 'noneligible'],
             'ews_status_options' => ['tepat_waktu', 'normal', 'perhatian', 'kritis'],
         ];
+    }
+
+    /**
+     * Get list mahasiswa berdasarkan status_mahasiswa dan/atau ews_status
+     */
+    public function getMahasiswaByStatus($filters = [])
+    {
+        $perPage = max((int) ($filters['per_page'] ?? 10), 1);
+
+        $query = AkademikMahasiswa::select(
+            'mahasiswa.id as mahasiswa_id',
+            'mahasiswa.nim',
+            'users.name as nama_mahasiswa',
+            'mahasiswa.status_mahasiswa',
+            'prodis.id as prodi_id',
+            'prodis.nama as nama_prodi',
+            'prodis.kode_prodi',
+            'akademik_mahasiswa.tahun_masuk',
+            'akademik_mahasiswa.sks_lulus',
+            'akademik_mahasiswa.ipk',
+            'akademik_mahasiswa.nilai_d_melebihi_batas',
+            'akademik_mahasiswa.nilai_e',
+            'early_warning_system.status as ews_status',
+            'early_warning_system.status_kelulusan'
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->join('users', 'mahasiswa.user_id', '=', 'users.id')
+            ->join('prodis', 'mahasiswa.prodi_id', '=', 'prodis.id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id');
+
+        if (! empty($filters['prodi_id'])) {
+            $query->where('mahasiswa.prodi_id', $filters['prodi_id']);
+        }
+
+        if (! empty($filters['tahun_masuk'])) {
+            $query->where('akademik_mahasiswa.tahun_masuk', $filters['tahun_masuk']);
+        }
+
+        if (! empty($filters['status_mahasiswa'])) {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = ?', [strtolower($filters['status_mahasiswa'])]);
+        } else {
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+        }
+
+        if (isset($filters['ipk_max']) && is_numeric($filters['ipk_max'])) {
+            $query->where('akademik_mahasiswa.ipk', '<', $filters['ipk_max']);
+        }
+
+        if (isset($filters['sks_max']) && is_numeric($filters['sks_max'])) {
+            $query->where('akademik_mahasiswa.sks_lulus', '<', $filters['sks_max']);
+        }
+
+        if (isset($filters['has_nilai_d'])) {
+            $hasNilaiD = filter_var($filters['has_nilai_d'], FILTER_VALIDATE_BOOLEAN);
+            $query->where('akademik_mahasiswa.nilai_d_melebihi_batas', $hasNilaiD ? 'yes' : 'no');
+        }
+
+        if (isset($filters['has_nilai_e'])) {
+            $hasNilaiE = filter_var($filters['has_nilai_e'], FILTER_VALIDATE_BOOLEAN);
+            $query->where('akademik_mahasiswa.nilai_e', $hasNilaiE ? 'yes' : 'no');
+        }
+
+        if (! empty($filters['status_kelulusan'])) {
+            $status = $filters['status_kelulusan'];
+            if (in_array($status, ['eligible', 'noneligible'])) {
+                $query->where('early_warning_system.status_kelulusan', $status);
+            }
+        }
+
+        if (! empty($filters['ews_status'])) {
+            $ewsStatus = $filters['ews_status'];
+            if (in_array($ewsStatus, ['tepat_waktu', 'normal', 'perhatian', 'kritis'])) {
+                $query->where('early_warning_system.status', $ewsStatus);
+            }
+        }
+
+        $mahasiswas = $query->orderBy('prodis.nama', 'asc')
+            ->orderBy('users.name', 'asc')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $mahasiswas->getCollection()->transform(function ($mhs) {
+            return [
+                'mahasiswa_id' => $mhs->mahasiswa_id,
+                'nim' => $mhs->nim,
+                'nama_mahasiswa' => $mhs->nama_mahasiswa,
+                'status_mahasiswa' => $mhs->status_mahasiswa,
+                'prodi' => [
+                    'id' => $mhs->prodi_id,
+                    'kode_prodi' => $mhs->kode_prodi,
+                    'nama_prodi' => $mhs->nama_prodi,
+                ],
+                'tahun_masuk' => $mhs->tahun_masuk,
+                'sks_total' => $mhs->sks_lulus ?? 0,
+                'ipk' => $mhs->ipk ?? 0,
+                'nilai_d_melebihi_batas' => $mhs->nilai_d_melebihi_batas ?? 'no',
+                'nilai_e' => $mhs->nilai_e ?? 'no',
+                'ews_status' => $mhs->ews_status ?? null,
+                'status_kelulusan' => $mhs->status_kelulusan ?? null,
+            ];
+        });
+
+        return $mahasiswas;
     }
 }

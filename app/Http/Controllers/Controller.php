@@ -76,6 +76,10 @@ abstract class Controller
 
     public function successResponse($data, $message = 'Success', $status = 200)
     {
+        if (is_object($data) && method_exists($data, 'items') && method_exists($data, 'total')) {
+            return $this->paginationResponse($data, $message, $status);
+        }
+
         $response = [
             'success' => true,
             'message' => $message,
