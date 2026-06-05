@@ -130,8 +130,12 @@ class DetailDashboardService
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->join('users', 'mahasiswa.user_id', '=', 'users.id')
-            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->where('mahasiswa.prodi_id', $prodiId);
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id');
+
+        // Super fakultas: prodi_id opsional. Kalau kosong → seluruh fakultas.
+        if (! empty($prodiId)) {
+            $query->where('mahasiswa.prodi_id', $prodiId);
+        }
 
         if ($criteria === 'do') {
             $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"');

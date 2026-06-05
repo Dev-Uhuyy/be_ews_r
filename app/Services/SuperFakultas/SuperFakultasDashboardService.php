@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services\SuperFakultas;
 
 use App\Models\AkademikMahasiswa;
-use App\Models\EarlyWarningSystem;
 use App\Models\Mahasiswa;
 use App\Models\Prodi;
 use Illuminate\Database\Eloquent\Collection;
@@ -69,21 +68,20 @@ class SuperFakultasDashboardService
 
     private function getStatistikKelulusan(): array
     {
-        $eligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
-            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-            ->where('early_warning_system.status_kelulusan', 'eligible')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
-            ->count();
+        // Basis sama dengan total_mahasiswa di statistik_global: hitung dari tabel
+        // mahasiswa (non lulus/do/tidak_aktif), LEFT JOIN ke EWS. Mahasiswa tanpa row
+        // EWS dianggap non_eligible → eligible + non_eligible == total_mahasiswa.
+        $base = Mahasiswa::leftJoin('akademik_mahasiswa', 'mahasiswa.id', '=', 'akademik_mahasiswa.mahasiswa_id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")');
 
-        $noneligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
-            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
-            ->where('early_warning_system.status_kelulusan', 'noneligible')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
-            ->count();
+        $total = (clone $base)->distinct()->count('mahasiswa.id');
+        $eligible = (clone $base)->where('early_warning_system.status_kelulusan', 'eligible')
+            ->distinct()->count('mahasiswa.id');
 
         return [
             'eligible' => $eligible,
-            'non_eligible' => $noneligible,
+            'non_eligible' => $total - $eligible,
         ];
     }
 

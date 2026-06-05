@@ -3,7 +3,6 @@
 namespace App\Services\Admin;
 
 use App\Models\AkademikMahasiswa;
-use App\Models\EarlyWarningSystem;
 use App\Models\Mahasiswa;
 use App\Models\Prodi;
 use Illuminate\Support\Facades\Auth;
@@ -90,19 +89,21 @@ class AdminDashboardService
 
     private function getStatistikKelulusan($prodiId)
     {
-        $stats = EarlyWarningSystem::select(
-            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
-            DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "noneligible" THEN 1 ELSE 0 END) as noneligible')
-        )
-            ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
-            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+        // Basis sama dengan total_mahasiswa di statistik_global: hitung dari tabel
+        // mahasiswa (non lulus/do/tidak_aktif) di prodi ini, LEFT JOIN ke EWS.
+        // Mahasiswa tanpa row EWS dianggap non_eligible → eligible + non_eligible == total_mahasiswa.
+        $base = Mahasiswa::leftJoin('akademik_mahasiswa', 'mahasiswa.id', '=', 'akademik_mahasiswa.mahasiswa_id')
+            ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
             ->where('mahasiswa.prodi_id', $prodiId)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
-            ->first();
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")');
+
+        $total = (clone $base)->distinct()->count('mahasiswa.id');
+        $eligible = (clone $base)->where('early_warning_system.status_kelulusan', 'eligible')
+            ->distinct()->count('mahasiswa.id');
 
         return [
-            'eligible' => $stats->eligible ?? 0,
-            'non_eligible' => $stats->noneligible ?? 0,
+            'eligible' => $eligible,
+            'non_eligible' => $total - $eligible,
         ];
     }
 
@@ -160,6 +161,7 @@ class AdminDashboardService
             $item->jumlah_mahasiswa_tidak_aktif = $tidakAktifData->get($item->tahun_masuk)->jumlah_mahasiswa_tidak_aktif ?? 0;
             $item->eligible = $item->eligible ?? 0;
             $item->tidak_eligible = $item->tidak_eligible ?? 0;
+
             return $item;
         });
 

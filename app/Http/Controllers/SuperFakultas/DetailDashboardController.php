@@ -52,13 +52,10 @@ class DetailDashboardController extends Controller
     public function getMahasiswaListByCriteria()
     {
         try {
+            // prodi_id opsional untuk super fakultas: kalau kosong → seluruh fakultas.
             $prodiId = request()->query('prodi_id');
             $tahunMasuk = request()->query('tahun_masuk');
             $criteria = request()->query('criteria');
-
-            if (! $prodiId) {
-                return $this->errorResponse('prodi_id wajib diisi', 400);
-            }
 
             $data = $this->detailDashboardService->getMahasiswaListByCriteria(
                 $prodiId,

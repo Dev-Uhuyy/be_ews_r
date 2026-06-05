@@ -46,7 +46,7 @@ All return `{ access_token, user, role_specific_data }`. Token passed as `Author
 - `app/Services/SuperFakultas/EwsService.php` — Core EWS status calculation logic
 - `app/Services/Admin/EwsService.php` — Admin-specific EWS logic
 
-> **Note:** Folder `app/Observers/` dan `app/Jobs/` TIDAK ADA di be_ews_r. Auto-recalc observer dan batch job belum diimplementasikan. Recalc saat ini hanya lewat endpoint manual.
+> **Note:** Batch job `app/Jobs/RecalculateAllEwsJob.php` SUDAH ADA (dipakai endpoint `recalculate-all-status`, dispatch ke queue, chunk 100). Folder `app/Observers/` masih TIDAK ADA — auto-recalc observer belum diimplementasikan (recalc per-mahasiswa hanya lewat endpoint manual `recalculate-status`).
 
 ### EWS Status Logic (critical)
 EWS status calculation is documented in `EWS-LOGIC.md`. Key rules:

@@ -17,7 +17,7 @@ class CapaianListMatakuliahExportService
         $this->capaianService = $capaianService;
     }
 
-    public function exportXlsx($filters = []): void
+    public function exportXlsx($filters = [])
     {
         $data = $this->capaianService->getListMataKuliahPerProdi($filters);
 
@@ -72,6 +72,7 @@ class CapaianListMatakuliahExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
+
         return $this->saveFile($spreadsheet, 'Admin_List_Matakuliah_'.date('Y-m-d'));
     }
 }

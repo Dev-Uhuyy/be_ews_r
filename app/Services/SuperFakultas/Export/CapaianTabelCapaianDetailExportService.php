@@ -17,7 +17,7 @@ class CapaianTabelCapaianDetailExportService
         $this->capaianService = $capaianService;
     }
 
-    public function exportXlsx($filters = []): void
+    public function exportXlsx($filters = [])
     {
         $data = $this->capaianService->getDetailTabelCapaianMahasiswa($filters);
 
@@ -58,6 +58,7 @@ class CapaianTabelCapaianDetailExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
+
         return $this->saveFile($spreadsheet, 'SuperFakultas_Tabel_Capaian_Detail_'.date('Y-m-d'));
     }
 }

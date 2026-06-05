@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Admin\AdminCapaianMahasiswaService;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\Request;
 
 /**
@@ -161,14 +162,18 @@ class AdminCapaianMahasiswaController extends Controller
      *
      * @tags Admin - Capaian Mahasiswa
      */
+    #[QueryParameter('matakuliah_id', description: 'ID Mata Kuliah yang akan dicek', required: true, type: 'integer', example: 23)]
+    #[QueryParameter('tahun_masuk', description: 'Filter berdasarkan tahun angkatan', required: false, type: 'integer', example: 2020)]
     public function getListMahasiswaGagalPerMataKuliah()
     {
         try {
-            $filters = [];
-
-            if (request()->has('matakuliah_id') && request('matakuliah_id') != '') {
-                $filters['matakuliah_id'] = request('matakuliah_id');
+            if (! request()->filled('matakuliah_id')) {
+                return $this->errorResponse('Parameter matakuliah_id wajib diisi', 400);
             }
+
+            $filters = [
+                'matakuliah_id' => request('matakuliah_id'),
+            ];
 
             if (request()->has('tahun_masuk') && request('tahun_masuk') != '') {
                 $filters['tahun_masuk'] = request('tahun_masuk');
@@ -196,14 +201,17 @@ class AdminCapaianMahasiswaController extends Controller
      *
      * @tags Admin - Capaian Mahasiswa
      */
+    #[QueryParameter('tahun_masuk', description: 'Tahun angkatan yang akan dicek', required: true, type: 'integer', example: 2020)]
     public function getListMahasiswaGagalByAngkatan()
     {
         try {
-            $filters = [];
-
-            if (request()->has('tahun_masuk') && request('tahun_masuk') != '') {
-                $filters['tahun_masuk'] = request('tahun_masuk');
+            if (! request()->filled('tahun_masuk')) {
+                return $this->errorResponse('Parameter tahun_masuk wajib diisi', 400);
             }
+
+            $filters = [
+                'tahun_masuk' => request('tahun_masuk'),
+            ];
 
             $data = $this->capaianMahasiswaService->getListMahasiswaGagalByAngkatan($filters);
 
@@ -310,9 +318,15 @@ class AdminCapaianMahasiswaController extends Controller
      *
      * @tags Admin - Capaian Mahasiswa
      */
+    #[QueryParameter('matakuliah_id', description: 'ID Mata Kuliah yang akan dicek', required: true, type: 'integer', example: 23)]
+    #[QueryParameter('tahun_masuk', description: 'Filter berdasarkan tahun angkatan', required: false, type: 'integer', example: 2020)]
     public function exportMahasiswaGagal(Request $request)
     {
         try {
+            if (! $request->filled('matakuliah_id')) {
+                return $this->errorResponse('Parameter matakuliah_id wajib diisi', 400);
+            }
+
             $filters = $request->query();
 
             return $this->capaianMahasiswaService->exportMahasiswaGagal($filters);
