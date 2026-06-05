@@ -17,7 +17,7 @@ class CapaianMahasiswaGagalExportService
         $this->capaianService = $capaianService;
     }
 
-    public function exportXlsx($filters = []): void
+    public function exportXlsx($filters = [])
     {
         $data = $this->capaianService->getListMahasiswaGagalPerMataKuliah($filters);
 
@@ -68,6 +68,7 @@ class CapaianMahasiswaGagalExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
+
         return $this->saveFile($spreadsheet, 'Admin_Mahasiswa_Gagal_'.date('Y-m-d'));
     }
 }

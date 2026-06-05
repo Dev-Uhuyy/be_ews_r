@@ -9,7 +9,6 @@ use App\Models\Prodi;
 use App\Services\SuperFakultas\EwsService;
 use App\Services\SuperFakultas\StatusMahasiswaService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 /**
  * @tags SuperFakultas - EWS Management
@@ -94,14 +93,9 @@ class EwsController extends Controller
                 return $this->errorResponse('Parameter mahasiswa_id harus berupa angka yang valid', 400);
             }
 
-            // Cari akademik mahasiswa by mahasiswa_id dengan scope prodi agar SuperFakultas A tidak bisa recalculate mhs SuperFakultas B
+            // Super fakultas mencakup seluruh prodi di fakultas (prodi_id = NULL),
+            // jadi tidak ada filter prodi — recalculate berlaku untuk semua mahasiswa fakultas.
             $akademik = AkademikMahasiswa::where('mahasiswa_id', $mahasiswaId)
-                ->whereHas('mahasiswa', function ($query) {
-                    $user = Auth::user();
-                    if ($user && $user->hasRole('super_fakultas')) {
-                        $query->where('prodi_id', $user->prodi_id);
-                    }
-                })
                 ->with('mahasiswa.user')
                 ->first();
 
@@ -135,17 +129,15 @@ class EwsController extends Controller
     public function recalculateAllStatus()
     {
         try {
-            // Retrieve prodiId based on role
+            // Super fakultas default: recalculate seluruh fakultas (prodiId = null).
+            // Opsional bisa di-scope ke 1 prodi lewat query param ?prodi_id=X.
             $prodiId = null;
-            $user = Auth::user();
-            if ($user && $user->hasRole('super_fakultas')) {
-                $prodiId = $user->prodi_id;
-            } elseif ($user && $user->hasRole('super_fakultas') && request()->has('prodi_id') && request('prodi_id') != '') {
+            if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodiId = request('prodi_id');
             }
 
             // Dispatch job to background with optional prodiId filter
-            RecalculateAllEwsJob::dispatch($prodiId);
+            RecalculateAllEwsJob::dispatch($prodiId !== null ? (int) $prodiId : null);
 
             return $this->successResponse(
                 null,

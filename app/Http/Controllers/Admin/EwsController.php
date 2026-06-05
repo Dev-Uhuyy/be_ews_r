@@ -142,17 +142,11 @@ class EwsController extends Controller
     public function recalculateAllStatus()
     {
         try {
-            // Retrieve prodiId based on role
-            $prodiId = null;
-            $user = Auth::user();
-            if ($user && $user->hasRole('admin')) {
-                $prodiId = $user->prodi_id;
-            } elseif ($user && $user->hasRole('super_fakultas') && request()->has('prodi_id') && request('prodi_id') != '') {
-                $prodiId = request('prodi_id');
-            }
+            // Admin selalu ter-scope ke prodi-nya sendiri.
+            $prodiId = Auth::user()?->prodi_id;
 
             // Dispatch job to background with optional prodiId filter
-            RecalculateAllEwsJob::dispatch($prodiId);
+            RecalculateAllEwsJob::dispatch($prodiId !== null ? (int) $prodiId : null);
 
             return $this->successResponse(
                 null,

@@ -222,4 +222,15 @@ class AdminMahasiswaListService
 
         return $mahasiswas;
     }
+
+    /**
+     * Get list mahasiswa berdasarkan status_mahasiswa dan/atau ews_status.
+     *
+     * getMahasiswaList() sudah menangani filter status_mahasiswa (exact match bila diisi,
+     * else exclude lulus/do) + ews_status + scope prodi admin, jadi cukup didelegasikan.
+     */
+    public function getMahasiswaByStatus($filters = [])
+    {
+        return $this->getMahasiswaList($filters);
+    }
 }

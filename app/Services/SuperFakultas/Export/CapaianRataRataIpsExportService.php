@@ -17,7 +17,7 @@ class CapaianRataRataIpsExportService
         $this->capaianService = $capaianService;
     }
 
-    public function exportXlsx($filters = []): void
+    public function exportXlsx($filters = [])
     {
         $data = $this->capaianService->getRataRataIpsPerTahunProdi($filters);
 
@@ -75,6 +75,7 @@ class CapaianRataRataIpsExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
+
         return $this->saveFile($spreadsheet, 'SuperFakultas_Rata_Rata_IPS_'.date('Y-m-d'));
     }
 }

@@ -56,7 +56,8 @@ class StatistikKelulusanService
         )
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
-            ->where('mahasiswa.prodi_id', $prodiId);
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")');
 
         $stats = $query->first();
 
@@ -97,6 +98,7 @@ class StatistikKelulusanService
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
             ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->whereNotNull('akademik_mahasiswa.tahun_masuk')
             ->groupBy('akademik_mahasiswa.tahun_masuk')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')

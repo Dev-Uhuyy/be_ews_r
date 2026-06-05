@@ -17,7 +17,7 @@ class CapaianTopMatakuliahExportService
         $this->capaianService = $capaianService;
     }
 
-    public function exportXlsx($filters = []): void
+    public function exportXlsx($filters = [])
     {
         $data = $this->capaianService->getTop10MatakuliahGagal($filters);
 
@@ -65,6 +65,7 @@ class CapaianTopMatakuliahExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
+
         return $this->saveFile($spreadsheet, 'SuperFakultas_Top_Matakuliah_Gagal_'.date('Y-m-d'));
     }
 }

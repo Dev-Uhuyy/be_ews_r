@@ -393,14 +393,19 @@ POST /api/ews/koor/recalculate-all-status
 
 ---
 
-### Auto Trigger (Observer)
+### Auto Trigger (Observer) — ⚠️ BELUM DIIMPLEMENTASIKAN
 
-System memiliki `AkademikMahasiswaObserver` yang otomatis trigger recalculation saat:
+> **Status:** `AkademikMahasiswaObserver` **belum ada** di `app/Observers/`.
+> Saat ini recalculation hanya dilakukan manual lewat endpoint
+> `recalculate-status` (1 mahasiswa) dan `recalculate-all-status` (batch job).
+> Rancangan observer di bawah masih berupa rencana, bukan kode yang berjalan.
+
+Rancangan: observer otomatis trigger recalculation saat:
 
 - **created:** Mahasiswa baru ditambahkan
 - **updated:** Data akademik mahasiswa diupdate (IPK, SKS, dll)
 
-**Code:**
+**Rancangan code:**
 ```php
 class AkademikMahasiswaObserver
 {
@@ -589,11 +594,11 @@ semester_aktif == 13 && ada nilai E di matkul ganjil ✅ → KRITIS
 
 ## File Terkait
 
-- **Service:** `app/Services/EwsService.php`
+- **Service:** `app/Services/EwsServiceBase.php` (+ `SuperFakultas/EwsService.php`, `Admin/EwsService.php`)
 - **Model:** `app/Models/EarlyWarningSystem.php`
-- **Observer:** `app/Observers/AkademikMahasiswaObserver.php`
+- **Observer:** `app/Observers/AkademikMahasiswaObserver.php` — ⚠️ belum diimplementasikan
 - **Job:** `app/Jobs/RecalculateAllEwsJob.php`
-- **Controller:** `app/Http/Controllers/Koor/EwsController.php`
+- **Controller:** `app/Http/Controllers/SuperFakultas/EwsController.php`, `app/Http/Controllers/Admin/EwsController.php`
 
 ---
 
@@ -603,5 +608,5 @@ semester_aktif == 13 && ada nilai E di matkul ganjil ✅ → KRITIS
 2. **Data Consistency:** Selalu update nilai D/E sebelum hitung status
 3. **Nilai Terakhir:** Hanya nilai terakhir per mata kuliah yang dihitung (MAX id)
 4. **Exclude:** Mahasiswa Lulus dan DO tidak di-recalculate
-5. **Observer:** Auto-trigger saat data akademik berubah
+5. **Observer:** Auto-trigger saat data akademik berubah — ⚠️ belum diimplementasikan (recalc manual lewat endpoint)
 6. **Background Job:** Recalculate all berjalan di queue untuk performa

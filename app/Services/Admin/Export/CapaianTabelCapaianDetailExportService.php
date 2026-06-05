@@ -17,7 +17,7 @@ class CapaianTabelCapaianDetailExportService
         $this->capaianService = $capaianService;
     }
 
-    public function exportXlsx($filters = []): void
+    public function exportXlsx($filters = [])
     {
         $data = $this->capaianService->getDetailTabelCapaianMahasiswa();
 
@@ -55,6 +55,7 @@ class CapaianTabelCapaianDetailExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
+
         return $this->saveFile($spreadsheet, 'Admin_Tabel_Capaian_Detail_'.date('Y-m-d'));
     }
 }

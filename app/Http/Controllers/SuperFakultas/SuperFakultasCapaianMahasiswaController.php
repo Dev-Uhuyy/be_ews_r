@@ -4,6 +4,7 @@ namespace App\Http\Controllers\SuperFakultas;
 
 use App\Http\Controllers\Controller;
 use App\Services\SuperFakultas\CapaianMahasiswaService;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\Request;
 
 /**
@@ -208,14 +209,19 @@ class SuperFakultasCapaianMahasiswaController extends Controller
      *
      * @tags SuperFakultas - Capaian Mahasiswa
      */
+    #[QueryParameter('matakuliah_id', description: 'ID Mata Kuliah yang akan dicek', required: true, type: 'integer', example: 23)]
+    #[QueryParameter('prodi_id', description: 'Filter berdasarkan ID Prodi', required: false, type: 'integer')]
+    #[QueryParameter('tahun_masuk', description: 'Filter berdasarkan tahun angkatan', required: false, type: 'integer', example: 2020)]
     public function getListMahasiswaGagalPerMataKuliah()
     {
         try {
-            $filters = [];
-
-            if (request()->has('matakuliah_id') && request('matakuliah_id') != '') {
-                $filters['matakuliah_id'] = request('matakuliah_id');
+            if (! request()->filled('matakuliah_id')) {
+                return $this->errorResponse('Parameter matakuliah_id wajib diisi', 400);
             }
+
+            $filters = [
+                'matakuliah_id' => request('matakuliah_id'),
+            ];
 
             if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $filters['prodi_id'] = request('prodi_id');
@@ -336,9 +342,16 @@ class SuperFakultasCapaianMahasiswaController extends Controller
      *
      * @tags SuperFakultas - Capaian Mahasiswa
      */
+    #[QueryParameter('matakuliah_id', description: 'ID Mata Kuliah yang akan dicek', required: true, type: 'integer', example: 23)]
+    #[QueryParameter('prodi_id', description: 'Filter berdasarkan ID Prodi', required: false, type: 'integer')]
+    #[QueryParameter('tahun_masuk', description: 'Filter berdasarkan tahun angkatan', required: false, type: 'integer', example: 2020)]
     public function exportMahasiswaGagal(Request $request)
     {
         try {
+            if (! $request->filled('matakuliah_id')) {
+                return $this->errorResponse('Parameter matakuliah_id wajib diisi', 400);
+            }
+
             $filters = $request->query();
 
             return $this->capaianMahasiswaService->exportMahasiswaGagal($filters);
