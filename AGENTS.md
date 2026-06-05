@@ -4,7 +4,7 @@
 - Laravel 12 + PHP 8.2+
 - Sanctum auth via custom `sti_api_token` middleware (NOT `auth:sanctum`)
 - Spatie `laravel-permission` for roles
-- Maatwebsite Excel for XLSX exports
+- PhpOffice\PhpSpreadsheet for XLSX exports (via custom `ExportFormatterTrait`)
 - Scramble for API doc generation
 - Vite + TailwindCSS for frontend asset pipeline
 

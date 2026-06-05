@@ -68,7 +68,7 @@ Route::prefix('ews')->group(function () {
 
         // Export routes
         Route::get('export/dashboard', [AdminExportController::class, 'exportDashboard']);
-        Route::get('export/dashboard-detail', [AdminExportController::class, 'exportDashboardDetail']);
+        Route::get('export/dashboard/detail', [AdminExportController::class, 'exportDashboardDetail']);
         Route::get('export/statistik-kelulusan', [AdminExportController::class, 'exportStatistikKelulusan']);
         Route::get('export/mahasiswa-list', [AdminExportController::class, 'exportMahasiswaList']);
         Route::get('export/mahasiswa-by-status', [AdminExportController::class, 'exportMahasiswaByStatus']);
@@ -99,7 +99,7 @@ Route::prefix('ews')->group(function () {
 
         // Export routes
         Route::get('export/dashboard', [SuperFakultasExportController::class, 'exportDashboard']);
-        Route::get('export/dashboard-detail', [SuperFakultasExportController::class, 'exportDashboardDetail']);
+        Route::get('export/dashboard/detail', [SuperFakultasExportController::class, 'exportDashboardDetail']);
         Route::get('export/statistik-kelulusan', [SuperFakultasExportController::class, 'exportStatistikKelulusan']);
         Route::get('export/detail-angkatan/{tahunMasuk}', [SuperFakultasExportController::class, 'exportDetailAngkatan']);
         Route::get('export/mahasiswa-list', [SuperFakultasExportController::class, 'exportMahasiswaList']);
