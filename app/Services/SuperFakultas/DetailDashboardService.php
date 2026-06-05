@@ -27,7 +27,6 @@ class DetailDashboardService
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_cuti'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mangkir'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_tidak_aktif'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as normal'),
@@ -40,7 +39,7 @@ class DetailDashboardService
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
             ->whereIn('mahasiswa.prodi_id', $prodiIds)
             ->whereNotNull('akademik_mahasiswa.tahun_masuk')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
             ->get()
@@ -59,10 +58,24 @@ class DetailDashboardService
             ->get()
             ->groupBy('prodi_id');
 
+        $tidakAktifPerProdi = AkademikMahasiswa::select(
+            'mahasiswa.prodi_id',
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(*) as jumlah_tidak_aktif')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif"')
+            ->groupBy('mahasiswa.prodi_id', 'akademik_mahasiswa.tahun_masuk')
+            ->get()
+            ->groupBy('prodi_id');
+
         $result = [];
         foreach ($prodis as $prodi) {
             $prodiTahunData = $tahunData->get($prodi->id, collect());
             $prodiDoData = $doPerProdi->get($prodi->id, collect())->keyBy('tahun_masuk');
+            $prodiTidakAktifData = $tidakAktifPerProdi->get($prodi->id, collect())->keyBy('tahun_masuk');
 
             $result[] = [
                 'prodi' => [
@@ -70,7 +83,7 @@ class DetailDashboardService
                     'kode_prodi' => $prodi->kode_prodi,
                     'nama_prodi' => $prodi->nama,
                 ],
-                'tahun_angkatan' => $prodiTahunData->map(function ($item) use ($prodiDoData) {
+                'tahun_angkatan' => $prodiTahunData->map(function ($item) use ($prodiDoData, $prodiTidakAktifData) {
                     return [
                         'tahun_masuk' => $item->tahun_masuk,
                         'jumlah_mahasiswa' => $item->jumlah_mahasiswa,
@@ -78,7 +91,7 @@ class DetailDashboardService
                         'jumlah_cuti' => $item->jumlah_cuti,
                         'jumlah_mangkir' => $item->jumlah_mangkir,
                         'jumlah_do' => $prodiDoData->get($item->tahun_masuk)->jumlah_do ?? 0,
-                        'jumlah_tidak_aktif' => $item->jumlah_tidak_aktif,
+                        'jumlah_tidak_aktif' => $prodiTidakAktifData->get($item->tahun_masuk)->jumlah_tidak_aktif ?? 0,
                         'ipk_rata_rata' => $item->ipk_rata_rata,
                         'tepat_waktu' => $item->tepat_waktu,
                         'normal' => $item->normal,
@@ -123,7 +136,7 @@ class DetailDashboardService
         if ($criteria === 'do') {
             $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"');
         } else {
-            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")');
         }
 
         if ($tahunMasuk) {

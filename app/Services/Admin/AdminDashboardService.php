@@ -37,13 +37,13 @@ class AdminDashboardService
     private function getStatistikGlobal($prodiId)
     {
         $query = Mahasiswa::where('prodi_id', $prodiId)
-            ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")');
+            ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")');
 
         $totalMahasiswa = (clone $query)->count();
 
         $statusBreakdown = Mahasiswa::select('status_mahasiswa', DB::raw('COUNT(*) as jumlah'))
             ->where('prodi_id', $prodiId)
-            ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->groupBy('status_mahasiswa')
             ->get()
             ->keyBy('status_mahasiswa');
@@ -52,7 +52,9 @@ class AdminDashboardService
         $totalNormal = ($statusBreakdown->get('normal')->jumlah ?? 0) + ($statusBreakdown->get('Normal')->jumlah ?? 0);
         $totalMangkir = ($statusBreakdown->get('mangkir')->jumlah ?? 0) + ($statusBreakdown->get('Mangkir')->jumlah ?? 0);
         $totalCuti = ($statusBreakdown->get('cuti')->jumlah ?? 0) + ($statusBreakdown->get('Cuti')->jumlah ?? 0);
-        $totalTidakAktif = ($statusBreakdown->get('tidak_aktif')->jumlah ?? 0) + ($statusBreakdown->get('Tidak Aktif')->jumlah ?? 0);
+        $totalTidakAktif = Mahasiswa::where('prodi_id', $prodiId)
+            ->whereRaw('LOWER(status_mahasiswa) = "tidak_aktif"')
+            ->count();
         $totalDO = Mahasiswa::where('prodi_id', $prodiId)
             ->whereRaw('LOWER(status_mahasiswa) = "do"')
             ->count();
@@ -80,7 +82,7 @@ class AdminDashboardService
             ->whereNotNull('tahun_masuk')
             ->whereNotNull('ipk')
             ->where('ipk', '>', 0)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->groupBy('tahun_masuk')
             ->orderBy('tahun_masuk', 'desc')
             ->get();
@@ -95,7 +97,7 @@ class AdminDashboardService
             ->join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->where('mahasiswa.prodi_id', $prodiId)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->first();
 
         return [
@@ -112,7 +114,6 @@ class AdminDashboardService
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_tidak_aktif'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
@@ -125,7 +126,7 @@ class AdminDashboardService
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
             ->where('mahasiswa.prodi_id', $prodiId)
             ->whereNotNull('akademik_mahasiswa.tahun_masuk')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->groupBy('akademik_mahasiswa.tahun_masuk')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
             ->get();
@@ -142,8 +143,21 @@ class AdminDashboardService
             ->get()
             ->keyBy('tahun_masuk');
 
-        $tahunData = $tahunData->map(function ($item) use ($doData) {
+        $tidakAktifData = AkademikMahasiswa::select(
+            'akademik_mahasiswa.tahun_masuk',
+            DB::raw('COUNT(DISTINCT akademik_mahasiswa.id) as jumlah_mahasiswa_tidak_aktif')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->where('mahasiswa.prodi_id', $prodiId)
+            ->whereNotNull('akademik_mahasiswa.tahun_masuk')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif"')
+            ->groupBy('akademik_mahasiswa.tahun_masuk')
+            ->get()
+            ->keyBy('tahun_masuk');
+
+        $tahunData = $tahunData->map(function ($item) use ($doData, $tidakAktifData) {
             $item->jumlah_do = $doData->get($item->tahun_masuk)->jumlah_do ?? 0;
+            $item->jumlah_mahasiswa_tidak_aktif = $tidakAktifData->get($item->tahun_masuk)->jumlah_mahasiswa_tidak_aktif ?? 0;
             $item->eligible = $item->eligible ?? 0;
             $item->tidak_eligible = $item->tidak_eligible ?? 0;
             return $item;
@@ -177,7 +191,7 @@ class AdminDashboardService
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
             ->where('mahasiswa.prodi_id', $prodiId)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->first();
 
         return [
@@ -217,7 +231,7 @@ class AdminDashboardService
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
             ->where('mahasiswa.prodi_id', $prodiId)
             ->whereNotNull('akademik_mahasiswa.tahun_masuk')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->groupBy('akademik_mahasiswa.tahun_masuk')
             ->orderBy('akademik_mahasiswa.tahun_masuk', 'desc')
             ->get();
@@ -255,7 +269,7 @@ class AdminDashboardService
         if ($criteria === 'do') {
             $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "do"');
         } else {
-            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")');
+            $query->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")');
         }
 
         if ($tahunMasuk) {

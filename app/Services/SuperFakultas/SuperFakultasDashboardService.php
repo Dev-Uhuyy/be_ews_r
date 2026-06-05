@@ -32,12 +32,12 @@ class SuperFakultasDashboardService
             DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as total_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as total_mangkir'),
             DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as total_cuti'),
-            DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as total_tidak_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(status_mahasiswa) = "do" THEN 1 ELSE 0 END) as total_do')
         )
-            ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->first();
 
+        $totalTidakAktif = Mahasiswa::whereRaw('LOWER(status_mahasiswa) = "tidak_aktif"')->count();
         $totalDO = Mahasiswa::whereRaw('LOWER(status_mahasiswa) = "do"')->count();
 
         return [
@@ -45,7 +45,7 @@ class SuperFakultasDashboardService
             'total_mahasiswa_aktif' => ($stats->total_aktif ?? 0),
             'total_mahasiswa_mangkir' => ($stats->total_mangkir ?? 0),
             'total_mahasiswa_cuti' => ($stats->total_cuti ?? 0),
-            'total_mahasiswa_tidak_aktif' => ($stats->total_tidak_aktif ?? 0),
+            'total_mahasiswa_tidak_aktif' => $totalTidakAktif,
             'total_mahasiswa_do' => $totalDO,
         ];
     }
@@ -60,7 +60,7 @@ class SuperFakultasDashboardService
             ->whereNotNull('tahun_masuk')
             ->whereNotNull('ipk')
             ->where('ipk', '>', 0)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->groupBy('tahun_masuk')
             ->orderBy('tahun_masuk', 'desc')
@@ -72,13 +72,13 @@ class SuperFakultasDashboardService
         $eligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->where('early_warning_system.status_kelulusan', 'eligible')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->count();
 
         $noneligible = EarlyWarningSystem::join('akademik_mahasiswa', 'early_warning_system.akademik_mahasiswa_id', '=', 'akademik_mahasiswa.id')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->where('early_warning_system.status_kelulusan', 'noneligible')
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->count();
 
         return [
@@ -97,7 +97,6 @@ class SuperFakultasDashboardService
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_aktif'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "cuti" THEN 1 ELSE 0 END) as jumlah_mahasiswa_cuti'),
             DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "mangkir" THEN 1 ELSE 0 END) as jumlah_mahasiswa_mangkir'),
-            DB::raw('SUM(CASE WHEN LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif" THEN 1 ELSE 0 END) as jumlah_mahasiswa_tidak_aktif'),
             DB::raw('ROUND(AVG(akademik_mahasiswa.ipk), 2) as ipk_rata_rata'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "tepat_waktu" THEN 1 ELSE 0 END) as jumlah_tepat_waktu'),
             DB::raw('SUM(CASE WHEN early_warning_system.status = "normal" THEN 1 ELSE 0 END) as jumlah_normal'),
@@ -109,7 +108,7 @@ class SuperFakultasDashboardService
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->leftJoin('early_warning_system', 'akademik_mahasiswa.id', '=', 'early_warning_system.akademik_mahasiswa_id')
             ->whereIn('mahasiswa.prodi_id', $prodiIds)
-            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do", "tidak_aktif")')
             ->groupBy('mahasiswa.prodi_id')
             ->get()
             ->keyBy('prodi_id');
@@ -125,10 +124,22 @@ class SuperFakultasDashboardService
             ->get()
             ->keyBy('prodi_id');
 
+        $tidakAktifStats = AkademikMahasiswa::select(
+            'mahasiswa.prodi_id',
+            DB::raw('COUNT(*) as jumlah_mahasiswa_tidak_aktif')
+        )
+            ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
+            ->whereIn('mahasiswa.prodi_id', $prodiIds)
+            ->whereRaw('LOWER(mahasiswa.status_mahasiswa) = "tidak_aktif"')
+            ->groupBy('mahasiswa.prodi_id')
+            ->get()
+            ->keyBy('prodi_id');
+
         $result = [];
         foreach ($prodis as $prodi) {
             $statsNonDo = $nonDoStats->get($prodi->id);
             $statsDo = $doStats->get($prodi->id);
+            $statsTidakAktif = $tidakAktifStats->get($prodi->id);
 
             $result[] = [
                 'prodi' => [
@@ -141,7 +152,7 @@ class SuperFakultasDashboardService
                 'jumlah_mahasiswa_cuti' => $statsNonDo->jumlah_mahasiswa_cuti ?? 0,
                 'jumlah_mahasiswa_mangkir' => $statsNonDo->jumlah_mahasiswa_mangkir ?? 0,
                 'jumlah_do' => $statsDo->jumlah_do ?? 0,
-                'jumlah_mahasiswa_tidak_aktif' => $statsNonDo->jumlah_mahasiswa_tidak_aktif ?? 0,
+                'jumlah_mahasiswa_tidak_aktif' => $statsTidakAktif->jumlah_mahasiswa_tidak_aktif ?? 0,
                 'ipk_rata_rata' => $statsNonDo->ipk_rata_rata ?? 0,
                 'jumlah_tepat_waktu' => $statsNonDo->jumlah_tepat_waktu ?? 0,
                 'jumlah_normal' => $statsNonDo->jumlah_normal ?? 0,
