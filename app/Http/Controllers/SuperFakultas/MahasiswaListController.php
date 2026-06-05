@@ -44,7 +44,7 @@ class MahasiswaListController extends Controller
             $filters = request()->query();
             $data = $this->mahasiswaListService->getMahasiswaList($filters);
 
-            return $this->successResponse(
+            return $this->paginationResponse(
                 $data,
                 'List mahasiswa berhasil diambil'
             );
