@@ -6,16 +6,18 @@ use App\Models\AkademikMahasiswa;
 use App\Models\EarlyWarningSystem;
 use App\Models\IpsMahasiswa;
 use App\Models\KhsKrsMahasiswa;
+use App\Services\Traits\ExportFormatterTrait;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ProfileExportService
 {
+    use ExportFormatterTrait;
+
     /**
      * Export Mahasiswa Profile to XLSX
      */
@@ -168,7 +170,7 @@ class ProfileExportService
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $this->saveFile($spreadsheet, 'Mahasiswa_Profile_'.$mahasiswa->nim.'_'.date('Y-m-d'));
+        return $this->saveFile($spreadsheet, 'Mahasiswa_Profile_'.$mahasiswa->nim.'_'.date('Y-m-d'));
     }
 
     private function getMatakuliahWithNilaiDE($mahasiswaId)
@@ -253,22 +255,5 @@ class ProfileExportService
         ];
         $endCol = chr(64 + $colCount);
         $sheet->getStyle('A'.$row.':'.$endCol.$row)->applyFromArray($styleArray);
-    }
-
-    private function saveFile($spreadsheet, $filename)
-    {
-        $writer = new Xlsx($spreadsheet);
-        $filename = $filename.'.xlsx';
-        $tempPath = storage_path('app/exports/'.$filename);
-
-        if (! file_exists(storage_path('app/exports'))) {
-            mkdir(storage_path('app/exports'), 0755, true);
-        }
-
-        $writer->save($tempPath);
-
-        response()->download($tempPath, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ])->send();
     }
 }

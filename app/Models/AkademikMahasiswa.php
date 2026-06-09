@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AkademikMahasiswa extends Model
 {
+    use HasFactory;
     protected $table = 'akademik_mahasiswa';
 
     protected $fillable = [

@@ -5,33 +5,44 @@ namespace Database\Seeders;
 use App\Models\AkademikMahasiswa;
 use App\Models\Dosen;
 use App\Models\IpsMahasiswa;
-use App\Models\KelompokMataKuliah;
 use App\Models\KhsKrsMahasiswa;
 use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Models\User;
-use App\Services\Kaprodi\EwsService;
+use App\Services\Admin\EwsService;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
+/**
+ * EwsDummyDataSeeder (REWRITE 2026-06-04 — Refactor 12)
+ *
+ * Generate ~4,560 mahasiswa (76 per tahun × 6 tahun × 10 prodi) dengan data
+ * realistis. Optimasi: bulk insert untuk KHS chunks 100.
+ *
+ * Kriteria data:
+ * - sks_lulus derived from KHS (sum SKS MK dengan latest KHS nilai NOT IN 'D','E')
+ * - mk_nasional/fakultas/prodi derived from KHS completeness
+ * - IPK = rata-rata IPS dari semester yang sudah ditempuh
+ * - Status distribusi: aktif, cuti, mangkir, tidak_aktif, lulus, DO (uppercase)
+ * - cuti_2='yes' 30% untuk status='cuti'
+ * - KHS 'U' (Ulang) 10% dari total
+ * - Retake scenario: 0.5% chance per (prodi,tahun)
+ */
 class EwsDummyDataSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     * Generates 75 varied students per year per Prodi for EWS testing.
-     */
+    private const BULK_INSERT_CHUNK = 100;
+    private const TARGET_PER_TAHUN = 75;
+
     public function run(): void
     {
         $prodis = Prodi::all();
         $ewsService = app(EwsService::class);
 
         $tahunMasukList = [2020, 2021, 2022, 2023, 2024, 2025];
-        $targetPerTahun = 75;
-
-        // Ensure roles are assigned faster by getting the models
         $mahasiswaRole = Role::firstOrCreate(['name' => 'mahasiswa']);
 
         foreach ($prodis as $prodi) {
@@ -39,53 +50,60 @@ class EwsDummyDataSeeder extends Seeder
 
             $dosenId = Dosen::where('prodi_id', $prodi->id)->first()?->id;
 
-            // Jika dosen tidak ada untuk prodi ini, lewati mahasiswa untuk prodi ini agar tidak amburadul
             if (! $dosenId) {
                 $this->command->warn("  ⚠ Dosen untuk prodi {$prodi->kode_prodi} kosong. Melewati seeding prodi ini.");
 
                 continue;
             }
 
-            // Ambil Mata Kuliah yang sudah disiapkan oleh MataKuliahSeeder
-            $mks = MataKuliah::where('prodi_id', $prodi->id)->get();
-
-            // Jika untuk suatu alasan kosong, tetap beri penanganan sementara
-            if ($mks->isEmpty()) {
-                $dummyMk = MataKuliah::firstOrCreate(
-                    ['kode' => $prodi->kode_prodi.'.DUMMY.1'],
-                    [
-                        'prodi_id' => $prodi->id,
-                        'name' => "Pemrograman Dasar {$prodi->kode_prodi}",
-                        'sks' => 3,
-                        'semester' => 1,
-                        'tipe_mk' => 'prodi',
-                    ]
-                );
-
-                $mks = collect([$dummyMk]);
-
-                // Assign a generic kelompok
-                KelompokMataKuliah::firstOrCreate([
-                    'mata_kuliah_id' => $dummyMk->id,
-                    'kode' => 'A',
-                ], ['dosen_pengampu_id' => $dosenId]);
+            // Cache MK per prodi dikelompokkan per tipe+semester
+            $mkByTipeSemester = $this->cacheMkByTipeSemester($prodi->id);
+            $allMks = collect();
+            foreach ($mkByTipeSemester as $bySem) {
+                foreach ($bySem as $arr) {
+                    foreach ($arr as $mk) {
+                        $allMks->push($mk);
+                    }
+                }
             }
+
+            if ($allMks->isEmpty()) {
+                $this->command->warn("  ⚠ Tidak ada MK untuk prodi {$prodi->kode_prodi}. Skip.");
+
+                continue;
+            }
+
+            // Pre-load Kelompok per MK agar bulk insert KHS bisa dapat kelompok_id valid
+            $kelompokByMk = $this->cacheKelompokByMk($prodi->id);
 
             foreach ($tahunMasukList as $tahun) {
                 $this->command->info("  - Tahun Masuk: {$tahun}");
 
                 $currentYear = (int) date('Y');
                 $diffYear = max(0, $currentYear - $tahun);
-                // Assume 2 semesters per year.
                 $baseSemesterAktif = ($diffYear * 2) + 1;
 
                 DB::beginTransaction();
                 try {
-                    for ($i = 100; $i <= (100 + $targetPerTahun); $i++) {
-                        $nim = $prodi->kode_prodi.'.'.$tahun.'.'.str_pad($i, 5, '0', STR_PAD_LEFT);
+                    $khsBatch = [];
+                    $mhsBatchData = [];   // user + mahasiswa + akademik + ips
+                    $akademikUpdates = []; // update IPK after IPS created
+                    $ewsServiceCalls = []; // akademik IDs to call EWS update
+
+                    for ($i = 100; $i <= (100 + self::TARGET_PER_TAHUN); $i++) {
+                        $nim = $prodi->kode_prodi.'.'.$tahun.'.'.str_pad((string) $i, 5, '0', STR_PAD_LEFT);
                         $email = "{$nim}@ews.com";
 
-                        // 1. Create User
+                        $semesterAktif = max(1, $baseSemesterAktif + rand(-1, 1));
+                        $statusMahasiswa = $this->getRandomStatus($baseSemesterAktif);
+                        $cuti2 = ($statusMahasiswa === 'cuti' && rand(1, 100) <= 30) ? 'yes' : 'no';
+
+                        $sksLulusEst = rand(20, 150);
+                        if ($statusMahasiswa == 'lulus') {
+                            $sksLulusEst = max(144, $sksLulusEst);
+                        }
+
+                        // ─── 1. User (lookup by email, create kalau belum ada) ───
                         $user = User::firstOrCreate(
                             ['email' => $email],
                             [
@@ -94,129 +112,184 @@ class EwsDummyDataSeeder extends Seeder
                                 'prodi_id' => $prodi->id,
                             ]
                         );
-
                         if (! $user->hasRole('mahasiswa')) {
                             $user->assignRole($mahasiswaRole);
                         }
 
-                        // 2. Create Mahasiswa Profile
-                        $statusMahasiswa = $this->getRandomStatus($baseSemesterAktif);
-
+                        // ─── 2. Mahasiswa ───
                         $mahasiswa = Mahasiswa::updateOrCreate(
                             ['user_id' => $user->id],
                             [
                                 'nim' => $nim,
                                 'prodi_id' => $prodi->id,
                                 'status_mahasiswa' => $statusMahasiswa,
-                                'cuti_2' => 'no',
+                                'cuti_2' => $cuti2,
                             ]
                         );
 
-                        // 3. Create Akademik Mahasiswa
-                        // Randomize slightly the semester aktif
-                        $semesterAktif = max(1, $baseSemesterAktif + rand(-1, 1));
-
-                        // Hitung IPK sementara (di-update ulang setelah IPS dibuat)
-                        $sksLulus = rand(20, 150);
-                        if ($statusMahasiswa == 'lulus') {
-                            $sksLulus = max(144, $sksLulus);
+                        // ─── 3. KHS rows (in-memory, batched insert) ───
+                        $nilaiOptions = ['A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'D', 'D', 'E'];
+                        $mkSmt1Plus = $allMks->where('semester', '<=', $semesterAktif)->values();
+                        if ($mkSmt1Plus->isEmpty()) {
+                            continue;
                         }
 
+                        $takeAmount = min($mkSmt1Plus->count(), rand(2, 3));
+                        $khsRows = []; // untuk sks_lulus calculation nanti
+                        foreach (range(1, $semesterAktif) as $smt) {
+                            $candidatesForSmt = $allMks->where('semester', $smt)->values();
+                            if ($candidatesForSmt->isEmpty()) {
+                                continue;
+                            }
+                            $take = min($candidatesForSmt->count(), rand(1, 2));
+                            // Pakai shuffle()->take() supaya selalu Collection of models.
+                            // Collection::random(1) return single model; cast ke array
+                            // malah jadi property array → $mk->id gagal.
+                            $picks = $candidatesForSmt->shuffle()->take($take);
+                            foreach ($picks as $mk) {
+                                $nilai = $nilaiOptions[array_rand($nilaiOptions)];
+                                $statusKhs = rand(1, 100) <= 10 ? 'U' : 'B';
+                                $kelompok = $kelompokByMk[$mk->id] ?? null;
+                                $kelompokId = $kelompok ? $kelompok[array_rand($kelompok)] : null;
+
+                                if (! $kelompokId) {
+                                    continue; // skip MK tanpa kelompok
+                                }
+
+                                $now = Carbon::now();
+                                $khsRows[] = [
+                                    'mahasiswa_id' => $mahasiswa->id,
+                                    'matakuliah_id' => $mk->id,
+                                    'kelompok_id' => $kelompokId,
+                                    'semester_ambil' => $smt,
+                                    'status' => $statusKhs,
+                                    'absen' => rand(70, 100),
+                                    'nilai_uts' => rand(60, 90),
+                                    'nilai_uas' => rand(60, 90),
+                                    'nilai_akhir_angka' => $this->nilaiHurufToAngka($nilai),
+                                    'nilai_akhir_huruf' => $nilai,
+                                    'created_at' => $now,
+                                    'updated_at' => $now,
+                                ];
+                                $khsBatch[] = end($khsRows);
+
+                                if (count($khsBatch) >= self::BULK_INSERT_CHUNK) {
+                                    KhsKrsMahasiswa::insert($khsBatch);
+                                    $khsBatch = [];
+                                }
+                            }
+                        }
+
+                        // Retake scenario: 0.5% chance — pick first KHS, insert older D + newer B
+                        if (rand(1, 200) <= 1 && ! empty($khsRows)) {
+                            $firstRow = $khsRows[0];
+                            $now = Carbon::now();
+
+                            // Older D
+                            $khsRows[] = [
+                                'mahasiswa_id' => $firstRow['mahasiswa_id'],
+                                'matakuliah_id' => $firstRow['matakuliah_id'],
+                                'kelompok_id' => $firstRow['kelompok_id'],
+                                'semester_ambil' => $firstRow['semester_ambil'],
+                                'status' => 'B',
+                                'absen' => 80,
+                                'nilai_uts' => 50,
+                                'nilai_uas' => 40,
+                                'nilai_akhir_angka' => 1,
+                                'nilai_akhir_huruf' => 'D',
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
+                            $khsBatch[] = end($khsRows);
+                            // Newer B (retake)
+                            $khsRows[] = [
+                                'mahasiswa_id' => $firstRow['mahasiswa_id'],
+                                'matakuliah_id' => $firstRow['matakuliah_id'],
+                                'kelompok_id' => $firstRow['kelompok_id'],
+                                'semester_ambil' => $firstRow['semester_ambil'] + 1,
+                                'status' => 'U',
+                                'absen' => 95,
+                                'nilai_uts' => 80,
+                                'nilai_uas' => 85,
+                                'nilai_akhir_angka' => 3,
+                                'nilai_akhir_huruf' => 'B',
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
+                            $khsBatch[] = end($khsRows);
+                        }
+
+                        // ─── 4. Hitung sks_lulus, mk_* dari KHS ───
+                        $sksLulus = $this->calculateSksLulus($khsRows);
+                        $mkNasional = $this->isKategoriSelesai($mahasiswa->id, 'nasional', $mkByTipeSemester) ? 'yes' : 'no';
+                        $mkFakultas = $this->isKategoriSelesai($mahasiswa->id, 'fakultas', $mkByTipeSemester) ? 'yes' : 'no';
+                        $mkProdi = $this->isKategoriSelesai($mahasiswa->id, 'prodi', $mkByTipeSemester) ? 'yes' : 'no';
+
+                        // ─── 5. IPS (1..smt) ───
+                        $ipsData = [
+                            'mahasiswa_id' => $mahasiswa->id,
+                        ];
+                        for ($n = 1; $n <= 14; $n++) {
+                            $ipsData["ips_{$n}"] = $n <= $semesterAktif
+                                ? round(rand(150, 390) / 100, 2)
+                                : null;
+                        }
+                        IpsMahasiswa::updateOrCreate(['mahasiswa_id' => $mahasiswa->id], $ipsData);
+
+                        // IPK = rata-rata IPS semester yang sudah ditempuh
+                        // HATI-HATI: 'mahasiswa_id' key adalah integer (FK), kalau di-include
+                        // ke sum akan jadi nilai IPK sangat besar (e.g. 163+3.5 = 166.5).
+                        // Filter HANYA key 'ips_X', exclude 'mahasiswa_id'.
+                        $activeIps = [];
+                        for ($n = 1; $n <= 14; $n++) {
+                            $v = $ipsData["ips_{$n}"];
+                            if ($v !== null && is_numeric($v)) {
+                                $activeIps[] = (float) $v;
+                            }
+                        }
+                        $calculatedIpk = count($activeIps) > 0
+                            ? round(array_sum($activeIps) / count($activeIps), 2)
+                            : null;
+
+                        // Clamp IPK ke range realistis 0-4 (decimal(3,2) max 9.99 tapi IPK max 4)
+                        $calculatedIpk = $calculatedIpk !== null ? min(max($calculatedIpk, 0), 4) : null;
+
+                        // ─── 6. Akademik ───
                         $akademik = AkademikMahasiswa::updateOrCreate(
                             ['mahasiswa_id' => $mahasiswa->id],
                             [
                                 'dosen_wali_id' => $dosenId,
                                 'tahun_masuk' => $tahun,
                                 'semester_aktif' => $semesterAktif,
-                                'ipk' => null, // di-set ulang setelah IPS dibuat
+                                'ipk' => $calculatedIpk,
                                 'sks_lulus' => $sksLulus,
-                                'sks_tempuh' => $sksLulus + rand(0, 15),
-                                'mk_nasional' => $semesterAktif >= 4 ? 'yes' : 'no',
-                                'mk_fakultas' => $semesterAktif >= 5 ? 'yes' : 'no',
-                                'mk_prodi' => $semesterAktif >= 7 ? 'yes' : 'no',
+                                'sks_tempuh' => $sksLulus + rand(0, 10),
+                                'sks_now' => rand(18, 22),
+                                'sks_gagal' => 0,
+                                'mk_nasional' => $mkNasional,
+                                'mk_fakultas' => $mkFakultas,
+                                'mk_prodi' => $mkProdi,
                             ]
                         );
 
-                        // 4. Create random KHS
-                        $nilaiOptions = ['A', 'A', 'B', 'B', 'B', 'C', 'C', 'D', 'E'];
-                        $mkCount = $mks->count();
-                        $takeAmount = min($mkCount, rand(3, 6)); // 3 to 6 matakuliah
-
-                        $randomMks = $takeAmount > 0 ? $mks->random($takeAmount) : collect([]);
-
-                        foreach ($randomMks as $mk) {
-                            $nilaiAkhir = $nilaiOptions[array_rand($nilaiOptions)];
-
-                            // Get kelompok specifically for this dosen/mk
-                            $kelompok = KelompokMataKuliah::where('mata_kuliah_id', $mk->id)->first();
-                            $kId = $kelompok ? $kelompok->id : null;
-
-                            KhsKrsMahasiswa::updateOrCreate(
-                                ['mahasiswa_id' => $mahasiswa->id, 'matakuliah_id' => $mk->id],
-                                [
-                                    'kelompok_id' => $kId,
-                                    'semester_ambil' => rand(1, max(1, $semesterAktif)),
-                                    'status' => 'B',
-                                    'absen' => round(rand(0, 16) * 6.25),
-                                    'nilai_akhir_huruf' => $nilaiAkhir,
-                                ]
-                            );
-                        }
-
-                        // Trigger E for someone randomly to make EWS more active
-                        if ($mkCount > 0 && rand(1, 100) <= 25) { // 25% chance
-                            $firstMk = $mks->first();
-                            $kelompok = KelompokMataKuliah::where('mata_kuliah_id', $firstMk->id)->first();
-                            $kId = $kelompok ? $kelompok->id : null;
-
-                            KhsKrsMahasiswa::updateOrCreate(
-                                ['mahasiswa_id' => $mahasiswa->id, 'matakuliah_id' => $firstMk->id],
-                                [
-                                    'kelompok_id' => $kId,
-                                    'semester_ambil' => $semesterAktif,
-                                    'status' => 'B',
-                                    'absen' => round(rand(0, 16) * 6.25),
-                                    'nilai_akhir_huruf' => 'E',
-                                ]
-                            );
-                        }
-
-                        // 5. Create IPS history
-                        // IPS di-set hanya sampai semester yang действительно sudah ditempuh
-                        // Semester 1 = ips_1, dst.
-                        $ipsData = [
-                            'ips_1' => rand(200, 400) / 100,
-                            'ips_2' => $semesterAktif >= 2 ? rand(200, 400) / 100 : null,
-                            'ips_3' => $semesterAktif >= 3 ? rand(200, 400) / 100 : null,
-                            'ips_4' => $semesterAktif >= 4 ? rand(200, 400) / 100 : null,
-                            'ips_5' => $semesterAktif >= 5 ? rand(150, 400) / 100 : null,
-                            'ips_6' => $semesterAktif >= 6 ? rand(150, 400) / 100 : null,
-                            'ips_7' => $semesterAktif >= 7 ? rand(150, 400) / 100 : null,
-                            'ips_8' => $semesterAktif >= 8 ? rand(150, 400) / 100 : null,
-                            'ips_9' => $semesterAktif >= 9 ? rand(150, 400) / 100 : null,
-                            'ips_10' => $semesterAktif >= 10 ? rand(150, 400) / 100 : null,
-                            'ips_11' => $semesterAktif >= 11 ? rand(150, 400) / 100 : null,
-                            'ips_12' => $semesterAktif >= 12 ? rand(150, 400) / 100 : null,
-                            'ips_13' => $semesterAktif >= 13 ? rand(150, 400) / 100 : null,
-                            'ips_14' => $semesterAktif >= 14 ? rand(150, 400) / 100 : null,
-                        ];
-
-                        // Hitung IPK sebagai rata-rata semua IPS yang ada
-                        $activeIps = array_filter($ipsData, fn ($v) => $v !== null);
-                        $calculatedIpk = count($activeIps) > 0 ? round(array_sum($activeIps) / count($activeIps), 2) : null;
-
-                        IpsMahasiswa::updateOrCreate(
-                            ['mahasiswa_id' => $mahasiswa->id],
-                            $ipsData
-                        );
-
-                        // 6. Update Akademik dengan IPK hasil kalkulasi
-                        $akademik->update(['ipk' => $calculatedIpk]);
-
-                        // 7. Recalculate Status EWS for this student via EwsService
-                        $ewsService->updateStatus($akademik);
+                        // Kumpulkan untuk EWS update setelah semua batch insert selesai
+                        $ewsServiceCalls[] = $akademik->id;
                     }
+
+                    // Flush remaining KHS batch
+                    if (! empty($khsBatch)) {
+                        KhsKrsMahasiswa::insert($khsBatch);
+                    }
+
                     DB::commit();
+
+                    // ─── 7. EWS recalc per akademik (di luar transaction supaya partial commit OK) ───
+                    foreach ($ewsServiceCalls as $akId) {
+                        $ak = AkademikMahasiswa::find($akId);
+                        if ($ak) {
+                            $ewsService->updateStatus($ak);
+                        }
+                    }
                 } catch (\Exception $e) {
                     DB::rollBack();
                     $this->command->error("Gagal seeding tahun {$tahun}: ".$e->getMessage());
@@ -225,33 +298,151 @@ class EwsDummyDataSeeder extends Seeder
         }
     }
 
-    private function getRandomStatus($semester)
+    private function cacheMkByTipeSemester(int $prodiId): array
+    {
+        $mks = MataKuliah::where('prodi_id', $prodiId)->get();
+        $cache = [];
+        foreach ($mks as $mk) {
+            $cache[$mk->tipe_mk][$mk->semester][] = $mk;
+        }
+
+        return $cache;
+    }
+
+    /**
+     * Cache kelompok per MK untuk lookup cepat di bulk insert.
+     * Returns: [mk_id => [kelompok_id_1, kelompok_id_2, ...]]
+     */
+    private function cacheKelompokByMk(int $prodiId): array
+    {
+        $rows = DB::table('mata_kuliahs as mk')
+            ->join('kelompok_mata_kuliah as kmk', 'mk.id', '=', 'kmk.mata_kuliah_id')
+            ->where('mk.prodi_id', $prodiId)
+            ->select('mk.id as mk_id', 'kmk.id as kelompok_id')
+            ->get();
+
+        $cache = [];
+        foreach ($rows as $row) {
+            $cache[$row->mk_id][] = $row->kelompok_id;
+        }
+
+        return $cache;
+    }
+
+    /**
+     * Hitung sks_lulus: sum SKS dari latest KHS per matakuliah dgn nilai NOT IN ('D','E').
+     *
+     * @param  array<int, array>  $khsRows  Array of KHS rows yang baru di-insert
+     */
+    private function calculateSksLulus(array $khsRows): int
+    {
+        // Group by matakuliah_id, ambil row paling akhir (last array entry = highest id)
+        $latestPerMk = [];
+        foreach ($khsRows as $khs) {
+            $mkId = $khs['matakuliah_id'];
+            // Always overwrite (last entry is newest due to id auto-increment)
+            $latestPerMk[$mkId] = $khs;
+        }
+
+        $sksLulus = 0;
+        foreach ($latestPerMk as $khs) {
+            if (! in_array($khs['nilai_akhir_huruf'], ['D', 'E'], true)) {
+                $sksLulus += $khs['nilai_akhir_angka']; // Will fix below
+            }
+        }
+
+        // Pakai SKS dari MK (bukan nilai_akhir_angka)
+        $sksLulus = 0;
+        $mkIds = array_keys($latestPerMk);
+        if (empty($mkIds)) {
+            return 0;
+        }
+        $mkSksMap = MataKuliah::whereIn('id', $mkIds)->pluck('sks', 'id')->toArray();
+        foreach ($latestPerMk as $mkId => $khs) {
+            if (! in_array($khs['nilai_akhir_huruf'], ['D', 'E'], true)) {
+                $sksLulus += $mkSksMap[$mkId] ?? 0;
+            }
+        }
+
+        return $sksLulus;
+    }
+
+    private function isKategoriSelesai(int $mahasiswaId, string $tipeMk, array $mkByTipeSemester): bool
+    {
+        $latestKhs = KhsKrsMahasiswa::where('mahasiswa_id', $mahasiswaId)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->groupBy('matakuliah_id')
+            ->map(fn ($rows) => $rows->first());
+
+        $requiredMkIds = [];
+        for ($smt = 1; $smt <= 8; $smt++) {
+            if (isset($mkByTipeSemester[$tipeMk][$smt])) {
+                foreach ($mkByTipeSemester[$tipeMk][$smt] as $mk) {
+                    $requiredMkIds[$mk->id] = true;
+                }
+            }
+        }
+
+        if (empty($requiredMkIds)) {
+            return true;
+        }
+
+        $passedMkCount = 0;
+        foreach (array_keys($requiredMkIds) as $mkId) {
+            if (isset($latestKhs[$mkId]) && ! in_array($latestKhs[$mkId]->nilai_akhir_huruf, ['D', 'E'], true)) {
+                $passedMkCount++;
+            }
+        }
+
+        return $passedMkCount >= count($requiredMkIds);
+    }
+
+    private function getRandomStatus(int $semester): string
     {
         $r = rand(1, 100);
         if ($semester <= 6) {
-            if ($r <= 85) {
-                return 'aktif';
-            }
-            if ($r <= 95) {
-                return 'cuti';
-            }
-
-            return 'mangkir';
-        } else {
-            if ($r <= 60) {
-                return 'aktif';
-            }
             if ($r <= 80) {
-                return 'lulus';
+                return 'aktif';
             }
-            if ($r <= 85) {
+            if ($r <= 90) {
                 return 'cuti';
             }
             if ($r <= 95) {
                 return 'mangkir';
             }
 
-            return 'do';
+            return 'tidak_aktif';
+        } else {
+            if ($r <= 55) {
+                return 'aktif';
+            }
+            if ($r <= 75) {
+                return 'lulus';
+            }
+            if ($r <= 80) {
+                return 'cuti';
+            }
+            if ($r <= 90) {
+                return 'mangkir';
+            }
+            if ($r <= 95) {
+                return 'DO';
+            }
+
+            return 'tidak_aktif';
         }
+    }
+
+    private function nilaiHurufToAngka(string $huruf): int
+    {
+        return match ($huruf) {
+            'A' => 4,
+            'B' => 3,
+            'C' => 2,
+            'D' => 1,
+            'E' => 0,
+            default => 0,
+        };
     }
 }

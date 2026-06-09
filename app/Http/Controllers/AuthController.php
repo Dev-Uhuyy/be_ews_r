@@ -30,17 +30,17 @@ use Illuminate\Support\Facades\Auth;
 class AuthController extends Controller
 {
     /**
-     * Login Kaprodi
+     * Login Admin
      *
-     * Endpoint asisten autentikasi untuk Login sebagai Kaprodi. Default Kaprodi test acc:
-     * - Email: kaprodi_a11@ews.com
+     * Endpoint asisten autentikasi untuk Login sebagai Admin (Kepala Program Studi). Default Admin test acc:
+     * - Email: admin_a11@ews.com
      * - Password: password
      *
      * @tags Auth
      *
      * @unauthenticated
      */
-    public function loginKaprodi(Request $request)
+    public function loginAdmin(Request $request)
     {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
 
@@ -48,17 +48,17 @@ class AuthController extends Controller
     }
 
     /**
-     * Login Dekan
+     * Login SuperFakultas
      *
-     * Endpoint asisten autentikasi untuk Login sebagai Dekan. Default Dekan test acc:
-     * - Email: dekan@ews.com
+     * Endpoint asisten autentikasi untuk Login sebagai SuperFakultas. Default SuperFakultas test acc:
+     * - Email: super_fakultas@ews.com
      * - Password: password
      *
      * @tags Auth
      *
      * @unauthenticated
      */
-    public function loginDekan(Request $request)
+    public function loginSuperFakultas(Request $request)
     {
         $request->validate(['email' => 'required|string|email', 'password' => 'required|string']);
 
@@ -175,10 +175,10 @@ class AuthController extends Controller
                 }
             }
 
-            if ($roles->first() == 'kaprodi') {
+            if ($roles->first() == 'admin') {
                 $user->load('dosen.prodi', 'prodi');
                 $res = array_merge($data, [
-                    'kaprodi' => [
+                    'admin' => [
                         'prodi_id' => $user->prodi_id,
                         'prodi' => $user->prodi?->nama,
                         'kode_prodi' => $user->prodi?->kode_prodi,
@@ -188,11 +188,11 @@ class AuthController extends Controller
                 return $this->successResponse($res);
             }
 
-            if ($roles->first() == 'dekan') {
+            if ($roles->first() == 'super_fakultas') {
                 $user->load('prodi');
                 $res = array_merge($data, [
-                    'dekan' => [
-                        'scope' => 'fakultas', // dekan lihat semua prodi
+                    'super_fakultas' => [
+                        'scope' => 'fakultas',
                     ],
                 ]);
 

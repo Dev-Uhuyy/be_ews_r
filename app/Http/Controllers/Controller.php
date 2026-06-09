@@ -37,28 +37,28 @@ abstract class Controller
         }
 
         // Eager load if needed, but normally $user->prodi relies on prodi_id
-        if ($user->hasRole('kaprodi')) {
+        if ($user->hasRole('admin')) {
             return [
-                'role' => 'kaprodi',
+                'role' => 'admin',
                 'scope_data' => 'Prodi Spesifik',
                 'nama_prodi' => $user->prodi?->nama ?? 'Unknown Prodi',
                 'kode_prodi' => $user->prodi?->kode_prodi ?? 'Unknown',
             ];
         }
 
-        if ($user->hasRole('dekan')) {
+        if ($user->hasRole('super_fakultas')) {
             if (request()->has('prodi_id') && request('prodi_id') != '') {
                 $prodi = Prodi::find(request('prodi_id'));
 
                 return [
-                    'role' => 'dekan',
+                    'role' => 'super_fakultas',
                     'scope_data' => 'Filter Prodi Spesifik',
                     'nama_prodi' => $prodi?->nama ?? 'Unknown Prodi',
                 ];
             }
 
             return [
-                'role' => 'dekan',
+                'role' => 'super_fakultas',
                 'scope_data' => 'Seluruh Fakultas (Semua Prodi)',
             ];
         }
@@ -76,6 +76,10 @@ abstract class Controller
 
     public function successResponse($data, $message = 'Success', $status = 200)
     {
+        if (is_object($data) && method_exists($data, 'items') && method_exists($data, 'total')) {
+            return $this->paginationResponse($data, $message, $status);
+        }
+
         $response = [
             'success' => true,
             'message' => $message,

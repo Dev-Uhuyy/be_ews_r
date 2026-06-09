@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Traits\ProdiBelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class MataKuliahPeminatan extends Model
 {
-    use ProdiBelongsTo;
+    use HasFactory, ProdiBelongsTo;
 
     protected $table = 'mata_kuliah_peminatans';
 

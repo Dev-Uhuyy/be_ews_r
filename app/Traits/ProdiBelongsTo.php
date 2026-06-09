@@ -19,8 +19,8 @@ trait ProdiBelongsTo
 
     /**
      * Scope a query untuk memfilter berdasarkan prodi_id.
-     * Secara otomatis mengambil prodi_id dari Auth user jika merupakan kaprodi.
-     * Jika role dekan, bisa memfilter berdasarkan request() ['prodi_id'] jika ada.
+     * Secara otomatis mengambil prodi_id dari Auth user jika merupakan admin (Kepala Program Studi).
+     * Jika role super_fakultas, bisa memfilter berdasarkan request() ['prodi_id'] jika ada.
      */
     public function scopeFilterByProdi(Builder $query, $prodiId = null): Builder
     {
@@ -33,12 +33,12 @@ trait ProdiBelongsTo
 
         // Cek auth logic
         if ($user) {
-            if ($user->hasRole('kaprodi')) {
-                // Kaprodi: Wajib limit sesuai prodi mereka
+            if ($user->hasRole('admin')) {
+                // Admin: Wajib limit sesuai prodi mereka
                 return $query->where($this->getTable().'.prodi_id', $user->prodi_id);
             }
-            if ($user->hasRole('dekan')) {
-                // Dekan: Bisa filter request jika ada (kalau tidak, munculkan semua)
+            if ($user->hasRole('super_fakultas')) {
+                // Super Fakultas: Bisa filter request jika ada (kalau tidak, munculkan semua)
                 if (request()->has('prodi_id') && request('prodi_id') != '') {
                     return $query->where($this->getTable().'.prodi_id', request('prodi_id'));
                 }

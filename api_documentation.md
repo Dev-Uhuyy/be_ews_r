@@ -11,15 +11,15 @@
 ## Table of Contents
 
 1. [Authentication](#1-authentication)
-2. [Dekan Dashboard](#2-dekan-dashboard)
-3. [Dekan Statistik Kelulusan](#3-dekan-statistik-kelulusan)
-4. [Dekan Detail Angkatan](#4-dekan-detail-angkatan)
-5. [Dekan Mahasiswa List](#5-dekan-mahasiswa-list)
-6. [Dekan Nilai Mahasiswa](#6-dekan-nilai-mahasiswa)
-7. [Dekan Recalculate EWS](#7-dekan-recalculate-ews)
-8. [Kaprodi Dashboard](#8-kaprodi-dashboard)
-9. [Kaprodi Statistik Kelulusan](#9-kaprodi-statistik-kelulusan)
-10. [Kaprodi Recalculate EWS](#10-kaprodi-recalculate-ews)
+2. [SuperFakultas Dashboard](#2-super-fakultas-dashboard)
+3. [SuperFakultas Statistik Kelulusan](#3-super-fakultas-statistik-kelulusan)
+4. [SuperFakultas Detail Angkatan](#4-super-fakultas-detail-angkatan)
+5. [SuperFakultas Mahasiswa List](#5-super-fakultas-mahasiswa-list)
+6. [SuperFakultas Nilai Mahasiswa](#6-super-fakultas-nilai-mahasiswa)
+7. [SuperFakultas Recalculate EWS](#7-super-fakultas-recalculate-ews)
+8. [Admin Dashboard](#8-admin-dashboard)
+9. [Admin Statistik Kelulusan](#9-admin-statistik-kelulusan)
+10. [Admin Recalculate EWS](#10-admin-recalculate-ews)
 11. [Mahasiswa Profile](#11-mahasiswa-profile)
 12. [Export Endpoints](#12-export-endpoints)
 13. [Common Data Types](#13-common-data-types)
@@ -28,13 +28,13 @@
 
 ## 1. Authentication
 
-### POST /login-dekan
-Login sebagai Dekan.
+### POST /login-super-fakultas
+Login sebagai SuperFakultas.
 
 **Request:**
 ```json
 {
-  "email": "dekan@ews.com",
+  "email": "super_fakultas@ews.com",
   "password": "password"
 }
 ```
@@ -48,12 +48,12 @@ Login sebagai Dekan.
     "access_token": "1|abc123...",
     "token_type": "Bearer",
     "user": {
-      "name": "Nama Dekan",
-      "email": "dekan@ews.com",
-      "roles": "dekan",
+      "name": "Nama SuperFakultas",
+      "email": "super_fakultas@ews.com",
+      "roles": "super_fakultas",
       "permissions": []
     },
-    "dekan": {
+    "super_fakultas": {
       "scope": "fakultas"
     }
   }
@@ -62,13 +62,13 @@ Login sebagai Dekan.
 
 ---
 
-### POST /login-kaprodi
-Login sebagai Kaprodi.
+### POST /login-admin
+Login sebagai Admin.
 
 **Request:**
 ```json
 {
-  "email": "kaprodi_a11@ews.com",
+  "email": "admin_a11@ews.com",
   "password": "password"
 }
 ```
@@ -82,12 +82,12 @@ Login sebagai Kaprodi.
     "access_token": "2|abc123...",
     "token_type": "Bearer",
     "user": {
-      "name": "Nama Kaprodi",
-      "email": "kaprodi_a11@ews.com",
-      "roles": "kaprodi",
+      "name": "Nama Admin",
+      "email": "admin_a11@ews.com",
+      "roles": "admin",
       "permissions": []
     },
-    "kaprodi": {
+    "admin": {
       "prodi_id": 1,
       "prodi": "Teknik Informatika",
       "kode_prodi": "A11"
@@ -154,13 +154,13 @@ Get profile user yang sedang login (semua role).
       "id": 1,
       "name": "Nama User",
       "email": "user@email.com",
-      "roles": "dekan|kaprodi|mahasiswa|dosen",
+      "roles": "super_fakultas|admin|mahasiswa|dosen",
       "permissions": ["permission_name"]
     },
-    // Untuk role spesifik (dekan/kaprodi/mahasiswa), akan ada data tambahan
-    "dekan": { "scope": "fakultas" },
+    // Untuk role spesifik (super_fakultas/admin/mahasiswa), akan ada data tambahan
+    "super_fakultas": { "scope": "fakultas" },
     // ATAU
-    "kaprodi": { "prodi_id": 1, "prodi": "Teknik Informatika", "kode_prodi": "A11" },
+    "admin": { "prodi_id": 1, "prodi": "Teknik Informatika", "kode_prodi": "A11" },
     // ATAU
     "mahasiswa": {
       "id": 1,
@@ -178,12 +178,12 @@ Get profile user yang sedang login (semua role).
 
 ---
 
-## 2. Dekan Dashboard
+## 2. SuperFakultas Dashboard
 
-**Auth Required:** Bearer Token dengan role `dekan`
+**Auth Required:** Bearer Token dengan role `super_fakultas`
 
-### GET /ews/dekan/dashboard
-Overview dashboard dekan (semua prodi).
+### GET /ews/super-fakultas/dashboard
+Overview dashboard super_fakultas (semua prodi).
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -234,7 +234,7 @@ Overview dashboard dekan (semua prodi).
 
 ---
 
-### GET /ews/dekan/dashboard/detail
+### GET /ews/super-fakultas/dashboard/detail
 Detail data per prodi dan tahun angkatan.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -244,7 +244,7 @@ Detail data per prodi dan tahun angkatan.
 |------------|------|----------|-------------|
 | prodi_id | integer | No | Filter berdasarkan ID Prodi |
 
-**Example:** `/ews/dekan/dashboard/detail?prodi_id=1`
+**Example:** `/ews/super-fakultas/dashboard/detail?prodi_id=1`
 
 **Response (200):**
 ```json
@@ -278,7 +278,7 @@ Detail data per prodi dan tahun angkatan.
 
 ---
 
-### GET /ews/dekan/dashboard/mahasiswa
+### GET /ews/super-fakultas/dashboard/mahasiswa
 List mahasiswa berdasarkan kriteria spesifik.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -290,7 +290,7 @@ List mahasiswa berdasarkan kriteria spesifik.
 | tahun_masuk | integer | No | Filter berdasarkan tahun angkatan |
 | criteria | string | No | Filter kriteria: `aktif`, `cuti_2x`, `tepat_waktu`, `perhatian`, `kritis` |
 
-**Example:** `/ews/dekan/dashboard/mahasiswa?prodi_id=1&tahun_masuk=2021&criteria=kritis`
+**Example:** `/ews/super-fakultas/dashboard/mahasiswa?prodi_id=1&tahun_masuk=2021&criteria=kritis`
 
 **Response (200):**
 ```json
@@ -319,11 +319,11 @@ List mahasiswa berdasarkan kriteria spesifik.
 
 ---
 
-## 3. Dekan Statistik Kelulusan
+## 3. SuperFakultas Statistik Kelulusan
 
-**Auth Required:** Bearer Token dengan role `dekan`
+**Auth Required:** Bearer Token dengan role `super_fakultas`
 
-### GET /ews/dekan/statistik-kelulusan
+### GET /ews/super-fakultas/statistik-kelulusan
 Statistik kelulusan per prodi dengan detail per tahun angkatan.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -334,7 +334,7 @@ Statistik kelulusan per prodi dengan detail per tahun angkatan.
 | prodi_id | integer | No | Filter berdasarkan ID Prodi |
 | per_page | integer | No | Jumlah item per halaman (default: 10) |
 
-**Example:** `/ews/dekan/statistik-kelulusan?prodi_id=1`
+**Example:** `/ews/super-fakultas/statistik-kelulusan?prodi_id=1`
 
 **Response (200):**
 ```json
@@ -369,11 +369,11 @@ Statistik kelulusan per prodi dengan detail per tahun angkatan.
 
 ---
 
-## 4. Dekan Detail Angkatan
+## 4. SuperFakultas Detail Angkatan
 
-**Auth Required:** Bearer Token dengan role `dekan`
+**Auth Required:** Bearer Token dengan role `super_fakultas`
 
-### GET /ews/dekan/tahun-angkatan
+### GET /ews/super-fakultas/tahun-angkatan
 List tahun angkatan yang tersedia.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -407,7 +407,7 @@ List tahun angkatan yang tersedia.
 
 ---
 
-### GET /ews/dekan/detail-angkatan/{tahunMasuk}
+### GET /ews/super-fakultas/detail-angkatan/{tahunMasuk}
 Detail mahasiswa per tahun angkatan.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -422,7 +422,7 @@ Detail mahasiswa per tahun angkatan.
 |------------|------|----------|-------------|
 | prodi_id | integer | No | Filter berdasarkan ID Prodi |
 
-**Example:** `/ews/dekan/detail-angkatan/2021?prodi_id=1`
+**Example:** `/ews/super-fakultas/detail-angkatan/2021?prodi_id=1`
 
 **Response (200):**
 ```json
@@ -455,11 +455,11 @@ Detail mahasiswa per tahun angkatan.
 
 ---
 
-## 5. Dekan Mahasiswa List
+## 5. SuperFakultas Mahasiswa List
 
-**Auth Required:** Bearer Token dengan role `dekan`
+**Auth Required:** Bearer Token dengan role `super_fakultas`
 
-### GET /ews/dekan/mahasiswa/kriteria
+### GET /ews/super-fakultas/mahasiswa/kriteria
 Melihat daftar filter/kriteria yang tersedia.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -488,7 +488,7 @@ Melihat daftar filter/kriteria yang tersedia.
 
 ---
 
-### GET /ews/dekan/mahasiswa/list
+### GET /ews/super-fakultas/mahasiswa/list
 List mahasiswa dengan filter fleksibel.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -505,7 +505,7 @@ List mahasiswa dengan filter fleksibel.
 | status_kelulusan | string | No | `eligible` atau `noneligible` |
 | ews_status | string | No | `tepat_waktu`, `normal`, `perhatian`, atau `kritis` |
 
-**Example:** `/ews/dekan/mahasiswa/list?prodi_id=1&has_nilai_e=true&status_kelulusan=noneligible`
+**Example:** `/ews/super-fakultas/mahasiswa/list?prodi_id=1&has_nilai_e=true&status_kelulusan=noneligible`
 
 **Response (200):**
 ```json
@@ -536,11 +536,11 @@ List mahasiswa dengan filter fleksibel.
 
 ---
 
-## 6. Dekan Nilai Mahasiswa
+## 6. SuperFakultas Nilai Mahasiswa
 
-**Auth Required:** Bearer Token dengan role `dekan`
+**Auth Required:** Bearer Token dengan role `super_fakultas`
 
-### GET /ews/dekan/mahasiswa/nilai-detail
+### GET /ews/super-fakultas/mahasiswa/nilai-detail
 List mahasiswa dengan detail nilai D, E, SKS tidak lulus, dan MK kurang. Dapat juga获取 satu mahasiswa spesifik.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -559,7 +559,7 @@ List mahasiswa dengan detail nilai D, E, SKS tidak lulus, dan MK kurang. Dapat j
 | mahasiswa_id | integer | No | Ambil satu mahasiswa spesifik (mengabaikan per_page) |
 | per_page | integer | No | Jumlah item per halaman (default: 10) |
 
-**Example (List):** `/ews/dekan/mahasiswa/nilai-detail?prodi_id=1&has_nilai_e=true`
+**Example (List):** `/ews/super-fakultas/mahasiswa/nilai-detail?prodi_id=1&has_nilai_e=true`
 
 **Response (200) - List:**
 ```json
@@ -609,7 +609,7 @@ List mahasiswa dengan detail nilai D, E, SKS tidak lulus, dan MK kurang. Dapat j
 }
 ```
 
-**Example (Single):** `/ews/dekan/mahasiswa/nilai-detail?mahasiswa_id=5`
+**Example (Single):** `/ews/super-fakultas/mahasiswa/nilai-detail?mahasiswa_id=5`
 
 **Response (200) - Single:**
 ```json
@@ -639,7 +639,7 @@ List mahasiswa dengan detail nilai D, E, SKS tidak lulus, dan MK kurang. Dapat j
 
 ---
 
-### GET /ews/dekan/mahasiswa/nilai-summary
+### GET /ews/super-fakultas/mahasiswa/nilai-summary
 Summary statistik total nilai D, E, dan MK kurang.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -667,11 +667,11 @@ Summary statistik total nilai D, E, dan MK kurang.
 
 ---
 
-## 7. Dekan Recalculate EWS
+## 7. SuperFakultas Recalculate EWS
 
-**Auth Required:** Bearer Token dengan role `dekan`
+**Auth Required:** Bearer Token dengan role `super_fakultas`
 
-### POST /ews/dekan/mahasiswa/{mahasiswaId}/recalculate-status
+### POST /ews/super-fakultas/mahasiswa/{mahasiswaId}/recalculate-status
 Recalculate EWS status untuk satu mahasiswa.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -698,7 +698,7 @@ Recalculate EWS status untuk satu mahasiswa.
 
 ---
 
-### POST /ews/dekan/recalculate-all-status
+### POST /ews/super-fakultas/recalculate-all-status
 Recalculate EWS status untuk semua mahasiswa di fakultas.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -717,12 +717,12 @@ Recalculate EWS status untuk semua mahasiswa di fakultas.
 
 ---
 
-## 8. Kaprodi Dashboard
+## 8. Admin Dashboard
 
-**Auth Required:** Bearer Token dengan role `kaprodi`
+**Auth Required:** Bearer Token dengan role `admin`
 
-### GET /ews/kaprodi/dashboard
-Dashboard kaprodi (hanya prodi sendiri).
+### GET /ews/admin/dashboard
+Dashboard admin (hanya prodi sendiri).
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -773,8 +773,8 @@ Dashboard kaprodi (hanya prodi sendiri).
 
 ---
 
-### GET /ews/kaprodi/dashboard/detail
-Detail per tahun angkatan di prodi kaprodi.
+### GET /ews/admin/dashboard/detail
+Detail per tahun angkatan di prodi admin.
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -808,7 +808,7 @@ Detail per tahun angkatan di prodi kaprodi.
 
 ---
 
-### GET /ews/kaprodi/dashboard/mahasiswa
+### GET /ews/admin/dashboard/mahasiswa
 List mahasiswa dengan filter.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -819,7 +819,7 @@ List mahasiswa dengan filter.
 | tahun_masuk | integer | No | Filter berdasarkan tahun angkatan |
 | criteria | string | No | Filter kriteria: `aktif`, `cuti_2x`, `tepat_waktu`, `perhatian`, `kritis` |
 
-**Example:** `/ews/kaprodi/dashboard/mahasiswa?tahun_masuk=2021&criteria=kritis`
+**Example:** `/ews/admin/dashboard/mahasiswa?tahun_masuk=2021&criteria=kritis`
 
 **Response (200):**
 ```json
@@ -848,12 +848,12 @@ List mahasiswa dengan filter.
 
 ---
 
-## 9. Kaprodi Statistik Kelulusan
+## 9. Admin Statistik Kelulusan
 
-**Auth Required:** Bearer Token dengan role `kaprodi`
+**Auth Required:** Bearer Token dengan role `admin`
 
-### GET /ews/kaprodi/statistik-kelulusan
-Statistik kelulusan untuk prodi kaprodi dengan detail per tahun angkatan.
+### GET /ews/admin/statistik-kelulusan
+Statistik kelulusan untuk prodi admin dengan detail per tahun angkatan.
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -895,11 +895,11 @@ Statistik kelulusan untuk prodi kaprodi dengan detail per tahun angkatan.
 
 ---
 
-## 10. Kaprodi Recalculate EWS
+## 10. Admin Recalculate EWS
 
-**Auth Required:** Bearer Token dengan role `kaprodi`
+**Auth Required:** Bearer Token dengan role `admin`
 
-### POST /ews/kaprodi/mahasiswa/{mahasiswaId}/recalculate-status
+### POST /ews/admin/mahasiswa/{mahasiswaId}/recalculate-status
 Recalculate EWS status untuk satu mahasiswa di prodi sendiri.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -924,8 +924,8 @@ Recalculate EWS status untuk satu mahasiswa di prodi sendiri.
 
 ---
 
-### POST /ews/kaprodi/recalculate-all-status
-Recalculate EWS status untuk semua mahasiswa di prodi kaprodi.
+### POST /ews/admin/recalculate-all-status
+Recalculate EWS status untuk semua mahasiswa di prodi admin.
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -1005,12 +1005,12 @@ Get profile mahasiswa lengkap.
 
 All export endpoints return an XLSX file download. The response will have `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`.
 
-**Auth Required:** Bearer Token dengan role yang sesuai (`dekan`, `kaprodi`, atau `mahasiswa`)
+**Auth Required:** Bearer Token dengan role yang sesuai (`super_fakultas`, `admin`, atau `mahasiswa`)
 
-### Dekan Export Endpoints
+### SuperFakultas Export Endpoints
 
-#### GET /ews/dekan/export/dashboard
-Export seluruh dashboard dekan ke file XLSX.
+#### GET /ews/super-fakultas/export/dashboard
+Export seluruh dashboard super_fakultas ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -1024,8 +1024,8 @@ Export seluruh dashboard dekan ke file XLSX.
 
 ---
 
-#### GET /ews/dekan/export/dashboard-detail
-Export detail dashboard dekan (per prodi dan tahun angkatan) ke file XLSX.
+#### GET /ews/super-fakultas/export/dashboard-detail
+Export detail dashboard super_fakultas (per prodi dan tahun angkatan) ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -1034,13 +1034,13 @@ Export detail dashboard dekan (per prodi dan tahun angkatan) ke file XLSX.
 |------------|------|----------|-------------|
 | prodi_id | integer | No | Filter Export ke satu Prodi saja |
 
-**Example:** `/ews/dekan/export/dashboard-detail?prodi_id=1`
+**Example:** `/ews/super-fakultas/export/dashboard-detail?prodi_id=1`
 
 **Response:** File XLSX dengan sheet per Prodi.
 
 ---
 
-#### GET /ews/dekan/export/statistik-kelulusan
+#### GET /ews/super-fakultas/export/statistik-kelulusan
 Export statistik kelulusan ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -1054,7 +1054,7 @@ Export statistik kelulusan ke file XLSX.
 
 ---
 
-#### GET /ews/dekan/export/detail-angkatan/{tahunMasuk}
+#### GET /ews/super-fakultas/export/detail-angkatan/{tahunMasuk}
 Export detail angkatan ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -1073,7 +1073,7 @@ Export detail angkatan ke file XLSX.
 
 ---
 
-#### GET /ews/dekan/export/mahasiswa-list
+#### GET /ews/super-fakultas/export/mahasiswa-list
 Export list mahasiswa dengan filter ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -1094,7 +1094,7 @@ Export list mahasiswa dengan filter ke file XLSX.
 
 ---
 
-#### GET /ews/dekan/export/nilai-detail
+#### GET /ews/super-fakultas/export/nilai-detail
 Export detail nilai mahasiswa ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -1110,7 +1110,7 @@ Export detail nilai mahasiswa ke file XLSX.
 
 ---
 
-#### GET /ews/dekan/export/nilai-summary
+#### GET /ews/super-fakultas/export/nilai-summary
 Export summary nilai mahasiswa ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
@@ -1125,10 +1125,10 @@ Export summary nilai mahasiswa ke file XLSX.
 
 ---
 
-### Kaprodi Export Endpoints
+### Admin Export Endpoints
 
-#### GET /ews/kaprodi/export/dashboard
-Export dashboard kaprodi ke file XLSX (hanya prodi sendiri).
+#### GET /ews/admin/export/dashboard
+Export dashboard admin ke file XLSX (hanya prodi sendiri).
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -1137,7 +1137,7 @@ Export dashboard kaprodi ke file XLSX (hanya prodi sendiri).
 |------------|------|----------|-------------|
 | tahun_masuk | integer | No | Filter per tahun angkatan |
 
-**Example:** `/ews/kaprodi/export/dashboard?tahun_masuk=2021`
+**Example:** `/ews/admin/export/dashboard?tahun_masuk=2021`
 
 **Response:** File XLSX dengan sheet:
 - Statistik Global (hanya prodi sendiri)
@@ -1147,8 +1147,8 @@ Export dashboard kaprodi ke file XLSX (hanya prodi sendiri).
 
 ---
 
-#### GET /ews/kaprodi/export/dashboard-detail
-Export detail dashboard kaprodi (per tahun angkatan) ke file XLSX.
+#### GET /ews/admin/export/dashboard-detail
+Export detail dashboard admin (per tahun angkatan) ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -1157,14 +1157,14 @@ Export detail dashboard kaprodi (per tahun angkatan) ke file XLSX.
 |------------|------|----------|-------------|
 | tahun_masuk | integer | No | Filter per tahun angkatan |
 
-**Example:** `/ews/kaprodi/export/dashboard-detail?tahun_masuk=2021`
+**Example:** `/ews/admin/export/dashboard-detail?tahun_masuk=2021`
 
-**Response:** File XLSX dengan detail per tahun angkatan di prodi kaprodi.
+**Response:** File XLSX dengan detail per tahun angkatan di prodi admin.
 
 ---
 
-#### GET /ews/kaprodi/export/statistik-kelulusan
-Export statistik kelulusan prodi kaprodi ke file XLSX.
+#### GET /ews/admin/export/statistik-kelulusan
+Export statistik kelulusan prodi admin ke file XLSX.
 
 **Headers:** `Authorization: Bearer {access_token}`
 
@@ -1173,7 +1173,7 @@ Export statistik kelulusan prodi kaprodi ke file XLSX.
 |------------|------|----------|-------------|
 | tahun_masuk | integer | No | Filter per tahun angkatan |
 
-**Example:** `/ews/kaprodi/export/statistik-kelulusan?tahun_masuk=2021`
+**Example:** `/ews/admin/export/statistik-kelulusan?tahun_masuk=2021`
 
 **Response:** File XLSX dengan summary dan detail per tahun angkatan.
 

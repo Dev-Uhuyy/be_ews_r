@@ -28,25 +28,25 @@ composer test    # clears config cache first, then artisan test
 ### Roles & Route Prefix
 | Role | Prefix | Scope |
 |------|--------|-------|
-| dekan | `/api/ews/dekan` | All prodi in fakultas |
-| kaprodi | `/api/ews/kaprodi` | Own prodi only |
+| super_fakultas | `/api/ews/super-fakultas` | All prodi in fakultas |
+| admin | `/api/ews/admin` | Own prodi only |
 | koor | `/api/ews/koor` | Own prodi only (recalculate, surat rekomitmen) |
 | dosen | `/api/ews/dosen` | Own mahasiswa Wali only |
 | mahasiswa | `/api/ews/mahasiswa` | Own data only |
 
 ### Login Endpoints (public)
 ```
-POST /api/login-dekan
-POST /api/login-kaprodi
+POST /api/login-admin
+POST /api/login-super-fakultas
 POST /api/login-mahasiswa
 ```
 All return `{ access_token, user, role_specific_data }`. Token passed as `Authorization: Bearer {token}`.
 
 ### Important Service Files
-- `app/Services/Dekan/EwsService.php` — Core EWS status calculation logic
-- `app/Services/Kaprodi/EwsService.php` — Kaprodi-specific EWS logic
-- `app/Observers/AkademikMahasiswaObserver.php` — Auto-recalculates EWS on akademik data change
-- `app/Jobs/RecalculateAllEwsJob.php` — Batch recalculation job (chunk 100, excludes Lulus/DO)
+- `app/Services/SuperFakultas/EwsService.php` — Core EWS status calculation logic
+- `app/Services/Admin/EwsService.php` — Admin-specific EWS logic
+
+> **Note:** Folder `app/Observers/` dan `app/Jobs/` TIDAK ADA di be_ews_r. Auto-recalc observer dan batch job belum diimplementasikan. Recalc saat ini hanya lewat endpoint manual.
 
 ### EWS Status Logic (critical)
 EWS status calculation is documented in `EWS-LOGIC.md`. Key rules:

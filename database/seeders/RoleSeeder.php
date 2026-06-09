@@ -13,9 +13,9 @@ class RoleSeeder extends Seeder
      * Seed roles & permissions untuk sistem EWS.
      *
      * Role EWS:
-     *  - mahasiswa  → melihat status EWS, KHS/KRS, dan mengajukan tindak lanjut
-     *  - kaprodi    → dashboard EWS prodi, manage status, verifikasi tindak lanjut
-     *  - dekan      → dashboard level fakultas, statistik semua prodi
+     *  - mahasiswa      → melihat status EWS, KHS/KRS, dan mengajukan tindak lanjut
+     *  - admin          → dashboard EWS prodi, manage status, verifikasi tindak lanjut
+     *  - super_fakultas → dashboard level fakultas, statistik semua prodi
      *
      * Catatan: sti-api sudah punya role 'mahasiswa', 'dosen', 'koordinator', 'mitra'.
      * Seeder ini menambahkan role EWS baru tanpa mengganggu role existing.
@@ -27,27 +27,25 @@ class RoleSeeder extends Seeder
 
         // ─── Permissions EWS ───────────────────────────────────────────────────
         $permEwsMahasiswa = Permission::firstOrCreate(['name' => 'ews-mahasiswa', 'guard_name' => 'web']);
-        $permEwsKaprodi = Permission::firstOrCreate(['name' => 'ews-kaprodi',   'guard_name' => 'web']);
-        $permEwsDekan = Permission::firstOrCreate(['name' => 'ews-dekan',     'guard_name' => 'web']);
+        $permEwsAdmin = Permission::firstOrCreate(['name' => 'ews-admin',   'guard_name' => 'web']);
+        $permEwsSuperFakultas = Permission::firstOrCreate(['name' => 'ews-super-fakultas',     'guard_name' => 'web']);
 
         // ─── Role: mahasiswa ────────────────────────────────────────────────────
         // Role ini sudah ada di DB dari sti-api. Kita hanya tambahkan permission EWS.
         $roleMahasiswa = Role::firstOrCreate(['name' => 'mahasiswa', 'guard_name' => 'web']);
         $roleMahasiswa->givePermissionTo($permEwsMahasiswa);
 
-        // ─── Role: kaprodi (baru — Kepala Program Studi) ───────────────────────
-        $roleKaprodi = Role::firstOrCreate(['name' => 'kaprodi', 'guard_name' => 'web']);
-        $roleKaprodi->givePermissionTo($permEwsKaprodi);
-        // kaprodi juga bisa akses fitur mahasiswa
-        $roleKaprodi->givePermissionTo($permEwsMahasiswa);
+        // ─── Role: admin (Kepala Program Studi) ───────────────────────────────
+        $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $roleAdmin->givePermissionTo($permEwsAdmin);
+        $roleAdmin->givePermissionTo($permEwsMahasiswa);
 
-        // ─── Role: dekan (baru — Dekan Fakultas) ───────────────────────────────
-        $roleDekan = Role::firstOrCreate(['name' => 'dekan', 'guard_name' => 'web']);
-        $roleDekan->givePermissionTo($permEwsDekan);
-        // dekan bisa akses semua
-        $roleDekan->givePermissionTo($permEwsKaprodi);
-        $roleDekan->givePermissionTo($permEwsMahasiswa);
+        // ─── Role: super_fakultas ───────────────────────────────
+        $roleSuperFakultas = Role::firstOrCreate(['name' => 'super_fakultas', 'guard_name' => 'web']);
+        $roleSuperFakultas->givePermissionTo($permEwsSuperFakultas);
+        $roleSuperFakultas->givePermissionTo($permEwsAdmin);
+        $roleSuperFakultas->givePermissionTo($permEwsMahasiswa);
 
-        $this->command->info('✔ RoleSeeder: 3 role EWS siap (mahasiswa, kaprodi, dekan).');
+        $this->command->info('✔ RoleSeeder: 3 role EWS siap (mahasiswa, admin, super_fakultas).');
     }
 }

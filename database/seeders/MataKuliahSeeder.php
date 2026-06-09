@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Dosen;
 use App\Models\MataKuliah;
 use App\Models\MataKuliahPeminatan;
 use App\Models\Prodi;
@@ -22,6 +23,10 @@ class MataKuliahSeeder extends Seeder
         foreach ($prodis as $prodi) {
             $kode = $prodi->kode_prodi;
             $peminatans = MataKuliahPeminatan::where('prodi_id', $prodi->id)->get()->keyBy('peminatan');
+
+            // Lookup dosen koordinator: ambil sembarang dosen prodi ini (yang sudah ada)
+            $koordinatorMk = Dosen::where('prodi_id', $prodi->id)->first()?->id;
+
             $mataKuliahs = [];
 
             if ($kode === 'A11') { // Teknik Informatika
@@ -149,9 +154,56 @@ class MataKuliahSeeder extends Seeder
                     ['kode' => "{$kode}.54921", 'name' => 'Sistem Produksi Televisi', 'sks' => 3, 'semester' => 5, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p3],
                     ['kode' => "{$kode}.54922", 'name' => 'Penyutradaraan Non-Drama', 'sks' => 3, 'semester' => 6, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p3],
                 ];
+            } else {
+                // 6 prodi ekstra (2026-06-04 Refactor 12): generic 24 MK prodi semester 1-6
+                // + 6 MK peminatan (3 peminatan × 2 smt). Plus fallback 9 nasional/fakultas
+                $p1 = $peminatans[array_key_first($peminatans->toArray())]->id ?? null;
+                $p2 = $peminatans[array_keys($peminatans->toArray())[1] ?? array_key_first($peminatans->toArray())]->id ?? null;
+                $p3 = $peminatans[array_keys($peminatans->toArray())[2] ?? array_key_first($peminatans->toArray())]->id ?? null;
+
+                $prodiNames = [
+                    'A16' => 'Film & Televisi',
+                    'A17' => 'Animasi',
+                    'A18' => 'PJJ Informatika',
+                    'A22' => 'Teknik Informatika (Kampus 2)',
+                    'P31' => 'Magister Teknik Informatika',
+                    'P41' => 'Program Ilmu Komputer',
+                ];
+                $prodiName = $prodiNames[$kode] ?? $prodi->nama;
+                $singkatan = substr($prodiName, 0, 3);
+
+                // Semester 1-4 (wajib, multiple kelas paralel)
+                $mataKuliahs = [
+                    ['kode' => "{$kode}.54101", 'name' => "Pengantar {$prodiName}", 'sks' => 3, 'semester' => 1, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54102", 'name' => 'Matematika Dasar', 'sks' => 3, 'semester' => 1, 'tipe_mk' => 'fakultas'],
+                    ['kode' => "{$kode}.54103", 'name' => 'Bahasa Indonesia', 'sks' => 2, 'semester' => 1, 'tipe_mk' => 'fakultas'],
+                    ['kode' => "{$kode}.54201", 'name' => "Dasar-dasar {$singkatan}", 'sks' => 4, 'semester' => 2, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54202", 'name' => 'Logika & Algoritma', 'sks' => 3, 'semester' => 2, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54203", 'name' => 'Komunikasi Profesional', 'sks' => 2, 'semester' => 2, 'tipe_mk' => 'fakultas'],
+                    ['kode' => "{$kode}.54301", 'name' => "Teori {$prodiName}", 'sks' => 3, 'semester' => 3, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54302", 'name' => 'Metodologi Penelitian', 'sks' => 3, 'semester' => 3, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54303", 'name' => 'Statistika Terapan', 'sks' => 3, 'semester' => 3, 'tipe_mk' => 'fakultas'],
+                    ['kode' => "{$kode}.54401", 'name' => "Metode Penelitian {$prodiName}", 'sks' => 4, 'semester' => 4, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54402", 'name' => 'Analisis Data', 'sks' => 3, 'semester' => 4, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54403", 'name' => 'Etika Profesi', 'sks' => 2, 'semester' => 4, 'tipe_mk' => 'prodi'],
+                    // Semester 5-6
+                    ['kode' => "{$kode}.54501", 'name' => "Topik Lanjut {$prodiName} 1", 'sks' => 3, 'semester' => 5, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54502", 'name' => "Topik Lanjut {$prodiName} 2", 'sks' => 3, 'semester' => 5, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54503", 'name' => 'Seminar Proposal', 'sks' => 2, 'semester' => 5, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54601", 'name' => "Aplikasi {$prodiName}", 'sks' => 3, 'semester' => 6, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54602", 'name' => "Proyek Akhir 1", 'sks' => 3, 'semester' => 6, 'tipe_mk' => 'prodi'],
+                    ['kode' => "{$kode}.54603", 'name' => 'Manajemen Proyek', 'sks' => 3, 'semester' => 6, 'tipe_mk' => 'prodi'],
+                    // Peminatan
+                    ['kode' => "{$kode}.54901", 'name' => "Peminatan {$singkatan} 1", 'sks' => 3, 'semester' => 5, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p1],
+                    ['kode' => "{$kode}.54902", 'name' => "Peminatan {$singkatan} 2", 'sks' => 3, 'semester' => 6, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p1],
+                    ['kode' => "{$kode}.54911", 'name' => "Peminatan Lanjut 1", 'sks' => 3, 'semester' => 5, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p2],
+                    ['kode' => "{$kode}.54912", 'name' => "Peminatan Lanjut 2", 'sks' => 3, 'semester' => 6, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p2],
+                    ['kode' => "{$kode}.54921", 'name' => "Topik Spesial 1", 'sks' => 3, 'semester' => 5, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p3],
+                    ['kode' => "{$kode}.54922", 'name' => "Topik Spesial 2", 'sks' => 3, 'semester' => 6, 'tipe_mk' => 'peminatan', 'peminatan_id' => $p3],
+                ];
             }
 
-            // Fallback general courses applicable to all prodis to fill the rest of semesters
+            // Fallback general courses applicable to all prodis
             $mataKuliahs = array_merge($mataKuliahs, [
                 ['kode' => "{$kode}.11101", 'name' => 'Pendidikan Kebangsaan & Pancasila', 'sks' => 2, 'semester' => 1, 'tipe_mk' => 'nasional'],
                 ['kode' => "{$kode}.11102", 'name' => 'Pendidikan Keagamaan', 'sks' => 2, 'semester' => 1, 'tipe_mk' => 'nasional'],
@@ -174,6 +226,7 @@ class MataKuliahSeeder extends Seeder
                         'semester' => $mk['semester'],
                         'tipe_mk' => $mk['tipe_mk'],
                         'peminatan_id' => $mk['peminatan_id'] ?? null,
+                        'koordinator_mk' => $koordinatorMk,
                     ]
                 );
             }

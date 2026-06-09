@@ -182,7 +182,7 @@ trait ExportFormatterTrait
     // Save / Download
     // ──────────────────────────────────────────────────────────────
 
-    protected function saveFile(Spreadsheet $spreadsheet, string $filename): void
+    protected function saveFile(Spreadsheet $spreadsheet, string $filename): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         $writer = new Xlsx($spreadsheet);
         $filename = $filename.'.xlsx';
@@ -194,9 +194,9 @@ trait ExportFormatterTrait
 
         $writer->save($tempPath);
 
-        response()->download($tempPath, $filename, [
+        return response()->download($tempPath, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ])->send();
+        ]);
     }
 
     // ──────────────────────────────────────────────────────────────

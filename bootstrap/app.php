@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CorsHeaders;
 use App\Http\Middleware\ValidateStiApiToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Custom CORS middleware (more reliable than built-in HandleCors)
+        $middleware->prepend(CorsHeaders::class);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
