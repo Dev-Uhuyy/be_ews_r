@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\DB;
 
 class SuperFakultasDashboardService
 {
-    public function getDashboard(): array
+    public function getDashboard(?int $prodiId = null): array
     {
         $prodis = Prodi::all();
 
         return [
             'statistik_global' => $this->getStatistikGlobal(),
-            'rata_ipk_per_tahun' => $this->getRataIpkPerTahun(),
+            'rata_ipk_per_tahun' => $this->getRataIpkPerTahun($prodiId),
             'statistik_kelulusan' => $this->getStatistikKelulusan(),
             'tabel_ringkasan_prodi' => $this->getTabelRingkasanProdi($prodis),
         ];
@@ -50,9 +50,10 @@ class SuperFakultasDashboardService
         ];
     }
 
-    private function getRataIpkPerTahun(): Collection
+        private function getRataIpkPerTahun(?int $prodiId = null): Collection
     {
-        return AkademikMahasiswa::select(
+
+        $query = AkademikMahasiswa::select(
             'tahun_masuk',
             DB::raw('ROUND(AVG(ipk), 2) as rata_ipk'),
             DB::raw('COUNT(*) as jumlah_mahasiswa')
@@ -63,8 +64,13 @@ class SuperFakultasDashboardService
             ->whereRaw('LOWER(mahasiswa.status_mahasiswa) NOT IN ("lulus", "do")')
             ->join('mahasiswa', 'akademik_mahasiswa.mahasiswa_id', '=', 'mahasiswa.id')
             ->groupBy('tahun_masuk')
-            ->orderBy('tahun_masuk', 'desc')
-            ->get();
+            ->orderBy('tahun_masuk', 'desc');
+
+        if ($prodiId) {
+            $query->where('mahasiswa.prodi_id', $prodiId);
+        }
+
+        return $query->get();
     }
 
     private function getStatistikKelulusan(): array
