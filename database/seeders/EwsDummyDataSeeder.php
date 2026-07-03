@@ -27,7 +27,7 @@ use Spatie\Permission\Models\Role;
  * - sks_lulus derived from KHS (sum SKS MK dengan latest KHS nilai NOT IN 'D','E')
  * - mk_nasional/fakultas/prodi derived from KHS completeness
  * - IPK = rata-rata IPS dari semester yang sudah ditempuh
- * - Status distribusi: aktif, cuti, mangkir, tidak_aktif, lulus, DO (uppercase)
+ * - Status distribusi: aktif, cuti, mangkir, tidak-aktif, lulus, DO (uppercase)
  * - cuti_2='yes' 30% untuk status='cuti'
  * - KHS 'U' (Ulang) 10% dari total
  * - Retake scenario: 0.5% chance per (prodi,tahun)
@@ -412,7 +412,7 @@ class EwsDummyDataSeeder extends Seeder
                 return 'mangkir';
             }
 
-            return 'tidak_aktif';
+            return 'tidak-aktif';
         } else {
             if ($r <= 55) {
                 return 'aktif';
@@ -430,7 +430,7 @@ class EwsDummyDataSeeder extends Seeder
                 return 'DO';
             }
 
-            return 'tidak_aktif';
+            return 'tidak-aktif';
         }
     }
 

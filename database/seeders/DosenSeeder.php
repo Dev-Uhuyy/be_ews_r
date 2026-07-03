@@ -117,6 +117,6 @@ class DosenSeeder extends Seeder
         ];
         $options = $map[$kodeProdi] ?? ['UMUM'];
 
-        return $options[($i - 1) % 3];
+        return $options[($i - 1) % count($options)];
     }
 }
