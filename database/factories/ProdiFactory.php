@@ -14,9 +14,7 @@ class ProdiFactory extends Factory
 
     public function definition(): array
     {
-        static $counter = 0;
-        $counter++;
-        $kode = 'T'.str_pad((string) $counter, 2, '0', STR_PAD_LEFT);
+        $kode = 'TEST-'.strtoupper($this->faker->unique()->bothify('??####'));
 
         return [
             'nama' => 'Prodi Test '.$kode,
