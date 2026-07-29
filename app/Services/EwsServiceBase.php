@@ -12,21 +12,21 @@ use Illuminate\Support\Facades\Log;
 
 abstract class EwsServiceBase
 {
-    protected const MAX_SKS_NILAI_D = 7.2;
-
-    protected const SKS_TARGET = 144;
-
     protected const SKS_PER_SEMESTER_MAX = 20;
 
     protected const SKS_PER_SEMESTER_11_14 = 24;
 
     public function updateStatus(AkademikMahasiswa $akademik): array
     {
-        $this->updateNilaiDE($akademik);
+        $jenjang = $this->resolveJenjang($akademik);
+        $K = (int) $jenjang['kurikulum'];
+        $sksTarget = (int) $jenjang['sks'];
+
+        $this->updateNilaiDE($akademik, $sksTarget);
         $akademik->refresh();
 
-        $status = $this->hitungStatus($akademik);
-        $statusKelulusan = $this->hitungStatusKelulusan($akademik);
+        $status = $this->hitungStatus($akademik, $K, $sksTarget);
+        $statusKelulusan = $this->hitungStatusKelulusan($akademik, $sksTarget);
 
         EarlyWarningSystem::updateOrCreate(
             ['akademik_mahasiswa_id' => $akademik->id],
@@ -42,7 +42,15 @@ abstract class EwsServiceBase
         ];
     }
 
-    private function updateNilaiDE(AkademikMahasiswa $akademik): void
+    private function resolveJenjang(AkademikMahasiswa $akademik): array
+    {
+        $default = config('ews.jenjang_default');
+        $gelar = $akademik->mahasiswa?->prodi?->gelar ?? $default;
+
+        return config("ews.jenjang.{$gelar}") ?? config("ews.jenjang.{$default}");
+    }
+
+    private function updateNilaiDE(AkademikMahasiswa $akademik, int $sksTarget): void
     {
         $latestKhs = DB::table('khs_krs_mahasiswa as khs1')
             ->join('mata_kuliahs', 'khs1.matakuliah_id', '=', 'mata_kuliahs.id')
@@ -69,7 +77,8 @@ abstract class EwsServiceBase
             }
         }
 
-        $nilaiDMelebihiBatas = ($countMKNilaiD > 2) || ($totalSksNilaiD > self::MAX_SKS_NILAI_D);
+        $maxSksNilaiD = $sksTarget * 0.05;
+        $nilaiDMelebihiBatas = ($countMKNilaiD > 2) || ($totalSksNilaiD > $maxSksNilaiD);
 
         $akademik->update([
             'nilai_d_melebihi_batas' => $nilaiDMelebihiBatas ? 'yes' : 'no',
@@ -77,10 +86,10 @@ abstract class EwsServiceBase
         ]);
     }
 
-    private function hitungStatusKelulusan(AkademikMahasiswa $akademik): string
+    private function hitungStatusKelulusan(AkademikMahasiswa $akademik, int $sksTarget): string
     {
         $ipkMemenuhi = $akademik->ipk > 2.0;
-        $sksMemenuhi = $akademik->sks_lulus >= self::SKS_TARGET;
+        $sksMemenuhi = $akademik->sks_lulus >= $sksTarget;
         $mkNasionalSelesai = ($akademik->mk_nasional === 'yes');
         $mkFakultasSelesai = ($akademik->mk_fakultas === 'yes');
         $mkProdiSelesai = ($akademik->mk_prodi === 'yes');
@@ -113,11 +122,11 @@ abstract class EwsServiceBase
             ->groupBy('nilai_akhir_huruf');
     }
 
-    private function hitungStatus(AkademikMahasiswa $akademik): string
+    private function hitungStatus(AkademikMahasiswa $akademik, int $K, int $sksTarget): string
     {
         $sksLulus = $akademik->sks_lulus ?? 0;
         $semesterAktif = $akademik->semester_aktif ?? 1;
-        $sisaSks = max(0, self::SKS_TARGET - $sksLulus);
+        $sisaSks = max(0, $sksTarget - $sksLulus);
 
         $gradeCounts = $this->getMahasiswaGradeCounts($akademik->mahasiswa_id);
         $nilaiD = $gradeCounts->get('D', collect());
@@ -126,71 +135,76 @@ abstract class EwsServiceBase
         $jumlahNilaiE = $nilaiE->count();
         $jumlahNilaiD = $nilaiD->count();
 
-        $sksBisaDiambilSD14 = $this->hitungSksMaksBisaDiambil($semesterAktif, 14);
-        $sksBisaDiambilSD10 = $this->hitungSksMaksBisaDiambil($semesterAktif, 10);
-        $sksBisaDiambilSD8 = $this->hitungSksMaksBisaDiambil($semesterAktif, 8);
+        // Batas semester per tier, diturunkan dari masa kurikulum K.
+        $batasNormal = $K;
+        $batasPerhatian = $K + 2;
+        $batasKritis = 2 * $K;
+
+        $sksBisaDiambilSDKritis = $this->hitungSksMaksBisaDiambil($semesterAktif, $batasKritis, $batasPerhatian);
+        $sksBisaDiambilSDPerhatian = $this->hitungSksMaksBisaDiambil($semesterAktif, $batasPerhatian, $batasPerhatian);
+        $sksBisaDiambilSDNormal = $this->hitungSksMaksBisaDiambil($semesterAktif, $batasNormal, $batasPerhatian);
 
         $isGenap = ($semesterAktif % 2 === 0);
         $isGanjil = ! $isGenap;
 
-        if ($sksLulus >= self::SKS_TARGET) {
+        if ($sksLulus >= $sksTarget) {
             return match (true) {
-                $semesterAktif <= 8 => 'tepat_waktu',
-                $semesterAktif <= 10 => 'normal',
-                $semesterAktif <= 14 => 'perhatian',
+                $semesterAktif <= $batasNormal => 'tepat_waktu',
+                $semesterAktif <= $batasPerhatian => 'normal',
+                $semesterAktif <= $batasKritis => 'perhatian',
                 default => 'kritis',
             };
         }
 
-        if ($sisaSks > $sksBisaDiambilSD14) {
+        if ($sisaSks > $sksBisaDiambilSDKritis) {
             return 'kritis';
         }
 
-        if ($isGanjil && $semesterAktif === 13) {
-            if ($this->cekAdaEDMataKuliahGanjil($akademik->mahasiswa_id, $nilaiD, $nilaiE)) {
+        if ($isGanjil && $semesterAktif === $batasKritis - 1) {
+            if ($this->cekAdaEDMataKuliah($nilaiD, $nilaiE, $K, ganjil: true)) {
                 return 'kritis';
             }
-        } elseif ($isGenap && $semesterAktif === 14) {
-            if ($this->cekAdaEDMataKuliahGenap($akademik->mahasiswa_id, $nilaiD, $nilaiE)) {
+        } elseif ($isGenap && $semesterAktif === $batasKritis) {
+            if ($this->cekAdaEDMataKuliah($nilaiD, $nilaiE, $K, ganjil: false)) {
                 return 'kritis';
             }
         }
 
-        if ($sisaSks > $sksBisaDiambilSD10) {
+        if ($sisaSks > $sksBisaDiambilSDPerhatian) {
             return 'perhatian';
         }
 
-        if ($isGanjil && $semesterAktif === 9) {
-            if ($this->cekAdaEDMataKuliahGanjil($akademik->mahasiswa_id, $nilaiD, $nilaiE)) {
+        if ($isGanjil && $semesterAktif === $batasPerhatian - 1) {
+            if ($this->cekAdaEDMataKuliah($nilaiD, $nilaiE, $K, ganjil: true)) {
                 return 'perhatian';
             }
-        } elseif ($isGenap && $semesterAktif === 10) {
-            if ($this->cekAdaEDMataKuliahGenap($akademik->mahasiswa_id, $nilaiD, $nilaiE)) {
+        } elseif ($isGenap && $semesterAktif === $batasPerhatian) {
+            if ($this->cekAdaEDMataKuliah($nilaiD, $nilaiE, $K, ganjil: false)) {
                 return 'perhatian';
             }
         }
 
-        if ($sisaSks > $sksBisaDiambilSD8) {
+        if ($sisaSks > $sksBisaDiambilSDNormal) {
             return 'normal';
         }
 
-        if ($isGanjil && $semesterAktif === 7) {
-            if ($this->cekAdaEDMataKuliahGanjil($akademik->mahasiswa_id, $nilaiD, $nilaiE)) {
+        if ($isGanjil && $semesterAktif === $batasNormal - 1) {
+            if ($this->cekAdaEDMataKuliah($nilaiD, $nilaiE, $K, ganjil: true)) {
                 return 'normal';
             }
-        } elseif ($isGenap && $semesterAktif === 8) {
-            if ($this->cekAdaEDMataKuliahGenap($akademik->mahasiswa_id, $nilaiD, $nilaiE)) {
+        } elseif ($isGenap && $semesterAktif === $batasNormal) {
+            if ($this->cekAdaEDMataKuliah($nilaiD, $nilaiE, $K, ganjil: false)) {
                 return 'normal';
             }
         }
 
-        $kondisiSksBiru = ($sisaSks <= $sksBisaDiambilSD8);
+        $kondisiSksBiru = ($sisaSks <= $sksBisaDiambilSDNormal);
 
-        if ($isGanjil && $semesterAktif === 7) {
+        if ($isGanjil && $semesterAktif === $batasNormal - 1) {
             if ($kondisiSksBiru && $jumlahNilaiE <= 0 && $jumlahNilaiD <= 1) {
                 return 'tepat_waktu';
             }
-        } elseif ($isGenap && $semesterAktif === 8) {
+        } elseif ($isGenap && $semesterAktif === $batasNormal) {
             if ($kondisiSksBiru && $jumlahNilaiE <= 0 && $jumlahNilaiD <= 1) {
                 return 'tepat_waktu';
             }
@@ -199,18 +213,18 @@ abstract class EwsServiceBase
         return 'normal';
     }
 
-    private function cekAdaEDMataKuliahGanjil(int $mahasiswaId, $nilaiD, $nilaiE): bool
+    private function cekAdaEDMataKuliah($nilaiD, $nilaiE, int $K, bool $ganjil): bool
     {
-        $ganjilSemesters = [1, 3, 5, 7];
+        $semesters = $ganjil ? range(1, $K, 2) : range(2, $K, 2);
 
         foreach ($nilaiD as $grade) {
-            if (in_array((int) $grade->semester, $ganjilSemesters)) {
+            if (in_array((int) $grade->semester, $semesters)) {
                 return true;
             }
         }
 
         foreach ($nilaiE as $grade) {
-            if (in_array((int) $grade->semester, $ganjilSemesters)) {
+            if (in_array((int) $grade->semester, $semesters)) {
                 return true;
             }
         }
@@ -218,26 +232,7 @@ abstract class EwsServiceBase
         return false;
     }
 
-    private function cekAdaEDMataKuliahGenap(int $mahasiswaId, $nilaiD, $nilaiE): bool
-    {
-        $genapSemesters = [2, 4, 6, 8];
-
-        foreach ($nilaiD as $grade) {
-            if (in_array((int) $grade->semester, $genapSemesters)) {
-                return true;
-            }
-        }
-
-        foreach ($nilaiE as $grade) {
-            if (in_array((int) $grade->semester, $genapSemesters)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hitungSksMaksBisaDiambil(int $semesterSekarang, int $semesterTarget): int
+    private function hitungSksMaksBisaDiambil(int $semesterSekarang, int $semesterTarget, int $capCutoff): int
     {
         if ($semesterSekarang > $semesterTarget) {
             return 0;
@@ -245,7 +240,7 @@ abstract class EwsServiceBase
 
         $totalSks = 0;
         for ($smt = $semesterSekarang; $smt <= $semesterTarget; $smt++) {
-            $totalSks += $smt <= 10 ? self::SKS_PER_SEMESTER_MAX : self::SKS_PER_SEMESTER_11_14;
+            $totalSks += $smt <= $capCutoff ? self::SKS_PER_SEMESTER_MAX : self::SKS_PER_SEMESTER_11_14;
         }
 
         return $totalSks;
@@ -253,7 +248,7 @@ abstract class EwsServiceBase
 
     protected function getBaseQueryExcludeLulusDo(): Builder
     {
-        return AkademikMahasiswa::with('mahasiswa')
+        return AkademikMahasiswa::with('mahasiswa.prodi')
             ->whereHas('mahasiswa', fn ($query) => $query->whereRaw('LOWER(status_mahasiswa) NOT IN ("lulus", "do")'));
     }
 
