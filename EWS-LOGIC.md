@@ -9,12 +9,44 @@ Early Warning System (EWS) adalah sistem untuk mendeteksi mahasiswa yang berisik
 
 Terdapat **4 tingkat status** dalam EWS:
 
-| Status | Warna | Keterangan |
+| Status | Warna | Keterangan (contoh S1, kurikulum 8 semester) |
 |--------|-------|------------|
-| **Tepat Waktu** | 🔵 Biru | Mahasiswa on track untuk lulus dalam 4 tahun (8 semester) |
-| **Normal** | 🟢 Hijau | Mahasiswa dalam kondisi normal, berpotensi lulus dalam 4 tahun |
-| **Perhatian** | 🟡 Kuning | Mahasiswa berisiko tidak lulus tepat waktu, target 5 tahun (10 semester) |
-| **Kritis** | 🔴 Merah | Mahasiswa berisiko tinggi DO atau tidak lulus dalam 7 tahun (14 semester) |
+| **Tepat Waktu** | 🔵 Biru | Mahasiswa on track untuk lulus dalam 1 masa kurikulum (S1: 4 tahun/8 semester) |
+| **Normal** | 🟢 Hijau | Mahasiswa dalam kondisi normal, berpotensi lulus dalam 1 masa kurikulum |
+| **Perhatian** | 🟡 Kuning | Mahasiswa berisiko tidak lulus tepat waktu, target masa kurikulum + 2 semester (S1: 10 semester) |
+| **Kritis** | 🔴 Merah | Mahasiswa berisiko tinggi DO atau tidak lulus dalam 2× masa kurikulum (S1: 7 tahun/16 semester) |
+
+---
+
+## Multi-Jenjang (D2/D3/D4/S1/Profesi/S2/S3)
+
+Semua threshold semester & SKS di dokumen ini diturunkan dari **masa kurikulum
+(`K`, dalam semester)** per jenjang mahasiswa, bukan angka tetap. Sumber
+jenjang: `prodis.gelar`, dipetakan ke `K` dan SKS target lewat `config/ews.php`:
+
+| Jenjang | `K` (kurikulum) | SKS target |
+|---|---|---|
+| D2 | 4 | 72 |
+| D3 | 6 | 108 |
+| D4 | 8 | 144 |
+| S1 | 8 | 144 |
+| Profesi | 4 | 24 |
+| S2 | 4 | 36 |
+| S3 | 8 | 42 |
+
+Rumus tier status (berlaku untuk semua jenjang):
+
+| Tier | Batas semester | S1 (`K=8`) | D3 (`K=6`) |
+|---|---|---|---|
+| Tepat Waktu | `semester ≤ K` | ≤ 8 | ≤ 6 |
+| Normal | `semester ≤ K+2` | ≤ 10 | ≤ 8 |
+| Perhatian | `semester ≤ 2K` | ≤ 16 | ≤ 12 |
+| Kritis | `semester > 2K` | > 16 | > 12 |
+
+Kalau `gelar` prodi null atau tidak dikenal, sistem **fallback ke S1**
+(`K=8`, 144 SKS) — semua contoh & narasi di bawah dokumen ini memakai S1
+sebagai ilustrasi (ditandai "contoh S1"), tapi rumusnya generik untuk semua
+jenjang di atas.
 
 ---
 
@@ -32,15 +64,15 @@ Terdapat **2 status kelulusan**:
 Mahasiswa dinyatakan **eligible** jika memenuhi **SEMUA** syarat berikut:
 
 1. ✅ **IPK > 2.0**
-2. ✅ **SKS Lulus >= 144**
+2. ✅ **SKS Lulus >= SKS target jenjang** (S1/D4: 144, D3: 108, D2: 72, S2: 36, S3: 42, Profesi: 24 — lihat [Multi-Jenjang](#multi-jenjang-d2d3d4s1profesis2s3))
 3. ✅ **MK Nasional Selesai** (mk_nasional = 'yes')
 4. ✅ **MK Fakultas Selesai** (mk_fakultas = 'yes')
 5. ✅ **MK Prodi Selesai** (mk_prodi = 'yes')
 6. ✅ **TIDAK ada nilai E** (nilai_e = 'no')
 7. ✅ **Nilai D tidak melebihi batas** (nilai_d_melebihi_batas = 'no')
    - Maksimal 2 mata kuliah dengan nilai D
-   - Total SKS nilai D tidak melebihi 7.2 SKS (5% dari 144 SKS standar)
-   - Contoh: 3 SKS + 3 SKS = 6 SKS ✅ | 2 SKS + 2 SKS + 2 SKS = 6 SKS ❌
+   - Total SKS nilai D tidak melebihi **5% dari SKS target jenjang** (S1: 7.2 SKS dari 144, D3: 5.4 SKS dari 108)
+   - Contoh (S1): 3 SKS + 3 SKS = 6 SKS ✅ | 2 SKS + 2 SKS + 2 SKS = 6 SKS ❌
 
 Jika salah satu syarat tidak terpenuhi, status menjadi **Non-eligible**.
 
@@ -60,7 +92,7 @@ Untuk menghitung status EWS, sistem membutuhkan data:
 ### Variabel Hitung
 
 ```
-sisa_sks = max(0, 144 - sks_lulus)
+sisa_sks = max(0, sks_target - sks_lulus)   // sks_target dari config('ews.jenjang.{gelar}.sks')
 jumlah_nilai_e = COUNT(nilai E dari KHS)
 jumlah_nilai_d = COUNT(nilai D dari KHS)
 ```
@@ -69,15 +101,18 @@ jumlah_nilai_d = COUNT(nilai D dari KHS)
 
 Sistem menghitung berapa SKS maksimal yang bisa diambil dari semester sekarang hingga target:
 
-- **Semester 1-10:** Maksimal 20 SKS per semester
-- **Semester 11-14:** Maksimal 24 SKS per semester
+- **Semester 1 s/d `K+2`:** Maksimal 20 SKS per semester
+- **Setelah `K+2`:** Maksimal 24 SKS per semester
+
+Untuk S1 (`K=8`), cutoff-nya semester 10 — sama seperti sebelumnya.
 
 **Fungsi:**
 ```php
-function hitungSksMaksBisaDiambil($semesterSekarang, $semesterTarget) {
+function hitungSksMaksBisaDiambil($semesterSekarang, $semesterTarget, $capCutoff) {
+    // $capCutoff = K + 2
     $totalSks = 0;
     for ($smt = $semesterSekarang; $smt <= $semesterTarget; $smt++) {
-        if ($smt <= 10) {
+        if ($smt <= $capCutoff) {
             $totalSks += 20;
         } else {
             $totalSks += 24;
@@ -87,7 +122,7 @@ function hitungSksMaksBisaDiambil($semesterSekarang, $semesterTarget) {
 }
 ```
 
-**Contoh:**
+**Contoh (S1, `K=8`, cutoff smt 10):**
 - Mahasiswa semester 6 ingin lulus semester 8:
   - Semester 6: 20 SKS
   - Semester 7: 20 SKS
@@ -102,29 +137,29 @@ Status ditentukan dengan **urutan prioritas** dari yang paling kritis:
 
 ### **Prioritas 1: KRITIS (🔴 Merah)**
 
-#### Kondisi A: Sisa SKS Tidak Cukup untuk 7 Tahun
+#### Kondisi A: Sisa SKS Tidak Cukup Sampai Batas Kritis (`2K`)
 ```
-if (sisa_sks > sksBisaDiambilSD14) {
+if (sisa_sks > sksBisaDiambilSampai2K) {
     return 'kritis';
 }
 ```
 
 **Penjelasan:**
-- Mahasiswa tidak akan bisa menyelesaikan 144 SKS bahkan jika mengambil SKS maksimal hingga semester 14
+- Mahasiswa tidak akan bisa menyelesaikan SKS target bahkan jika mengambil SKS maksimal hingga semester `2K`
 - Risiko DO sangat tinggi
 
-**Contoh:**
+**Contoh (S1, `K=8` → batas `2K=16`):**
 - Semester aktif: 12
 - SKS lulus: 80 → Sisa SKS: 64
-- SKS bisa diambil S12-S14: (24+24+24) = 72
-- 64 < 72 ✅ (masih aman)
-- Tapi jika sisa SKS > 72, maka KRITIS
+- SKS bisa diambil S12-S16: (24×5) = 120
+- 64 < 120 ✅ (masih aman)
+- Tapi jika sisa SKS > 120, maka KRITIS
 
 ---
 
-#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester 13 Ganjil)
+#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester `2K-1`, Ganjil Terakhir)
 ```
-if (semester_aktif == 13 && semester_ganjil) {
+if (semester_aktif == 2K - 1 && semester_ganjil) {
     if (ada_nilai_E_atau_D_di_matkul_ganjil) {
         return 'kritis';
     }
@@ -132,15 +167,15 @@ if (semester_aktif == 13 && semester_ganjil) {
 ```
 
 **Penjelasan:**
-- Semester 13 adalah semester ganjil terakhir (tahun ke-7)
-- Jika masih ada nilai E/D di mata kuliah semester 1, 3, 5, 7
+- Semester `2K-1` adalah semester ganjil terakhir sebelum batas kritis (S1: semester 15)
+- Jika masih ada nilai E/D di mata kuliah semester ganjil (1..K)
 - Mahasiswa mungkin tidak sempat mengulang
 
 ---
 
-#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester 14 Genap)
+#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester `2K`, Terakhir)
 ```
-if (semester_aktif == 14 && semester_genap) {
+if (semester_aktif == 2K && semester_genap) {
     if (ada_nilai_E_atau_D_di_matkul_genap) {
         return 'kritis';
     }
@@ -148,26 +183,30 @@ if (semester_aktif == 14 && semester_genap) {
 ```
 
 **Penjelasan:**
-- Semester 14 adalah semester terakhir (tahun ke-7)
-- Jika masih ada nilai E/D di mata kuliah semester 2, 4, 6, 8
+- Semester `2K` adalah semester terakhir (S1: semester 16)
+- Jika masih ada nilai E/D di mata kuliah semester genap (1..K)
 - Mahasiswa tidak punya kesempatan mengulang lagi
+
+> **Catatan migrasi:** sebelum EWS multi-jenjang, kondisi B/C ini hardcode
+> semester 13/14 untuk S1. Setelah threshold diturunkan dari `2K-1`/`2K`,
+> batasnya untuk S1 (`K=8`) bergeser ke semester **15/16**.
 
 ---
 
 ### **Prioritas 2: PERHATIAN (🟡 Kuning)**
 
-#### Kondisi A: Sisa SKS Tidak Cukup untuk 5 Tahun
+#### Kondisi A: Sisa SKS Tidak Cukup Sampai Batas Perhatian (`K+2`)
 ```
-if (sisa_sks > sksBisaDiambilSD10) {
+if (sisa_sks > sksBisaDiambilSampaiKPlus2) {
     return 'perhatian';
 }
 ```
 
 **Penjelasan:**
-- Mahasiswa tidak akan bisa menyelesaikan 144 SKS hingga semester 10 (5 tahun)
-- Target lulus mundur ke 5-7 tahun
+- Mahasiswa tidak akan bisa menyelesaikan SKS target hingga semester `K+2`
+- Target lulus mundur
 
-**Contoh:**
+**Contoh (S1, `K=8` → batas `K+2=10`):**
 - Semester aktif: 8
 - SKS lulus: 100 → Sisa SKS: 44
 - SKS bisa diambil S8-S10: (20+20+20) = 60
@@ -176,9 +215,9 @@ if (sisa_sks > sksBisaDiambilSD10) {
 
 ---
 
-#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester 9)
+#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester `K+1`)
 ```
-if (semester_aktif == 9 && semester_ganjil) {
+if (semester_aktif == K + 1 && semester_ganjil) {
     if (ada_nilai_E_atau_D_di_matkul_ganjil) {
         return 'perhatian';
     }
@@ -186,15 +225,15 @@ if (semester_aktif == 9 && semester_ganjil) {
 ```
 
 **Penjelasan:**
-- Semester 9 adalah evaluasi 5 tahun
+- Semester `K+1` adalah evaluasi perhatian (S1: semester 9)
 - Masih ada nilai E/D di mata kuliah ganjil
-- Risiko tidak lulus 5 tahun
+- Risiko tidak lulus di masa kurikulum + toleransi
 
 ---
 
-#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester 10)
+#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester `K+2`)
 ```
-if (semester_aktif == 10 && semester_genap) {
+if (semester_aktif == K + 2 && semester_genap) {
     if (ada_nilai_E_atau_D_di_matkul_genap) {
         return 'perhatian';
     }
@@ -205,23 +244,23 @@ if (semester_aktif == 10 && semester_genap) {
 
 ### **Prioritas 3: NORMAL (🟢 Hijau)**
 
-#### Kondisi A: Sisa SKS Tidak Cukup untuk 4 Tahun
+#### Kondisi A: Sisa SKS Tidak Cukup Sampai Batas Normal (`K`)
 ```
-if (sisa_sks > sksBisaDiambilSD8) {
+if (sisa_sks > sksBisaDiambilSampaiK) {
     return 'normal';
 }
 ```
 
 **Penjelasan:**
-- Mahasiswa tidak akan bisa lulus dalam 4 tahun (8 semester)
-- Tapi masih bisa lulus dalam 4-5 tahun
+- Mahasiswa tidak akan bisa lulus dalam 1 masa kurikulum (S1: 8 semester)
+- Tapi masih bisa lulus dalam masa kurikulum + toleransi
 - Kondisi masih terkendali
 
 ---
 
-#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester 7)
+#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester `K-1`)
 ```
-if (semester_aktif == 7 && semester_ganjil) {
+if (semester_aktif == K - 1 && semester_ganjil) {
     if (ada_nilai_E_atau_D_di_matkul_ganjil) {
         return 'normal';
     }
@@ -230,9 +269,9 @@ if (semester_aktif == 7 && semester_ganjil) {
 
 ---
 
-#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester 8)
+#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester `K`)
 ```
-if (semester_aktif == 8 && semester_genap) {
+if (semester_aktif == K && semester_genap) {
     if (ada_nilai_E_atau_D_di_matkul_genap) {
         return 'normal';
     }
@@ -243,22 +282,22 @@ if (semester_aktif == 8 && semester_genap) {
 
 ### **Prioritas 4: TEPAT WAKTU (🔵 Biru)**
 
-#### Kondisi (Semester 7 atau 8):
+#### Kondisi (Semester `K-1` atau `K`):
 ```
-kondisiSksBiru = (sisa_sks <= sksBisaDiambilSD8)
+kondisiSksBiru = (sisa_sks <= sksBisaDiambilSampaiK)
 
-if (semester_aktif == 7 || semester_aktif == 8) {
+if (semester_aktif == K - 1 || semester_aktif == K) {
     if (kondisiSksBiru && jumlahNilaiE == 0 && jumlahNilaiD <= 1) {
         return 'tepat_waktu';
     }
 }
 ```
 
-**Penjelasan:**
-- Mahasiswa bisa menyelesaikan sisa SKS hingga semester 8
+**Penjelasan (S1, `K=8` → semester 7/8):**
+- Mahasiswa bisa menyelesaikan sisa SKS hingga semester `K`
 - Tidak ada nilai E sama sekali
 - Maksimal 1 nilai D (toleransi)
-- Diprediksi lulus tepat waktu 4 tahun
+- Diprediksi lulus tepat waktu di masa kurikulum
 
 ---
 
@@ -273,24 +312,24 @@ Jika tidak masuk kondisi apapun, default status adalah **Normal**.
 
 ## Kasus Khusus
 
-### 1. Mahasiswa Sudah Lulus (SKS >= 144)
+### 1. Mahasiswa Sudah Lulus (SKS >= SKS target jenjang)
 
 ```
-if (sks_lulus >= 144) {
-    if (semester_aktif <= 8) return 'tepat_waktu';
-    if (semester_aktif <= 10) return 'normal';
-    if (semester_aktif <= 14) return 'perhatian';
+if (sks_lulus >= sks_target) {
+    if (semester_aktif <= K) return 'tepat_waktu';
+    if (semester_aktif <= K + 2) return 'normal';
+    if (semester_aktif <= 2 * K) return 'perhatian';
     return 'kritis';
 }
 ```
 
-**Penjelasan:**
-- Mahasiswa sudah mengumpulkan 144 SKS
+**Penjelasan (contoh S1, `K=8`, sks_target=144):**
+- Mahasiswa sudah mengumpulkan SKS target
 - Status ditentukan berdasarkan semester lulus:
   - ≤ Semester 8: Tepat Waktu
   - Semester 9-10: Normal
-  - Semester 11-14: Perhatian
-  - > Semester 14: Kritis (seharusnya tidak terjadi)
+  - Semester 11-16: Perhatian
+  - > Semester 16: Kritis (seharusnya tidak terjadi)
 
 ---
 
@@ -320,8 +359,8 @@ foreach ($latestKhs as $khs) {
 
 // Cek apakah nilai D melebihi batas:
 // 1. Maksimal 2 mata kuliah yang boleh mendapat nilai D
-// 2. Total SKS tidak melebihi 7.2 SKS (5% dari 144 SKS standar)
-$maxSksNilaiD = 7.2; // Tetap 5% dari 144 SKS untuk konsistensi
+// 2. Total SKS tidak melebihi 5% dari SKS target jenjang mahasiswa
+$maxSksNilaiD = $sksTarget * 0.05; // S1: 7.2 (5% dari 144), D3: 5.4 (5% dari 108), dst
 $nilaiDMelebihiBatas = ($countMKNilaiD > 2) || ($totalSksNilaiD > $maxSksNilaiD);
 
 // Update akademik_mahasiswa
@@ -334,9 +373,9 @@ nilai_e = $adaNilaiE ? 'yes' : 'no';
 - Jika mahasiswa retake dan dapat nilai lebih baik, nilai lama tidak dihitung
 - **Batas nilai D:** 
   - Maksimal **2 mata kuliah** dengan nilai D
-  - Total SKS nilai D tidak melebihi **7.2 SKS** (5% dari 144 SKS standar kelulusan)
+  - Total SKS nilai D tidak melebihi **5% dari SKS target jenjang** (S1/D4: 7.2 dari 144, D3: 5.4 dari 108, dst — lihat [Multi-Jenjang](#multi-jenjang-d2d3d4s1profesis2s3))
   - Berlaku untuk semua mahasiswa terlepas dari total SKS lulus mereka
-  - Contoh: 3 SKS + 3 SKS (2 MK) ✅ | 2 SKS + 2 SKS + 2 SKS (3 MK) ❌
+  - Contoh (S1): 3 SKS + 3 SKS (2 MK) ✅ | 2 SKS + 2 SKS + 2 SKS (3 MK) ❌
 
 ---
 
@@ -425,7 +464,11 @@ class AkademikMahasiswaObserver
 
 ## Contoh Perhitungan
 
-### Contoh 1: Mahasiswa Tepat Waktu
+> Semua contoh di bawah pakai jenjang **S1** (`K=8`, sks_target=144) sebagai
+> ilustrasi. Rumusnya sama untuk jenjang lain, tinggal ganti `K`/sks_target
+> sesuai tabel di [Multi-Jenjang](#multi-jenjang-d2d3d4s1profesis2s3).
+
+### Contoh 1: Mahasiswa Tepat Waktu (contoh S1)
 
 **Data:**
 - Semester aktif: 7 (ganjil)
@@ -446,7 +489,7 @@ jumlahNilaiD (1) <= 1 ✅
 
 ---
 
-### Contoh 2: Mahasiswa Normal
+### Contoh 2: Mahasiswa Normal (contoh S1)
 
 **Data:**
 - Semester aktif: 7 (ganjil)
@@ -464,14 +507,14 @@ Tapi:
 sksBisaDiambilSD10 = 40 + 20 + 20 = 80 (semester 7-10)
 sisa_sks (54) <= sksBisaDiambilSD10 (80) ✅
 
-Dan tidak critical untuk semester 13-14
+Dan tidak masuk kondisi kritis di semester 15-16
 ```
 
 **Result:** ✅ **NORMAL** (tidak bisa lulus 4 tahun, tapi bisa 4-5 tahun)
 
 ---
 
-### Contoh 3: Mahasiswa Perhatian
+### Contoh 3: Mahasiswa Perhatian (contoh S1)
 
 **Data:**
 - Semester aktif: 9 (ganjil)
@@ -493,22 +536,22 @@ semester_aktif == 9 && ada nilai E di matkul ganjil ✅
 
 ---
 
-### Contoh 4: Mahasiswa Kritis
+### Contoh 4: Mahasiswa Kritis (contoh S1)
 
 **Data:**
-- Semester aktif: 13 (ganjil)
+- Semester aktif: 15 (ganjil, `= 2K-1`)
 - SKS lulus: 60
 - Sisa SKS: 84
 - Ada nilai E di mata kuliah semester 1
 
 **Perhitungan:**
 ```
-sksBisaDiambilSD14 = 24 + 24 = 48 (semester 13-14)
-sisa_sks (84) > sksBisaDiambilSD14 (48) ✅ → KRITIS
+sksBisaDiambilSampai2K = 24 + 24 = 48 (semester 15-16)
+sisa_sks (84) > sksBisaDiambilSampai2K (48) ✅ → KRITIS
 
 ATAU
 
-semester_aktif == 13 && ada nilai E di matkul ganjil ✅ → KRITIS
+semester_aktif == 15 (2K-1) && ada nilai E di matkul ganjil ✅ → KRITIS
 ```
 
 **Result:** 🔴 **KRITIS** (risiko DO sangat tinggi)
@@ -529,59 +572,59 @@ semester_aktif == 13 && ada nilai E di matkul ganjil ✅ → KRITIS
        └───────┬───────┘
                │
                ▼
-       ┌───────────────────────────┐
-       │ Sudah Lulus (SKS >= 144)? │
-       └───────┬──────────┬────────┘
+       ┌──────────────────────────────────┐
+       │ Sudah Lulus (SKS >= sks_target)? │
+       └───────┬──────────┬───────────────┘
                │ YES      │ NO
                ▼          │
        Return status      │ 
        by semester        │
                           ▼
-              ┌───────────────────────┐
-              │ Sisa SKS > Maks S14?  │
-              └───────┬──────┬────────┘
-                      │ YES  │ NO
-                      ▼      │
-                  KRITIS     │
-                             ▼
               ┌────────────────────────┐
-              │ S13/14 ada nilai E/D?  │
+              │ Sisa SKS > Maks 2K?    │
               └───────┬──────┬─────────┘
                       │ YES  │ NO
                       ▼      │
                   KRITIS     │
                              ▼
+              ┌───────────────────────────┐
+              │ S(2K-1)/2K ada nilai E/D? │
+              └───────┬──────┬────────────┘
+                      │ YES  │ NO
+                      ▼      │
+                  KRITIS     │
+                             ▼
               ┌────────────────────────┐
-              │ Sisa SKS > Maks S10?   │
+              │ Sisa SKS > Maks K+2?   │
               └───────┬──────┬─────────┘
                       │ YES  │ NO
                       ▼      │
                   PERHATIAN  │
                              ▼
-              ┌────────────────────────┐
-              │ S9/10 ada nilai E/D?   │
-              └───────┬──────┬─────────┘
+              ┌─────────────────────────────┐
+              │ S(K+1)/(K+2) ada nilai E/D? │
+              └───────┬──────┬──────────────┘
                       │ YES  │ NO
                       ▼      │
                   PERHATIAN  │
                              ▼
               ┌────────────────────────┐
-              │ Sisa SKS > Maks S8?    │
+              │ Sisa SKS > Maks K?     │
               └───────┬──────┬─────────┘
                       │ YES  │ NO
                       ▼      │
                    NORMAL    │
                              ▼
               ┌────────────────────────┐
-              │ S7/8 ada nilai E/D?    │
+              │ S(K-1)/K ada nilai E/D?│
               └───────┬──────┬─────────┘
                       │ YES  │ NO
                       ▼      │
                    NORMAL    │
                              ▼
               ┌─────────────────────────────┐
-              │ S7/8 + SKS OK + Max 1 nilai │
-              │ D + No nilai E?             │
+              │ S(K-1)/K + SKS OK + Max 1   │
+              │ nilai D + No nilai E?       │
               └───────┬──────┬──────────────┘
                       │ YES  │ NO
                       ▼      │
@@ -590,10 +633,14 @@ semester_aktif == 13 && ada nilai E di matkul ganjil ✅ → KRITIS
                           NORMAL
 ```
 
+> Untuk S1 (`K=8`): `2K=16`, `K+2=10`, `K=8` — sama seperti diagram lama,
+> hanya labelnya sekarang generik per jenjang.
+
 ---
 
 ## File Terkait
 
+- **Config:** `config/ews.php` (tabel kurikulum & SKS target per jenjang)
 - **Service:** `app/Services/EwsServiceBase.php` (+ `SuperFakultas/EwsService.php`, `Admin/EwsService.php`)
 - **Model:** `app/Models/EarlyWarningSystem.php`
 - **Observer:** `app/Observers/AkademikMahasiswaObserver.php` — ⚠️ belum diimplementasikan
