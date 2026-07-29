@@ -21,11 +21,12 @@ abstract class EwsServiceBase
         $jenjang = $this->resolveJenjang($akademik);
         $K = (int) $jenjang['kurikulum'];
         $sksTarget = (int) $jenjang['sks'];
+        $batasKritisOverride = isset($jenjang['batas_kritis']) ? (int) $jenjang['batas_kritis'] : null;
 
         $this->updateNilaiDE($akademik, $sksTarget);
         $akademik->refresh();
 
-        $status = $this->hitungStatus($akademik, $K, $sksTarget);
+        $status = $this->hitungStatus($akademik, $K, $sksTarget, $batasKritisOverride);
         $statusKelulusan = $this->hitungStatusKelulusan($akademik, $sksTarget);
 
         EarlyWarningSystem::updateOrCreate(
@@ -122,7 +123,7 @@ abstract class EwsServiceBase
             ->groupBy('nilai_akhir_huruf');
     }
 
-    private function hitungStatus(AkademikMahasiswa $akademik, int $K, int $sksTarget): string
+    private function hitungStatus(AkademikMahasiswa $akademik, int $K, int $sksTarget, ?int $batasKritisOverride = null): string
     {
         $sksLulus = $akademik->sks_lulus ?? 0;
         $semesterAktif = $akademik->semester_aktif ?? 1;
@@ -138,7 +139,7 @@ abstract class EwsServiceBase
         // Batas semester per tier, diturunkan dari masa kurikulum K.
         $batasNormal = $K;
         $batasPerhatian = $K + 2;
-        $batasKritis = 2 * $K;
+        $batasKritis = $batasKritisOverride ?? (2 * $K);
 
         $sksBisaDiambilSDKritis = $this->hitungSksMaksBisaDiambil($semesterAktif, $batasKritis, $batasPerhatian);
         $sksBisaDiambilSDPerhatian = $this->hitungSksMaksBisaDiambil($semesterAktif, $batasPerhatian, $batasPerhatian);

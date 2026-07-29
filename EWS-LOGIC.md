@@ -14,7 +14,7 @@ Terdapat **4 tingkat status** dalam EWS:
 | **Tepat Waktu** | 🔵 Biru | Mahasiswa on track untuk lulus dalam 1 masa kurikulum (S1: 4 tahun/8 semester) |
 | **Normal** | 🟢 Hijau | Mahasiswa dalam kondisi normal, berpotensi lulus dalam 1 masa kurikulum |
 | **Perhatian** | 🟡 Kuning | Mahasiswa berisiko tidak lulus tepat waktu, target masa kurikulum + 2 semester (S1: 10 semester) |
-| **Kritis** | 🔴 Merah | Mahasiswa berisiko tinggi DO atau tidak lulus dalam 2× masa kurikulum (S1: 7 tahun/16 semester) |
+| **Kritis** | 🔴 Merah | Mahasiswa berisiko tinggi DO atau tidak lulus (S1: 7 tahun/14 semester; jenjang lain: 2× masa kurikulum) |
 
 ---
 
@@ -36,17 +36,23 @@ jenjang: `prodis.gelar`, dipetakan ke `K` dan SKS target lewat `config/ews.php`:
 
 Rumus tier status (berlaku untuk semua jenjang):
 
-| Tier | Batas semester | S1 (`K=8`) | D3 (`K=6`) |
+| Tier | Batas semester | S1 (`K=8`, override) | D3 (`K=6`) |
 |---|---|---|---|
 | Tepat Waktu | `semester ≤ K` | ≤ 8 | ≤ 6 |
 | Normal | `semester ≤ K+2` | ≤ 10 | ≤ 8 |
-| Perhatian | `semester ≤ 2K` | ≤ 16 | ≤ 12 |
-| Kritis | `semester > 2K` | > 16 | > 12 |
+| Perhatian | `semester ≤ 2K` | ≤ 14 | ≤ 12 |
+| Kritis | `semester > 2K` | > 14 | > 12 |
+
+> **S1 adalah pengecualian:** batas kritisnya di-override ke `14` lewat
+> `config/ews.php` (`jenjang.S1.batas_kritis`), bukan hasil rumus `2K` (yang
+> harusnya 16). Ini sengaja dipertahankan sama seperti behavior sebelum EWS
+> multi-jenjang. Jenjang lain (D2, D3, D4, Profesi, S2, S3) semuanya pakai
+> rumus `2K` generik tanpa override.
 
 Kalau `gelar` prodi null atau tidak dikenal, sistem **fallback ke S1**
 (`K=8`, 144 SKS) — semua contoh & narasi di bawah dokumen ini memakai S1
 sebagai ilustrasi (ditandai "contoh S1"), tapi rumusnya generik untuk semua
-jenjang di atas.
+jenjang di atas (kecuali batas kritis S1 seperti dijelaskan di atas).
 
 ---
 
@@ -137,29 +143,32 @@ Status ditentukan dengan **urutan prioritas** dari yang paling kritis:
 
 ### **Prioritas 1: KRITIS (🔴 Merah)**
 
-#### Kondisi A: Sisa SKS Tidak Cukup Sampai Batas Kritis (`2K`)
+#### Kondisi A: Sisa SKS Tidak Cukup Sampai Batas Kritis (`2K`, S1 override `14`)
 ```
-if (sisa_sks > sksBisaDiambilSampai2K) {
+if (sisa_sks > sksBisaDiambilSampaiBatasKritis) {
     return 'kritis';
 }
 ```
 
 **Penjelasan:**
-- Mahasiswa tidak akan bisa menyelesaikan SKS target bahkan jika mengambil SKS maksimal hingga semester `2K`
+- Mahasiswa tidak akan bisa menyelesaikan SKS target bahkan jika mengambil SKS maksimal hingga semester batas kritis
 - Risiko DO sangat tinggi
+- Batas kritis = `2K` untuk semua jenjang, **kecuali S1** yang pakai override
+  `batas_kritis = 14` di `config/ews.php` (compat dengan behavior sebelum
+  multi-jenjang, bukan hasil rumus `2K`)
 
-**Contoh (S1, `K=8` → batas `2K=16`):**
+**Contoh (S1, `K=8` → batas kritis `14`):**
 - Semester aktif: 12
 - SKS lulus: 80 → Sisa SKS: 64
-- SKS bisa diambil S12-S16: (24×5) = 120
-- 64 < 120 ✅ (masih aman)
-- Tapi jika sisa SKS > 120, maka KRITIS
+- SKS bisa diambil S12-S14: (24×3) = 72
+- 64 < 72 ✅ (masih aman)
+- Tapi jika sisa SKS > 72, maka KRITIS
 
 ---
 
-#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester `2K-1`, Ganjil Terakhir)
+#### Kondisi B: Nilai E/D di Mata Kuliah Ganjil (Semester `batasKritis - 1`, Ganjil Terakhir)
 ```
-if (semester_aktif == 2K - 1 && semester_ganjil) {
+if (semester_aktif == batasKritis - 1 && semester_ganjil) {
     if (ada_nilai_E_atau_D_di_matkul_ganjil) {
         return 'kritis';
     }
@@ -167,15 +176,15 @@ if (semester_aktif == 2K - 1 && semester_ganjil) {
 ```
 
 **Penjelasan:**
-- Semester `2K-1` adalah semester ganjil terakhir sebelum batas kritis (S1: semester 15)
+- Semester `batasKritis - 1` adalah semester ganjil terakhir sebelum batas kritis (S1: semester 13, jenjang lain: `2K-1`)
 - Jika masih ada nilai E/D di mata kuliah semester ganjil (1..K)
 - Mahasiswa mungkin tidak sempat mengulang
 
 ---
 
-#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester `2K`, Terakhir)
+#### Kondisi C: Nilai E/D di Mata Kuliah Genap (Semester `batasKritis`, Terakhir)
 ```
-if (semester_aktif == 2K && semester_genap) {
+if (semester_aktif == batasKritis && semester_genap) {
     if (ada_nilai_E_atau_D_di_matkul_genap) {
         return 'kritis';
     }
@@ -183,13 +192,14 @@ if (semester_aktif == 2K && semester_genap) {
 ```
 
 **Penjelasan:**
-- Semester `2K` adalah semester terakhir (S1: semester 16)
+- Semester `batasKritis` adalah semester terakhir (S1: semester 14, jenjang lain: `2K`)
 - Jika masih ada nilai E/D di mata kuliah semester genap (1..K)
 - Mahasiswa tidak punya kesempatan mengulang lagi
 
-> **Catatan migrasi:** sebelum EWS multi-jenjang, kondisi B/C ini hardcode
-> semester 13/14 untuk S1. Setelah threshold diturunkan dari `2K-1`/`2K`,
-> batasnya untuk S1 (`K=8`) bergeser ke semester **15/16**.
+> **Catatan migrasi:** kondisi B/C tetap hardcode semester 13/14 untuk S1
+> (sama seperti sebelum EWS multi-jenjang) lewat override `batas_kritis`
+> di `config/ews.php`. Jenjang lain (D3, S2, dst) pakai rumus generik
+> `2K-1`/`2K` tanpa override.
 
 ---
 
@@ -318,18 +328,18 @@ Jika tidak masuk kondisi apapun, default status adalah **Normal**.
 if (sks_lulus >= sks_target) {
     if (semester_aktif <= K) return 'tepat_waktu';
     if (semester_aktif <= K + 2) return 'normal';
-    if (semester_aktif <= 2 * K) return 'perhatian';
+    if (semester_aktif <= batasKritis) return 'perhatian'; // S1: 14 (override), jenjang lain: 2*K
     return 'kritis';
 }
 ```
 
-**Penjelasan (contoh S1, `K=8`, sks_target=144):**
+**Penjelasan (contoh S1, `K=8`, sks_target=144, batas kritis override=14):**
 - Mahasiswa sudah mengumpulkan SKS target
 - Status ditentukan berdasarkan semester lulus:
   - ≤ Semester 8: Tepat Waktu
   - Semester 9-10: Normal
-  - Semester 11-16: Perhatian
-  - > Semester 16: Kritis (seharusnya tidak terjadi)
+  - Semester 11-14: Perhatian
+  - > Semester 14: Kritis (seharusnya tidak terjadi)
 
 ---
 
@@ -507,7 +517,7 @@ Tapi:
 sksBisaDiambilSD10 = 40 + 20 + 20 = 80 (semester 7-10)
 sisa_sks (54) <= sksBisaDiambilSD10 (80) ✅
 
-Dan tidak masuk kondisi kritis di semester 15-16
+Dan tidak masuk kondisi kritis di semester 13-14
 ```
 
 **Result:** ✅ **NORMAL** (tidak bisa lulus 4 tahun, tapi bisa 4-5 tahun)
@@ -539,19 +549,19 @@ semester_aktif == 9 && ada nilai E di matkul ganjil ✅
 ### Contoh 4: Mahasiswa Kritis (contoh S1)
 
 **Data:**
-- Semester aktif: 15 (ganjil, `= 2K-1`)
+- Semester aktif: 13 (ganjil, `= batasKritis - 1`, override S1 = 14)
 - SKS lulus: 60
 - Sisa SKS: 84
 - Ada nilai E di mata kuliah semester 1
 
 **Perhitungan:**
 ```
-sksBisaDiambilSampai2K = 24 + 24 = 48 (semester 15-16)
-sisa_sks (84) > sksBisaDiambilSampai2K (48) ✅ → KRITIS
+sksBisaDiambilSampaiBatasKritis = 24 + 24 = 48 (semester 13-14)
+sisa_sks (84) > sksBisaDiambilSampaiBatasKritis (48) ✅ → KRITIS
 
 ATAU
 
-semester_aktif == 15 (2K-1) && ada nilai E di matkul ganjil ✅ → KRITIS
+semester_aktif == 13 (batasKritis-1) && ada nilai E di matkul ganjil ✅ → KRITIS
 ```
 
 **Result:** 🔴 **KRITIS** (risiko DO sangat tinggi)
@@ -580,16 +590,17 @@ semester_aktif == 15 (2K-1) && ada nilai E di matkul ganjil ✅ → KRITIS
        Return status      │ 
        by semester        │
                           ▼
-              ┌────────────────────────┐
-              │ Sisa SKS > Maks 2K?    │
-              └───────┬──────┬─────────┘
+              ┌─────────────────────────────┐
+              │ Sisa SKS > Maks batasKritis?│
+              └───────┬──────┬──────────────┘
                       │ YES  │ NO
                       ▼      │
                   KRITIS     │
                              ▼
-              ┌───────────────────────────┐
-              │ S(2K-1)/2K ada nilai E/D? │
-              └───────┬──────┬────────────┘
+              ┌───────────────────────────────┐
+              │ S(batasKritis-1)/batasKritis  │
+              │ ada nilai E/D?                │
+              └───────┬──────┬────────────────┘
                       │ YES  │ NO
                       ▼      │
                   KRITIS     │
@@ -633,8 +644,9 @@ semester_aktif == 15 (2K-1) && ada nilai E di matkul ganjil ✅ → KRITIS
                           NORMAL
 ```
 
-> Untuk S1 (`K=8`): `2K=16`, `K+2=10`, `K=8` — sama seperti diagram lama,
-> hanya labelnya sekarang generik per jenjang.
+> Untuk S1 (`K=8`): `batasKritis=14` (override, bukan `2K=16`), `K+2=10`,
+> `K=8` — persis sama seperti sebelum EWS multi-jenjang. Jenjang lain
+> (D3, S2, dst) pakai `batasKritis=2K` generik tanpa override.
 
 ---
 

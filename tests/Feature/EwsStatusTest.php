@@ -154,16 +154,16 @@ class EwsStatusTest extends TestCase
     }
 
     #[Test]
-    public function s1_perhatian_boundary_moved_from_14_to_16(): void
+    public function s1_kritis_boundary_stays_at_14(): void
     {
         $service = app(EwsService::class);
 
-        // S16 = 2K untuk S1 (K=8) → masih 'perhatian', bukan 'kritis'
-        $ak1 = $this->makeMhs(['sks_lulus' => 130, 'semester_aktif' => 16], gelar: 'S1');
+        // S14 = batas_kritis override S1 (bukan 2K=16) → masih 'perhatian', bukan 'kritis'
+        $ak1 = $this->makeMhs(['sks_lulus' => 130, 'semester_aktif' => 14], gelar: 'S1');
         $service->updateStatus($ak1);
 
-        // S17 > 2K → 'kritis'
-        $ak2 = $this->makeMhs(['sks_lulus' => 130, 'semester_aktif' => 17], gelar: 'S1');
+        // S15 > batas_kritis(14) → 'kritis'
+        $ak2 = $this->makeMhs(['sks_lulus' => 130, 'semester_aktif' => 15], gelar: 'S1');
         $service->updateStatus($ak2);
 
         $this->assertEquals('perhatian', $ak1->fresh()->earlyWarningSystem->status);
