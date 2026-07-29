@@ -48,7 +48,7 @@ class ProfileService
             'ews' => [
                 'status' => $ews->status ?? null,
                 'status_kelulusan' => $ews->status_kelulusan ?? null,
-                'alasan_tidak_eligible' => $this->getAlasanTidakEligible($akademik),
+                'alasan_tidak_eligible' => $this->getAlasanTidakEligible($akademik, $mahasiswa),
             ],
             'ips' => $this->getIpsData($ips),
             'matakuliah_nilai_de' => $khsKrsWithNilaiDE,
@@ -129,11 +129,13 @@ class ProfileService
         ];
     }
 
-    private function getAlasanTidakEligible($akademik)
+    private function getAlasanTidakEligible($akademik, $mahasiswa)
     {
         if (! $akademik) {
             return [];
         }
+
+        $sksTarget = (int) (config('ews.jenjang.'.($mahasiswa->prodi?->gelar ?? 'S1').'.sks') ?? 144);
 
         $alasan = [];
 
@@ -141,8 +143,8 @@ class ProfileService
             $alasan[] = 'IPK kurang dari atau sama dengan 2.0';
         }
 
-        if ($akademik->sks_lulus < 144) {
-            $alasan[] = 'SKS Lulus kurang dari 144';
+        if ($akademik->sks_lulus < $sksTarget) {
+            $alasan[] = "SKS Lulus kurang dari {$sksTarget}";
         }
 
         if ($akademik->mk_nasional !== 'yes') {

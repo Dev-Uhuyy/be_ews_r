@@ -24,19 +24,20 @@ class StatistikKelulusanExportService
         $prodiId = $this->getProdiId();
         $prodi = Prodi::find($prodiId);
         $tahunMasuk = $filters['tahun_masuk'] ?? null;
+        $sksTarget = (int) (config('ews.jenjang.'.($prodi->gelar ?? 'S1').'.sks') ?? 144);
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Statistik Kelulusan');
 
-        $headers = ['Tahun Masuk', 'Jumlah Mhs', 'IPK < 2', 'SKS < 144', 'Nilai D > 5%', 'Ada Nilai E', 'Eligible', 'Tidak Eligible', 'IPK Rata', 'Aktif', 'Mangkir'];
+        $headers = ['Tahun Masuk', 'Jumlah Mhs', 'IPK < 2', "SKS < {$sksTarget}", 'Nilai D > 5%', 'Ada Nilai E', 'Eligible', 'Tidak Eligible', 'IPK Rata', 'Aktif', 'Mangkir'];
         $this->writeTitleBlock($sheet, 'LAPORAN STATISTIK KELULUSAN', $prodi->kode_prodi.' - '.$prodi->nama, $tahunMasuk ? 'Angkatan: '.$tahunMasuk : 'Semua Angkatan', count($headers));
 
         $startRow = 6;
         $this->writeSectionHeader($sheet, $startRow, 'RINGKASAN STATISTIK', count($headers));
         $startRow++;
 
-        $stats = $this->getStatistikPerProdi($prodiId, $tahunMasuk);
+        $stats = $this->getStatistikPerProdi($prodiId, $sksTarget, $tahunMasuk);
         $sheet->setCellValue('A'.$startRow, 'TOTAL');
         $sheet->setCellValue('B'.$startRow, $stats['jumlah_mahasiswa']);
         $sheet->setCellValue('C'.$startRow, $stats['ipk_dibawah_2']);
@@ -55,7 +56,7 @@ class StatistikKelulusanExportService
         $this->writeHeaderRow($sheet, $startRow, $headers);
         $startRow++;
 
-        $detailPerTahun = $this->getStatistikPerTahun($prodiId, $tahunMasuk);
+        $detailPerTahun = $this->getStatistikPerTahun($prodiId, $sksTarget, $tahunMasuk);
         foreach ($detailPerTahun as $i => $row) {
             $sheet->setCellValue('A'.$startRow, $row->tahun_masuk);
             $sheet->setCellValue('B'.$startRow, $row->jumlah_mahasiswa);
@@ -73,15 +74,16 @@ class StatistikKelulusanExportService
         }
 
         $this->autoSizeColumns($sheet, count($headers));
+
         return $this->saveFile($spreadsheet, 'Admin_Statistik_Kelulusan_'.$prodi->kode_prodi.'_'.date('Y-m-d'));
     }
 
-    private function getStatistikPerProdi($prodiId, $tahunMasuk = null)
+    private function getStatistikPerProdi($prodiId, $sksTarget, $tahunMasuk = null)
     {
         $q = AkademikMahasiswa::select(
             DB::raw('COUNT(*) as jumlah_mahasiswa'),
             DB::raw('SUM(CASE WHEN ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
-            DB::raw('SUM(CASE WHEN sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
+            DB::raw("SUM(CASE WHEN sks_lulus < {$sksTarget} THEN 1 ELSE 0 END) as sks_kurang_dari_144"),
             DB::raw('SUM(CASE WHEN nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
             DB::raw('SUM(CASE WHEN nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
             DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),
@@ -100,13 +102,13 @@ class StatistikKelulusanExportService
         return (array) $q->first()->toArray();
     }
 
-    private function getStatistikPerTahun($prodiId, $tahunMasuk = null)
+    private function getStatistikPerTahun($prodiId, $sksTarget, $tahunMasuk = null)
     {
         $q = AkademikMahasiswa::select(
             'akademik_mahasiswa.tahun_masuk',
             DB::raw('COUNT(*) as jumlah_mahasiswa'),
             DB::raw('SUM(CASE WHEN ipk < 2 THEN 1 ELSE 0 END) as ipk_dibawah_2'),
-            DB::raw('SUM(CASE WHEN sks_lulus < 144 THEN 1 ELSE 0 END) as sks_kurang_dari_144'),
+            DB::raw("SUM(CASE WHEN sks_lulus < {$sksTarget} THEN 1 ELSE 0 END) as sks_kurang_dari_144"),
             DB::raw('SUM(CASE WHEN nilai_d_melebihi_batas = "yes" THEN 1 ELSE 0 END) as nilai_d_lebih_dari_5_persen'),
             DB::raw('SUM(CASE WHEN nilai_e = "yes" THEN 1 ELSE 0 END) as ada_nilai_e'),
             DB::raw('SUM(CASE WHEN early_warning_system.status_kelulusan = "eligible" THEN 1 ELSE 0 END) as eligible'),

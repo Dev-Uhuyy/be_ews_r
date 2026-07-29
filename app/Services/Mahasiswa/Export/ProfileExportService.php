@@ -35,7 +35,7 @@ class ProfileExportService
         $ews = $akademik ? EarlyWarningSystem::where('akademik_mahasiswa_id', $akademik->id)->first() : null;
         $khsKrsWithNilaiDE = $this->getMatakuliahWithNilaiDE($mahasiswa->id);
         $progressMk = $this->getProgressMk($akademik);
-        $alasanTidakEligible = $this->getAlasanTidakEligible($akademik);
+        $alasanTidakEligible = $this->getAlasanTidakEligible($akademik, $mahasiswa);
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
@@ -214,17 +214,18 @@ class ProfileExportService
         ];
     }
 
-    private function getAlasanTidakEligible($akademik)
+    private function getAlasanTidakEligible($akademik, $mahasiswa)
     {
         if (! $akademik) {
             return [];
         }
+        $sksTarget = (int) (config('ews.jenjang.'.($mahasiswa->prodi?->gelar ?? 'S1').'.sks') ?? 144);
         $alasan = [];
         if ($akademik->ipk <= 2.0) {
             $alasan[] = 'IPK kurang dari atau sama dengan 2.0';
         }
-        if ($akademik->sks_lulus < 144) {
-            $alasan[] = 'SKS Lulus kurang dari 144';
+        if ($akademik->sks_lulus < $sksTarget) {
+            $alasan[] = "SKS Lulus kurang dari {$sksTarget}";
         }
         if ($akademik->mk_nasional !== 'yes') {
             $alasan[] = 'MK Nasional belum diselesaikan';
