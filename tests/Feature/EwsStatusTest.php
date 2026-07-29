@@ -154,6 +154,74 @@ class EwsStatusTest extends TestCase
     }
 
     #[Test]
+    public function d2_status_values_follow_kurikulum_4_semester(): void
+    {
+        $service = app(EwsService::class);
+
+        // Tepat Waktu: S4, sks=60/72, sisa=12 (<= sksBisaSDNormal=20)
+        $ak1 = $this->makeMhs(['sks_lulus' => 60, 'semester_aktif' => 4], gelar: 'D2');
+        $service->updateStatus($ak1);
+
+        // Kritis: S9 > 2K=8, sksBisaMaks=0
+        $ak2 = $this->makeMhs(['sks_lulus' => 10, 'semester_aktif' => 9], gelar: 'D2');
+        $service->updateStatus($ak2);
+
+        $this->assertEquals('tepat_waktu', $ak1->fresh()->earlyWarningSystem->status);
+        $this->assertEquals('kritis', $ak2->fresh()->earlyWarningSystem->status);
+    }
+
+    #[Test]
+    public function d4_status_values_follow_kurikulum_8_semester_no_override(): void
+    {
+        $service = app(EwsService::class);
+
+        // Tepat Waktu: S8, sks=130/144, sisa=14 (<= sksBisaSDNormal=20)
+        $ak1 = $this->makeMhs(['sks_lulus' => 130, 'semester_aktif' => 8], gelar: 'D4');
+        $service->updateStatus($ak1);
+
+        // Kritis: S17 > 2K=16 (generic, tanpa override seperti S1), sksBisaMaks=0
+        $ak2 = $this->makeMhs(['sks_lulus' => 50, 'semester_aktif' => 17], gelar: 'D4');
+        $service->updateStatus($ak2);
+
+        $this->assertEquals('tepat_waktu', $ak1->fresh()->earlyWarningSystem->status);
+        $this->assertEquals('kritis', $ak2->fresh()->earlyWarningSystem->status);
+    }
+
+    #[Test]
+    public function profesi_status_values_follow_kurikulum_4_semester(): void
+    {
+        $service = app(EwsService::class);
+
+        // Tepat Waktu: S4, sks=20/24, sisa=4 (<= sksBisaSDNormal=20)
+        $ak1 = $this->makeMhs(['sks_lulus' => 20, 'semester_aktif' => 4], gelar: 'PROFESI');
+        $service->updateStatus($ak1);
+
+        // Kritis: S9 > 2K=8, sksBisaMaks=0
+        $ak2 = $this->makeMhs(['sks_lulus' => 2, 'semester_aktif' => 9], gelar: 'PROFESI');
+        $service->updateStatus($ak2);
+
+        $this->assertEquals('tepat_waktu', $ak1->fresh()->earlyWarningSystem->status);
+        $this->assertEquals('kritis', $ak2->fresh()->earlyWarningSystem->status);
+    }
+
+    #[Test]
+    public function s3_status_values_follow_kurikulum_8_semester(): void
+    {
+        $service = app(EwsService::class);
+
+        // Tepat Waktu: S8, sks=38/42, sisa=4 (<= sksBisaSDNormal=20)
+        $ak1 = $this->makeMhs(['sks_lulus' => 38, 'semester_aktif' => 8], gelar: 'S3');
+        $service->updateStatus($ak1);
+
+        // Kritis: S17 > 2K=16, sksBisaMaks=0
+        $ak2 = $this->makeMhs(['sks_lulus' => 5, 'semester_aktif' => 17], gelar: 'S3');
+        $service->updateStatus($ak2);
+
+        $this->assertEquals('tepat_waktu', $ak1->fresh()->earlyWarningSystem->status);
+        $this->assertEquals('kritis', $ak2->fresh()->earlyWarningSystem->status);
+    }
+
+    #[Test]
     public function s1_kritis_boundary_stays_at_14(): void
     {
         $service = app(EwsService::class);

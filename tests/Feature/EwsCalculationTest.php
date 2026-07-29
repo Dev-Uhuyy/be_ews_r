@@ -323,11 +323,12 @@ class EwsCalculationTest extends TestCase
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     #[Test]
-    public function semester_15_e_in_odd_mk_returns_kritis(): void
+    public function semester_15_returns_kritis_past_s1_batas_kritis_override(): void
     {
-        // K=8 (S1) → batas kritis via E/D sekarang di (2K-1, 2K) = (15, 16),
-        // bukan (13, 14) lagi. sks_lulus=100 → sisa=44 <= sksBisaSD16(48),
-        // jadi harus lewat branch cekAdaEDMataKuliah, bukan branch sisa-SKS.
+        // S1 batas_kritis override = 14 (bukan 2K=16). Semester 15 > 14, jadi
+        // sksBisaDiambilSDKritis = 0 → sisa_sks (44) > 0 selalu 'kritis' lewat
+        // branch sisa-SKS, bukan branch cekAdaEDMataKuliah (yang cuma fire di
+        // semester 13/14 persis). E di MK ganjil di sini cuma noise.
         $ak = $this->setupMahasiswa(
             ['sks_lulus' => 100, 'semester_aktif' => 15],
             [['nilai' => 'E', 'tipe_mk' => 'prodi', 'semester' => 1, 'sks' => 2]]
@@ -338,10 +339,10 @@ class EwsCalculationTest extends TestCase
     }
 
     #[Test]
-    public function semester_16_d_in_even_mk_returns_kritis(): void
+    public function semester_16_returns_kritis_past_s1_batas_kritis_override(): void
     {
-        // sks_lulus=130 → sisa=14 <= sksBisaSD16(24), jadi harus lewat
-        // branch cekAdaEDMataKuliah, bukan branch sisa-SKS.
+        // Sama seperti di atas: semester 16 > batas_kritis(14), sksBisaDiambilSDKritis
+        // = 0 → sisa_sks (14) > 0 selalu 'kritis' lewat branch sisa-SKS.
         $ak = $this->setupMahasiswa(
             ['sks_lulus' => 130, 'semester_aktif' => 16],
             [['nilai' => 'D', 'tipe_mk' => 'prodi', 'semester' => 2, 'sks' => 2]]
