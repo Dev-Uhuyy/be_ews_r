@@ -9,7 +9,6 @@ use App\Models\KelompokMataKuliah;
 use App\Models\KhsKrsMahasiswa;
 use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
-use App\Models\MataKuliahPeminatan;
 use App\Models\Prodi;
 use App\Models\User;
 use App\Services\Admin\EwsService;
@@ -324,10 +323,13 @@ class EwsCalculationTest extends TestCase
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     #[Test]
-    public function semester_13_e_in_odd_mk_returns_kritis(): void
+    public function semester_15_e_in_odd_mk_returns_kritis(): void
     {
+        // K=8 (S1) → batas kritis via E/D sekarang di (2K-1, 2K) = (15, 16),
+        // bukan (13, 14) lagi. sks_lulus=100 → sisa=44 <= sksBisaSD16(48),
+        // jadi harus lewat branch cekAdaEDMataKuliah, bukan branch sisa-SKS.
         $ak = $this->setupMahasiswa(
-            ['sks_lulus' => 80, 'semester_aktif' => 13],
+            ['sks_lulus' => 100, 'semester_aktif' => 15],
             [['nilai' => 'E', 'tipe_mk' => 'prodi', 'semester' => 1, 'sks' => 2]]
         );
         $this->ewsService->updateStatus($ak);
@@ -336,10 +338,12 @@ class EwsCalculationTest extends TestCase
     }
 
     #[Test]
-    public function semester_14_d_in_even_mk_returns_kritis(): void
+    public function semester_16_d_in_even_mk_returns_kritis(): void
     {
+        // sks_lulus=130 → sisa=14 <= sksBisaSD16(24), jadi harus lewat
+        // branch cekAdaEDMataKuliah, bukan branch sisa-SKS.
         $ak = $this->setupMahasiswa(
-            ['sks_lulus' => 80, 'semester_aktif' => 14],
+            ['sks_lulus' => 130, 'semester_aktif' => 16],
             [['nilai' => 'D', 'tipe_mk' => 'prodi', 'semester' => 2, 'sks' => 2]]
         );
         $this->ewsService->updateStatus($ak);
@@ -592,4 +596,3 @@ class EwsCalculationTest extends TestCase
         $this->assertEquals(1, $result['total_processed']);
     }
 }
-
